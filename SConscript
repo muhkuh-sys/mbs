@@ -19,11 +19,23 @@
 #   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             #
 #-------------------------------------------------------------------------#
 
-import scons_common
+# Try to load the global build_properties first.
+try:
+	import build_properties
+except ImportError:
+	pass
 
+
+# Add the local site_scons folder to the search path.
+from SCons.Script.Main import _load_site_scons_dir
+# NOTE: why do I have to use '#' here? This is the only 
+_load_site_scons_dir(Dir('#'), 'site_scons')
+
+# Import all local modules.
 import bootblock
 import build_properties
 import gen_random_seq
+import scons_common
 import svnversion
 import uuencode
 
