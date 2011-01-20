@@ -105,6 +105,7 @@ if not GetOption('help'):
 	asciidoc.ApplyToEnv(env_default)
 	bootblock.ApplyToEnv(env_default)
 	gen_random_seq.ApplyToEnv(env_default)
+	scons_common.ApplyToEnv(env_default)
 	svnversion.ApplyToEnv(env_default)
 	uuencode.ApplyToEnv(env_default)
 	Export('env_default')
@@ -131,19 +132,4 @@ if not GetOption('help'):
 	env_netx10_default.Replace(LIBPATH = ['${GCC_LIBRARY_DIR_ARCHITECTURE}/arm966e-s', '${GCC_LIBRARY_DIR_COMPILER}/arm966e-s'])
 	env_netx10_default.Append(CPPDEFINES = [['ASIC_TYP', '10']])
 	Export('env_netx10_default')
-	
-	
-	#----------------------------------------------------------------------------
-	#
-	# Create the legacy environments for the different asics.
-	#
-	env_netx500_old_default = env_default.Clone()
-	env_netx500_old_default.Append(CCFLAGS = ['-mcpu=arm926ej-s'])
-	env_netx500_old_default.Replace(LIBPATH = ['${GCC_DIR}/arm-elf/lib/arm926ej-s', '${GCC_DIR}/lib/gcc/arm-elf/${GCC_VERSION}/arm926ej-s'])
-	Export('env_netx500_old_default')
-	
-	env_netx50_old_default = env_default.Clone()
-	env_netx50_old_default.Append(CCFLAGS = ['-mcpu=arm966e-s'])
-	env_netx50_old_default.Replace(LIBPATH = ['${GCC_DIR}/arm-elf/lib/arm966e-s', '${GCC_DIR}/lib/gcc/arm-elf/${GCC_VERSION}/arm966e-s'])
-	Export('env_netx50_old_default')
 	
