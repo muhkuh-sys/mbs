@@ -21,7 +21,11 @@
 
 import scons_common
 
+import bootblock
 import build_properties
+import gen_random_seq
+import svnversion
+import uuencode
 
 build_properties.Read()
 
@@ -99,9 +103,10 @@ if not GetOption('help'):
 	# Add all other tools to the default environment.
 	#
 	asciidoc.ApplyToEnv(env_default)
-	# Set some fancy options.
-	env_default['Asciidoc_backend'] = 'xhtml11'
-	env_default['Asciidoc_attributes'] = dict({'numbered':True, 'toc':True, 'toclevels':4})
+	bootblock.ApplyToEnv(env_default)
+	gen_random_seq.ApplyToEnv(env_default)
+	svnversion.ApplyToEnv(env_default)
+	uuencode.ApplyToEnv(env_default)
 	Export('env_default')
 	
 	
