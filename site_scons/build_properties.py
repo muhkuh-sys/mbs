@@ -21,6 +21,7 @@
 
 
 from SCons.Script import *
+import os
 
 
 # Init the global build properties.
@@ -37,7 +38,8 @@ def Read():
 	global _g_env_help
 	
 	# specify the name of the file in which variables are stored
-	_g_build_properties = Variables('build.properties')
+	strFileName = os.path.join(SCons.Node.FS.get_default_fs().SConstruct_dir.abspath, 'build.properties')
+	_g_build_properties = Variables([strFileName])
 	
 	# Register which variables we're interested in and
 	# get values from a saved file if any (defaults, which are
