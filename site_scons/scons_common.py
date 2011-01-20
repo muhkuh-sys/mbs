@@ -39,22 +39,6 @@ if 'clean' in COMMAND_LINE_TARGETS:
 
 #----------------------------------------------------------------------------
 #
-# Replace the default exception hander.
-#
-BUILD_CRASHED = False
-
-print sys.excepthook
-def mbs_excepthook(_type, _value, _traceback):
-	print '*** Crash ***'
-	global BUILD_CRASHED
-	BUILD_CRASHED = True
-	#sys.__excepthook__(_type, _value, _traceback)
-
-sys.excepthook = mbs_excepthook
-print sys.excepthook
-
-#----------------------------------------------------------------------------
-#
 # Display the complete command line if any command failed.
 #
 # TODO: GetBuildFailures only reports scons errors. If an exception occured,
@@ -62,23 +46,18 @@ print sys.excepthook
 #       after the stack dump. How can I detect this here?
 #
 def display_build_status():
-	if BUILD_CRASHED==True:
-		print "!!!!!!!!!!!!!!!!"
-		print "!!! CRASHED !!!!"
-		print "!!!!!!!!!!!!!!!!"
+	from SCons.Script import GetBuildFailures
+	bf_all = GetBuildFailures()
+	if bf_all:
+		# iterate over all failures and print the command
+		for bf in bf_all:
+			if bf and bf.node and bf.command:
+				print 'Failed command for ' + str(bf.node) + ":\n" + ' '.join(bf.command)
+		print "!!!!!!!!!!!!!!!"
+		print "!!! FAILED !!!!"
+		print "!!!!!!!!!!!!!!!"
 	else:
-		from SCons.Script import GetBuildFailures
-		bf_all = GetBuildFailures()
-		if bf_all:
-			# iterate over all failures and print the command
-			for bf in bf_all:
-				if bf and bf.node and bf.command:
-					print 'Failed command for ' + str(bf.node) + ":\n" + ' '.join(bf.command)
-			print "!!!!!!!!!!!!!!!"
-			print "!!! FAILED !!!!"
-			print "!!!!!!!!!!!!!!!"
-		else:
-			print "Build succeeded."
+		print "Build succeeded."
 
 import atexit
 atexit.register(display_build_status)
