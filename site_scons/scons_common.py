@@ -56,8 +56,6 @@ def display_build_status():
 		print "!!!!!!!!!!!!!!!"
 		print "!!! FAILED !!!!"
 		print "!!!!!!!!!!!!!!!"
-	else:
-		print "Build succeeded."
 
 import atexit
 atexit.register(display_build_status)
@@ -89,4 +87,8 @@ def get_tool(strToolName):
 def set_build_path(env, build_path, source_path, sources):
 	env.VariantDir(build_path, source_path, duplicate=0)
 	return [src.replace(source_path, build_path) for src in sources]
+
+
+def ApplyToEnv(env):
+	env.AddMethod(set_build_path, 'SetBuildPath')
 
