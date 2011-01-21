@@ -1,1 +1,1 @@
-CFG_BUILD_DEBUG=False
+CFG_BUILD=release

@@ -45,7 +45,7 @@ def Read():
 	# get values from a saved file if any (defaults, which are
 	# specified in the last argument, are used otherwise).
 	# See http://scons.org/doc/1.2.0.d20090919/HTML/scons-user/x2378.html for details.
-	_g_build_properties.Add(BoolVariable('CFG_BUILD_DEBUG', 'Build the project in debug mode.', 'False'))
+	_g_build_properties.Add(EnumVariable('CFG_BUILD', 'Build the project in release or debug mode.', 'release', allowed_values=('debug', 'release')))
 	
 	_g_env_help = Environment(variables=_g_build_properties)
 
@@ -69,15 +69,15 @@ def PrintSummary():
 	global _g_env_help
 	
 	print 'build properties:'
-	print "\tCFG_BUILD_DEBUG = %s" % _g_env_help['CFG_BUILD_DEBUG']
+	print "\tCFG_BUILD = %s" % _g_env_help['CFG_BUILD']
 
 
 def ApplyToEnv(env):
 	global _g_env_help
 	
-	if _g_env_help['CFG_BUILD_DEBUG']==0:
+	if _g_env_help['CFG_BUILD']=='release':
 		# this is the release build
 		env.Append(CCFLAGS = ['-O2'])
-	else:
+	elif _g_env_help['CFG_BUILD']=='debug':
 		# this is the debug build
 		env.Append(CCFLAGS = ['-O0'])

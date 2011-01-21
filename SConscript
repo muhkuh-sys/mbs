@@ -28,7 +28,7 @@ except ImportError:
 
 # Add the local site_scons folder to the search path.
 from SCons.Script.Main import _load_site_scons_dir
-# NOTE: why do I have to use '#' here? This is the only 
+# NOTE: why do I have to use '#' here?
 _load_site_scons_dir(Dir('#'), 'site_scons')
 
 # Import all local modules.
@@ -38,6 +38,7 @@ import gen_random_seq
 import scons_common
 import svnversion
 import uuencode
+
 
 build_properties.Read()
 
