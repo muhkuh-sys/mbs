@@ -1,1 +1,1 @@
-CFG_BUILD=release
+CFG_BUILD="release"
