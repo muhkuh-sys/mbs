@@ -35,6 +35,7 @@ _load_site_scons_dir(Dir('#'), 'site_scons')
 import bootblock
 import build_properties
 import data_array
+import diff
 import gen_random_seq
 import scons_common
 import svnversion
@@ -115,6 +116,7 @@ build_properties.ApplyToEnv(env_default)
 asciidoc.ApplyToEnv(env_default)
 bootblock.ApplyToEnv(env_default)
 data_array.ApplyToEnv(env_default)
+diff.ApplyToEnv(env_default)
 gen_random_seq.ApplyToEnv(env_default)
 scons_common.ApplyToEnv(env_default)
 svnversion.ApplyToEnv(env_default)
