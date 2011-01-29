@@ -8,14 +8,14 @@
 	</project_version>
 
 	<paths>
-		<marker>~/.m2/depack</marker>
-		<repository>~/.m2/repository</repository>
-		<depack>~/.m2/depack</depack>
+		<marker>~/.mbs/depack</marker>
+		<repository>~/.mbs/repository</repository>
+		<depack>~/.mbs/depack</depack>
 	</paths>
 
 	<repositories>
 		<!-- TODO: add your local repositories here. -->
-		<repository name="muhkuh@sourceforge">http://downloads.sourceforge.net/project/muhkuh/maven2</repository>
+		<repository name="muhkuh@sourceforge">http://downloads.sourceforge.net/project/muhkuh/mbs</repository>
 	</repositories>
 
 	<scons>
