@@ -125,26 +125,3 @@ svnversion.ApplyToEnv(env_default)
 uuencode.ApplyToEnv(env_default)
 Export('env_default')
 
-
-#----------------------------------------------------------------------------
-#
-# Create the default environments for the different asics.
-#
-env_netx500_default = env_default.Clone()
-env_netx500_default.Append(CCFLAGS = ['-mcpu=arm926ej-s'])
-env_netx500_default.Replace(LIBPATH = ['${GCC_LIBRARY_DIR_ARCHITECTURE}/arm926ej-s', '${GCC_LIBRARY_DIR_COMPILER}/arm926ej-s'])
-env_netx500_default.Append(CPPDEFINES = [['ASIC_TYP', '500']])
-Export('env_netx500_default')
-
-env_netx50_default = env_default.Clone()
-env_netx50_default.Append(CCFLAGS = ['-mcpu=arm966e-s'])
-env_netx50_default.Replace(LIBPATH = ['${GCC_LIBRARY_DIR_ARCHITECTURE}/arm966e-s', '${GCC_LIBRARY_DIR_COMPILER}/arm966e-s'])
-env_netx50_default.Append(CPPDEFINES = [['ASIC_TYP', '50']])
-Export('env_netx50_default')
-
-env_netx10_default = env_default.Clone()
-env_netx10_default.Append(CCFLAGS = ['-mcpu=arm966e-s'])
-env_netx10_default.Replace(LIBPATH = ['${GCC_LIBRARY_DIR_ARCHITECTURE}/arm966e-s', '${GCC_LIBRARY_DIR_COMPILER}/arm966e-s'])
-env_netx10_default.Append(CPPDEFINES = [['ASIC_TYP', '10']])
-Export('env_netx10_default')
-

@@ -89,6 +89,15 @@ def set_build_path(env, build_path, source_path, sources):
 	return [src.replace(source_path, build_path) for src in sources]
 
 
+def create_compiler_environment(env, strAsicTyp, strCpuId):
+	env_new = env.Clone()
+	env_new.Append(CCFLAGS = ['-mcpu=%s'%strCpuId])
+	env_new.Replace(LIBPATH = ['${GCC_LIBRARY_DIR_ARCHITECTURE}/%s'%strCpuId, '${GCC_LIBRARY_DIR_COMPILER}/%s'%strCpuId])
+	env_new.Append(CPPDEFINES = [['ASIC_TYP', '%s'%strAsicTyp]])
+	
+	return env_new
+
+
 def ApplyToEnv(env):
 	env.AddMethod(set_build_path, 'SetBuildPath')
-
+	env.AddMethod(create_compiler_environment, 'CreateCompilerEnv')
