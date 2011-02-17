@@ -33,7 +33,7 @@ from SCons.Script import *
 # much easier to work with an IDE like KDevelop.
 #
 if 'clean' in COMMAND_LINE_TARGETS:
-	Alias('clean', '.')
+	Alias('clean', SCons.Node.FS.get_default_fs().SConstruct_dir.abspath)
 	SetOption('clean', 1)
 
 
