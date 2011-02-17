@@ -19,6 +19,7 @@
 #   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             #
 #-------------------------------------------------------------------------#
 
+
 # Try to load the global build_properties first.
 try:
 	import build_properties
@@ -52,10 +53,15 @@ build_properties.Read()
 Help("""
 This SConstruct file is part of a Muhkuh buildsystem project. Run
 
-  'python path_to_setup.py'
+  'python path/to/setup.py'
 
-from your project's root folder to setup the project environment. This will
-also download all missing tools.
+from your project's root folder to setup the project environment. Usually
+this will be
+
+  'python mbs/setup.py'
+
+
+This will also download all missing tools.
 """)
 
 build_properties.GenerateHelp()
