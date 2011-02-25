@@ -29,12 +29,12 @@ import shutil
 import subprocess
 import sys
 import tarfile
-import urlgrabber
-import urlgrabber.progress
+import urllib2
+import urlparse
 
 from string import Template
-from urlgrabber.grabber import URLGrabError
 from xml.etree.ElementTree import ElementTree
+
 
 def get_tool_path(aCfg, aTool):
 	return os.path.join(aCfg['depack_path'], aTool['group'], aTool['name'], '%s-%s'%(aTool['name'],aTool['version']))
@@ -46,15 +46,40 @@ def get_tool_path(aCfg, aTool):
 # Returns 'True' on success, 'False' on error.
 #
 def download_file(strUrl, strFile):
-	tProgressObj = urlgrabber.progress.text_progress_meter()
+	bResult = False
+	fOutput = None
+	sizDownloaded = 0
+	
 	try:
-		urlgrabber.urlgrab(strUrl, strFile, progress_obj=tProgressObj)
+		aSocket = urllib2.urlopen(strUrl)
+		aInfo = aSocket.info()
+		try:
+			sizTotal = long(aInfo['content-length'])
+		except KeyError:
+			sizTotal = 0
+		
+		fOutput = open(strFile, 'wb')
+		while 1:
+			strChunk = aSocket.read(2048)
+			sizChunk = len(strChunk)
+			if sizChunk==0:
+				break
+			fOutput.write(strChunk)
+			sizDownloaded += sizChunk
+			if sizTotal!=0:
+				print '%d%% (%d/%d)' % (100.0*sizDownloaded/sizTotal, sizDownloaded, sizTotal)
+			else:
+				print '%d' % sizDownloaded
+		
 		bResult = True
-	except URLGrabError, e:
-		print 'Failed to download the package: %s'%e.strerror
-		bResult = False
+	except urllib2.HTTPError, e: 
+		print 'Failed to download %s: %d' % (strUrl,e.code)
+	
+	if fOutput:
+		fOutput.close()
 	
 	return bResult
+
 
 #
 # Check the Sha1 sum for a file.
@@ -181,7 +206,7 @@ def install_package(aCfg, aTool):
 							os.remove(strLocalSha1Path)
 			
 			if bDownloadOk==False:
-				raise Exception(strPackageName, 'Failed to download the package!')
+				raise Exception(strName, 'Failed to download the package!')
 		
 		if bDownloadOk==True:
 			# Unpack the archive.
