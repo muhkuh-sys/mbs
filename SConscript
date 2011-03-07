@@ -97,31 +97,59 @@ build_properties.PrintSummary()
 
 #----------------------------------------------------------------------------
 #
-# Import the tool definitions.
+# Create the default environment.
 #
-gcc_arm = scons_common.get_tool('gcc-arm-none-eabi-4.5.1_1')
-asciidoc = scons_common.get_tool('asciidoc-8.6.3_2')
+env_default = Environment()
+env_default.Decider('MD5')
 
 
 #----------------------------------------------------------------------------
 #
-# Create the default environment and apply the compiler.
+# Add the Compiler to the environment.
 #
-env_default = Environment()
-gcc_arm.ApplyToEnv(env_default)
-env_default.Decider('MD5')
-env_default.Replace(CCFLAGS = Split(default_ccflags))
-env_default.Replace(LIBS = ['m', 'c', 'gcc'])
-env_default.Replace(LINKFLAGS = ['-nostdlib', '-static', '-Map=${TARGET}.map'])
-build_properties.ApplyToEnv(env_default)
+strGccVersion = None
+try:
+	# Allow the user to specify the GCC version with the MBS_GCC_VERSION veriable.
+	strGccVersion = MBS_GCC_VERSION
+except NameError:
+	# The default is to take the first available GCC version from the tools.
+	for strName in TOOLS:
+		if strName.startswith('gcc')==True:
+			strGccVersion = strName
+			break
+if strGccVersion!=None:
+	gcc_arm = scons_common.get_tool(strGccVersion)
+	gcc_arm.ApplyToEnv(env_default)
+	env_default.Replace(CCFLAGS = Split(default_ccflags))
+	env_default.Replace(LIBS = ['m', 'c', 'gcc'])
+	env_default.Replace(LINKFLAGS = ['-nostdlib', '-static', '-Map=${TARGET}.map'])
+
+
+#----------------------------------------------------------------------------
+#
+# Add Asciidoc to the environment.
+#
+strAsciidocVersion = None
+try:
+	# Allow the user to specify the Asciidoc version with the MBS_ASCIIDOC_VERSION veriable.
+	strAsciidocVersion = MBS_ASCIIDOC_VERSION
+except NameError:
+	# The default is to take the first available Asciidoc version from the tools.
+	for strName in TOOLS:
+		if strName.startswith('asciidoc')==True:
+			strAsciidocVersion = strName
+			break
+if strAsciidocVersion!=None:
+	asciidoc = scons_common.get_tool(strAsciidocVersion)
+	asciidoc.ApplyToEnv(env_default)
 
 
 #----------------------------------------------------------------------------
 #
 # Add all other tools to the default environment.
 #
-asciidoc.ApplyToEnv(env_default)
 bootblock.ApplyToEnv(env_default)
+build_properties.ApplyToEnv(env_default)
 data_array.ApplyToEnv(env_default)
 diff.ApplyToEnv(env_default)
 flex_zip.ApplyToEnv(env_default)
