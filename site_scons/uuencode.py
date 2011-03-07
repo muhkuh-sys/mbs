@@ -81,7 +81,7 @@ def uuencode_emitter(target, source, env):
 	# Make the target depend on the parameter.
 	Depends(target, SCons.Node.Python.Value(env['UUE_PRE']))
 	Depends(target, SCons.Node.Python.Value(env['UUE_POST']))
-	Depends(target, SCons.Node.Python.Value(env['UUE_ELF']))
+	Depends(target, env['UUE_ELF'])
 	
 	return target, source
 
