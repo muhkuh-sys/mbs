@@ -307,29 +307,66 @@ def read_tool(tNode):
 	})
 
 
-def read_config(strPath):
-	aCfg = dict({})
+def read_config_paths(aCfg, tXml):
+	strPath = tXml.findtext('paths/marker')
+	if strPath!=None:
+		aCfg['marker_path'] = os.path.abspath(os.path.expanduser(strPath))
 	
-	if os.path.isfile(strPath)==True:
+	strPath = tXml.findtext('paths/repository')
+	if strPath!=None:
+		aCfg['repository_path'] = os.path.abspath(os.path.expanduser(strPath))
+	
+	strPath = tXml.findtext('paths/depack')
+	if strPath!=None:
+		aCfg['depack_path'] = os.path.abspath(os.path.expanduser(strPath))
+
+
+def read_user_config(strConfigPath, aCfg):
+	strRealPath = os.path.abspath(os.path.expanduser(strConfigPath))
+	if os.path.isfile(strRealPath)==True:
 		tXml = ElementTree()
-		tXml.parse(strPath)
+		tXml.parse(strRealPath)
+		
+		read_config_paths(aCfg, tXml)
+		
+		iInsertPos = 0
+		for tNode in tXml.findall('repositories/repository'):
+			# Insert the user repositories before the default entries.
+			aCfg['repositories'].insert(iInsertPos, tNode.text)
+			iInsertPos += 1
+
+
+def read_project_config(strConfigPath, aCfg):
+	if os.path.isfile(strConfigPath)==True:
+		tXml = ElementTree()
+		tXml.parse(strConfigPath)
 		
 		aCfg['project_version_maj'] = long(tXml.findtext('project_version/major'))
 		aCfg['project_version_min'] = long(tXml.findtext('project_version/minor'))
 		
 		strPath = tXml.findtext('paths/marker')
-		aCfg['marker_path'] = os.path.abspath(os.path.expanduser(strPath))
-
-		strPath = tXml.findtext('paths/repository')
-		aCfg['repository_path'] = os.path.abspath(os.path.expanduser(strPath))
-
-		strPath = tXml.findtext('paths/depack')
-		aCfg['depack_path'] = os.path.abspath(os.path.expanduser(strPath))
+		if strPath!=None:
+			aCfg['marker_path'] = os.path.abspath(os.path.expanduser(strPath))
 		
-		aRepositories = []
-		for tNode in tXml.findall('repositories/repository'):
-			aRepositories.append(tNode.text)
-		aCfg['repositories'] = aRepositories
+		strPath = tXml.findtext('paths/repository')
+		if strPath!=None:
+			aCfg['repository_path'] = os.path.abspath(os.path.expanduser(strPath))
+		
+		strPath = tXml.findtext('paths/depack')
+		if strPath!=None:
+			aCfg['depack_path'] = os.path.abspath(os.path.expanduser(strPath))
+		
+		tElement = tXml.find('repositories')
+		if tElement!=None:
+			# Replace all other elements?
+			strReplace = tElement.get('replace')
+			if strReplace in ['true', 'True', 'yes', 'Yes']:
+				aCfg['repositories'] = dict({})
+			# Insert the projects repositories before all other entries.
+			iInsertPos = 0
+			for tNode in tXml.findall('repositories/repository'):
+				aCfg['repositories'].insert(iInsertPos, tNode.text)
+				iInsertPos += 1
 		
 		aCfg['scons'] = read_tool(tXml.find('scons'))
 		
@@ -338,21 +375,37 @@ def read_config(strPath):
 			aTools.append(read_tool(tNode))
 		aCfg['tools'] = aTools
 	
-		aFilter = dict({})
-		for tNode in tXml.findall('filters/filter'):
-			strTemplate = tNode.findtext('template')
-			strDst = tNode.findtext('destination')
-			if strTemplate!=None and strDst!=None:
-				aFilter[strDst] = strTemplate
-		aCfg['filter'] = aFilter
+		tElement = tXml.find('filters')
+		if tElement!=None:
+			strReplace = tElement.get('replace')
+			if strReplace in ['true', 'True', 'yes', 'Yes']:
+				aCfg['filter'] = dict({})
+			
+			for tNode in tXml.findall('filters/filter'):
+				strTemplate = tNode.findtext('template')
+				strDst = tNode.findtext('destination')
+				if strTemplate!=None and strDst!=None:
+					aCfg['filter'][strDst] = strTemplate
 	return aCfg
 
 
 # Get the relative path from the current folder to the muhkuh build system.
 strMbsDir = os.path.relpath(os.path.dirname(os.path.realpath(__file__)))
 
-
-aCfg = read_config('setup.xml')
+# Set the defaults.
+aCfg = dict({
+	'marker_path': os.path.abspath(os.path.expanduser('~/.mbs/depack')),
+	'repository_path': os.path.abspath(os.path.expanduser('~/.mbs/repository')),
+	'depack_path': os.path.abspath(os.path.expanduser('~/.mbs/depack')),
+	'repositories': ['http://downloads.sourceforge.net/project/muhkuh/mbs'],
+	'filter': dict({
+		'scons.bat': 'templates/scons.bat',
+		'scons.sh': 'templates/scons.sh',
+		'site_scons/site_init.py': 'templates/site_init.py'
+	})
+})
+read_user_config('~/.mbs.xml', aCfg)
+read_project_config('setup.xml', aCfg)
 
 # Install Scons.
 install_package(aCfg, aCfg['scons'])
