@@ -144,7 +144,7 @@ def bootblock_string(target, source, env):
 def ApplyToEnv(env):                                                                                                                                                                                            
 	#----------------------------------------------------------------------------                                                                                                                           
 	#                                                                                                                                                                                                       
-	# Add secmem builder.                                                                                                                                                                                 
+	# Add bootblock builder.                                                                                                                                                                                 
 	#                                                                                                                                                                                                       
 	env['BOOTBLOCK_XML'] = 'site_scons/netx.xml'
 	env['BOOTBLOCK_SRC'] = ''
