@@ -22,6 +22,8 @@
 
 import imp
 import os
+import re
+import subprocess
 import sys
 
 from SCons.Script import *
@@ -89,10 +91,38 @@ def set_build_path(env, build_path, source_path, sources):
 	return [src.replace(source_path, build_path) for src in sources]
 
 
-def create_compiler_environment(env, strAsicTyp, strCpuId):
+def create_compiler_environment(env, strAsicTyp, aAttributes):
+	# Find the library paths for gcc and newlib.
+	
+	# Prepend an 'm' to each attribute and create a set from this list.
+	aMAttributes = set(['m'+strAttr for strAttr in aAttributes])
+	
+	# Prepend an '-m' to each attribute.
+	aOptAttributes = ['-m'+strAttr for strAttr in aAttributes]
+	
+	# Get the mapping for multiple library search directories.
+	strMultilibPath = None
+	aCmd = [env['CC']]
+	aCmd.extend(aOptAttributes)
+	aCmd.append('-print-multi-lib')
+	proc = subprocess.Popen(aCmd, stdout=subprocess.PIPE)
+	strOutput = proc.communicate()[0]
+	for match_obj in re.finditer('^([^;]+);@?(.*)$', strOutput, re.MULTILINE):
+		strPath = match_obj.group(1)
+		aAttr = set(match_obj.group(2).split('@'))
+		if aAttr==aMAttributes:
+			strMultilibPath = strPath
+			break
+	
+	if strMultilibPath==None:
+		raise Exception('Could not find multilib configuration for attributes %s' % (','.join(aAttributes)))
+	
+	strGccLibPath = os.path.join(env['GCC_LIBRARY_DIR_COMPILER'], strMultilibPath)
+	strNewlibPath = os.path.join(env['GCC_LIBRARY_DIR_ARCHITECTURE'], strMultilibPath)
+	
 	env_new = env.Clone()
-	env_new.Append(CCFLAGS = ['-mcpu=%s'%strCpuId])
-	env_new.Replace(LIBPATH = ['${GCC_LIBRARY_DIR_ARCHITECTURE}/%s'%strCpuId, '${GCC_LIBRARY_DIR_COMPILER}/%s'%strCpuId])
+	env_new.Append(CCFLAGS = aOptAttributes)
+	env_new.Replace(LIBPATH = [strGccLibPath, strNewlibPath])
 	env_new.Append(CPPDEFINES = [['ASIC_TYP', '%s'%strAsicTyp]])
 	
 	return env_new
