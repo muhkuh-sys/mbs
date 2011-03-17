@@ -68,8 +68,11 @@ def GenerateHelp():
 def PrintSummary():
 	global _g_env_help
 	
-	print 'build properties:'
-	print "\tCFG_BUILD = %s" % _g_env_help['CFG_BUILD']
+	print 'Build properties:'
+	print 'Copy the next lines to a file named "build.properties" to modify them.'
+	print '--------8<--------8<--------8<----snip----8<--------8<--------8<--------'
+	print 'CFG_BUILD = "%s"' % _g_env_help['CFG_BUILD']
+	print '-------->8-------->8-------->8----snap---->8-------->8-------->8--------'
 
 
 def ApplyToEnv(env):
