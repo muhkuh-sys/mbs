@@ -94,7 +94,7 @@ def svnversion_string(target, source, env):
 def ApplyToEnv(env):
 	#----------------------------------------------------------------------------
 	#
-	# Add uuencode builder.
+	# Add svnversion builder.
 	#
 	env['SVNVERSION'] = env.Detect('svnversion')
 	
