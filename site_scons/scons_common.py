@@ -107,7 +107,7 @@ def create_compiler_environment(env, strAsicTyp, aAttributes):
 	aCmd.append('-print-multi-lib')
 	proc = subprocess.Popen(aCmd, stdout=subprocess.PIPE)
 	strOutput = proc.communicate()[0]
-	for match_obj in re.finditer('^([^;]+);@?(.*)$', strOutput, re.MULTILINE):
+	for match_obj in re.finditer('^([^;]+);@?([^\r\n\t ]+)', strOutput, re.MULTILINE):
 		strPath = match_obj.group(1)
 		aAttr = set(match_obj.group(2).split('@'))
 		if aAttr==aMAttributes:
