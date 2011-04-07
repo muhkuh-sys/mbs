@@ -24,6 +24,97 @@ from SCons.Script import *
 
 import elf_support
 
+import array
+import subprocess
+import re
+import xml.etree.ElementTree
+
+
+aBootBlockElements = dict({
+	'MagCok':             0,
+
+	'MemCtrl':            1,
+	'Speed':              1,
+	'Res':                1,
+
+	'AppEnt':             2,
+	'AppChksm':           3,
+	'AppFilSiz':          4,
+	'AppSrtAdd':          5,
+	'Signt':              6,
+
+	'SdramGeneralCtrl':   7,
+	'ExpBusReg':          7,
+	'SramCtrl':           7,
+
+	'SdramTimingCtrl':    8,
+	'IoRegMode0':         8,
+
+	'IoRegMode1':         9,
+	'Res0':               9,
+
+	'IfConf1':            10,
+	'Res0':               10,
+
+	'IfConf2':            11,
+	'Res0':               11,
+
+	'MiscAsicCtrl':       12,
+	'Serial':             13,
+	'SrcType':            14,
+	'BootChksm':          15
+})
+
+
+def string_to_number(strNumber):
+	# Try the C syntax (hex digits with '0x' or '0X' prefix).
+	match_obj = re.match("[ \t]*0[xX]([0-9a-fA-F]+)", strNumber)
+	if match_obj:
+		# Convert C hex string to number.
+		number = long(match_obj.group(1), 16)
+	else:
+		# Try the normal decimal syntax.
+		try:
+			number = long(strNumber)
+		except ValueError:
+			number = None
+	return number
+
+
+def find_device_node(tNetxXml, strDeviceTyp, strChipTyp, strDevice):
+	# Find all nodes of the requested type.
+	tPlatformElement = None
+	for tElement in tNetxXml.findall(strDeviceTyp):
+		if tElement.get('netx_version')==strChipTyp:
+			tPlatformElement = tElement
+			break
+	
+	if tPlatformElement==None:
+		raise Exception('Chiptyp %s not found in %s list.'%(strChipTyp,strDeviceTyp))
+	
+	tDeviceElement = None
+	for tElement in tPlatformElement.findall('Device'):
+		if ('id' in tElement.attrib) and (tElement.attrib['id']==strDevice):
+			tDeviceElement = tElement
+			break
+	
+	if tDeviceElement==None:
+		raise Exception('Device %s not found in %s %s list.'%(strDevice,strChipTyp,strDeviceTyp))
+	
+	return tDeviceElement
+
+
+def apply_parameters(tDeviceElement, aBootblock):
+	for tElement in tDeviceElement.findall('Param'):
+		if not 'name' in tElement.attrib:
+			raise Exception('Error in netx xml: the Param node has no name attribute!')
+		strFieldName = tElement.attrib['name']
+		if not strFieldName in aBootBlockElements:
+			raise Exception('Error in netx xml: the Param node has an unknown value for the name attribute: %s'%strFieldName)
+		
+		ulValue = string_to_number(tElement.text.strip())
+		aBootblock[aBootBlockElements[strFieldName]] = ulValue
+
 
 def bootblock_action(target, source, env):
 	# Get the source filename.
@@ -47,12 +138,20 @@ def bootblock_action(target, source, env):
 	ulLoadAddress = elf_support.get_load_address(atSegments)
 	
 	# Get the application data.
-	ulApplicationSize = os.stat(strBinFileName).st_size
-	if (ulApplicationSize&3)!=0:
-		raise Exception("The application size is no multiple of dwords!")
+	tBinFile = open(strBinFileName, 'rb')
+	strBinFile = tBinFile.read()
+	tBinFile.close()
+	
+	# Pad the application size to a multiple of dwords.
+	ulApplicationSize = len(strBinFile)
+	uiPadBytes = ulApplicationSize & 3;
+	if uiPadBytes!=0:
+		uiPadBytes = 4 - uiPadBytes
+		strBinFile += '\0' * uiPadBytes
+	ulApplicationDwordSize = ulApplicationSize / 4;
 	fApplicationFile = open(strBinFileName, 'rb')
-	aulApplicationData = array.array('L')
-	aulApplicationData.fromfile(fApplicationFile, ulApplicationSize/4)
+	aulApplicationData = array.array('L', [0]*ulApplicationDwordSize)
+	aulApplicationData.fromstring(strBinFile)
 	
 	# Build the application checksum.
 	ulApplicationChecksum = 0
@@ -61,26 +160,29 @@ def bootblock_action(target, source, env):
 		ulApplicationChecksum &= 0xffffffff
 	
 	aBootBlock = array.array('L', [0]*16)
-	aBootBlock[0x00] = 0xf8beaf00			# Magic cookie.
-	aBootBlock[0x01] = 0x00000000			# unCtrl
-	aBootBlock[0x02] = ulExecAddress		# execution address
-	aBootBlock[0x03] = ulApplicationChecksum	# application checksum
-	aBootBlock[0x04] = ulApplicationSize/4		# application dword size
-	aBootBlock[0x05] = ulLoadAddress		# load address
-	aBootBlock[0x06] = 0x5854454e			# 'NETX' signature
-	aBootBlock[0x07] = 0x00000000			# krams
-	aBootBlock[0x08] = 0x00000000			# krams
-	aBootBlock[0x09] = 0x00000000			# krams
-	aBootBlock[0x0a] = 0x00000000			# krams
-	aBootBlock[0x0b] = 0x00000000			# krams
-	aBootBlock[0x0c] = 0x00000001			# misc_asic_ctrl dummy
-	aBootBlock[0x0d] = 0x00000000			# user data
-	aBootBlock[0x0e] = 0x00000000			# src type
+	aBootBlock[0x00] = 0xf8beaf00                   # Magic cookie.
+	aBootBlock[0x01] = 0x00000000                   # unCtrl
+	aBootBlock[0x02] = ulExecAddress                # execution address
+	aBootBlock[0x03] = ulApplicationChecksum        # application checksum
+	aBootBlock[0x04] = ulApplicationDwordSize       # application dword size
+	aBootBlock[0x05] = ulLoadAddress                # load address
+	aBootBlock[0x06] = 0x5854454e                   # 'NETX' signature
+	aBootBlock[0x07] = 0x00000000                   # krams
+	aBootBlock[0x08] = 0x00000000                   # krams
+	aBootBlock[0x09] = 0x00000000                   # krams
+	aBootBlock[0x0a] = 0x00000000                   # krams
+	aBootBlock[0x0b] = 0x00000000                   # krams
+	aBootBlock[0x0c] = 0x00000001                   # misc_asic_ctrl dummy
+	aBootBlock[0x0d] = 0x00000000                   # user data
+	aBootBlock[0x0e] = 0x00000000                   # src type
 	
 	# Test if we need to read the xml file.
 	if isinstance(env['BOOTBLOCK_SRC'], str) or isinstance(env['BOOTBLOCK_DST'], str):
-		# TODO: Read the xml file.
-		raise Exception("read xml not done yet.")
+		# Read the xml file.
+		tNetxXml = xml.etree.ElementTree.ElementTree()
+		tNetxXml.parse(env['BOOTBLOCK_XML'])
+		# Generate the chiptyp info.
+		strChipTyp = 'netx 500'
 	
 	# Apply source options.
 	if isinstance(env['BOOTBLOCK_SRC'], dict):
@@ -91,8 +193,9 @@ def bootblock_action(target, source, env):
 				raise Exception('invalid offset in BOOTBLOCK_SRC parameters: %s' % uiOffset)
 			aBootBlock[uiOffset] = ulValue
 	elif isinstance(env['BOOTBLOCK_SRC'], str):
-		# TODO: Read the xml file.
-		raise Exception("xml parameter not done yet.")
+		# Find the source device.
+		tDeviceElement = find_device_node(tNetxXml, 'src', strChipTyp, env['BOOTBLOCK_SRC'])
+		apply_parameters(tDeviceElement, aBootBlock)
 	else:
 		raise Exception('The parameter BOOTBLOCK_SRC has an invalid type (%s), only dict and str can be processed.' % repr(type(env['BOOTBLOCK_SRC'])))
 	
@@ -105,8 +208,8 @@ def bootblock_action(target, source, env):
 				raise Exception('invalid offset in BOOTBLOCK_DST parameters: %s' % uiOffset)
 			aBootBlock[uiOffset] = ulValue
 	elif isinstance(env['BOOTBLOCK_DST'], str):
-		# TODO: Read the xml file.
-		raise Exception("xml parameter not done yet.")
+		tDeviceElement = find_device_node(tNetxXml, 'dst', strChipTyp, env['BOOTBLOCK_DST'])
+		apply_parameters(tDeviceElement, aBootBlock)
 	else:
 		raise Exception('The parameter BOOTBLOCK_DST has an invalid type (%s), only dict and str can be processed.' % repr(type(env['BOOTBLOCK_DST'])))
 	
@@ -141,12 +244,12 @@ def bootblock_string(target, source, env):
 	return 'BootBlock %s' % target[0].get_path()
 
 
-def ApplyToEnv(env):                                                                                                                                                                                            
-	#----------------------------------------------------------------------------                                                                                                                           
-	#                                                                                                                                                                                                       
-	# Add bootblock builder.                                                                                                                                                                                 
-	#                                                                                                                                                                                                       
-	env['BOOTBLOCK_XML'] = 'site_scons/netx.xml'
+def ApplyToEnv(env):
+	#----------------------------------------------------------------------------
+	#
+	# Add bootblock builder.
+	#
+	env['BOOTBLOCK_XML'] = os.path.join( os.path.dirname(os.path.realpath(__file__)), 'netx.xml')
 	env['BOOTBLOCK_SRC'] = ''
 	env['BOOTBLOCK_DST'] = ''
 	env['BOOTBLOCK_USERDATA'] = 0
