@@ -149,8 +149,7 @@ def bootblock_action(target, source, env):
 		uiPadBytes = 4 - uiPadBytes
 		strBinFile += '\0' * uiPadBytes
 	ulApplicationDwordSize = ulApplicationSize / 4;
-	fApplicationFile = open(strBinFileName, 'rb')
-	aulApplicationData = array.array('L', [0]*ulApplicationDwordSize)
+	aulApplicationData = array.array('L')
 	aulApplicationData.fromstring(strBinFile)
 	
 	# Build the application checksum.
