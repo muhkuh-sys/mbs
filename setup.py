@@ -206,7 +206,7 @@ def install_package(aCfg, aTool):
 							os.remove(strLocalSha1Path)
 			
 			if bDownloadOk==False:
-				raise Exception(strName, 'Failed to download the package!')
+				raise Exception('Failed to download the package %s!'%strPackageName)
 		
 		if bDownloadOk==True:
 			# Unpack the archive.
