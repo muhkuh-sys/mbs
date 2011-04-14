@@ -96,7 +96,7 @@ def ApplyToEnv(env):
 	#
 	# Add svnversion builder.
 	#
-	env['SVNVERSION'] = env.Detect('svnversion')
+	env['SVNVERSION'] = env.Detect('svnversion') or 'svnversion'
 	
 	svnversion_act = SCons.Action.Action(svnversion_action, svnversion_string)
 	svnversion_bld = Builder(action=svnversion_act, emitter=svnversion_emitter, single_source=1)
