@@ -143,12 +143,12 @@ def bootblock_action(target, source, env):
 	tBinFile.close()
 	
 	# Pad the application size to a multiple of dwords.
-	ulApplicationSize = len(strBinFile)
-	uiPadBytes = ulApplicationSize & 3;
+	uiPadBytes = len(strBinFile) & 3;
 	if uiPadBytes!=0:
 		uiPadBytes = 4 - uiPadBytes
 		strBinFile += '\0' * uiPadBytes
-	ulApplicationDwordSize = ulApplicationSize / 4;
+	# Get the size of the evetually padded data.
+	ulApplicationDwordSize = len(strBinFile) / 4;
 	aulApplicationData = array.array('L')
 	aulApplicationData.fromstring(strBinFile)
 	
