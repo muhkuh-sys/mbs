@@ -65,8 +65,8 @@ def uuencode_action(target, source, env):
 		strUUEPre = Template(env['UUE_PRE']).safe_substitute(aSubst)
 		strUUEPost = Template(env['UUE_POST']).safe_substitute(aSubst)
 	
-	file_source = open(source[0].get_path(), 'r')
-	file_target = open(target[0].get_path(), 'w')
+	file_source = open(source[0].get_path(), 'rb')
+	file_target = open(target[0].get_path(), 'wt')
 	
 	file_target.write(strUUEPre)
 	uu.encode(file_source, file_target)
