@@ -20,6 +20,14 @@
 #-------------------------------------------------------------------------#
 
 
+iMinimumInterpreterVersion_maj = 2
+iMinimumInterpreterVersion_min = 6
+
+import sys
+iMinimumInterpreterVersion_hex = (iMinimumInterpreterVersion_maj<<24) | (iMinimumInterpreterVersion_min<<16)
+if sys.hexversion<iMinimumInterpreterVersion_hex:
+	sys.exit('The setup script needs at least python %d.%d to run. Please update!'%(iMinimumInterpreterVersion_maj, iMinimumInterpreterVersion_min))
+
 import hashlib
 import os
 import platform
@@ -27,7 +35,6 @@ import re
 import runpy
 import shutil
 import subprocess
-import sys
 import tarfile
 import urllib2
 import urlparse
