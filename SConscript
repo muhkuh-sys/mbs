@@ -38,6 +38,7 @@ import build_properties
 import data_array
 import diff
 import flex_zip
+import gcc_symbol_template
 import gen_random_seq
 import scons_common
 import svnversion
@@ -153,6 +154,7 @@ build_properties.ApplyToEnv(env_default)
 data_array.ApplyToEnv(env_default)
 diff.ApplyToEnv(env_default)
 flex_zip.ApplyToEnv(env_default)
+gcc_symbol_template.ApplyToEnv(env_default)
 gen_random_seq.ApplyToEnv(env_default)
 scons_common.ApplyToEnv(env_default)
 svnversion.ApplyToEnv(env_default)
