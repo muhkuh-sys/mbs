@@ -1,2 +1,2 @@
-REM ${NOTE}
-"${PYTHON}" "${SCONS_DIR}" %*
+@REM ${NOTE}
+@"${PYTHON}" "${SCONS_DIR}" %*
