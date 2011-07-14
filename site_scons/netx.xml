@@ -179,77 +179,77 @@ or      false, error message string
 				14
 			</Param>
 		</Device>
-		<Device id="SPI_gen_0_05" name="Generic SPI Flash, 0.05MHz" size="0" type="SPI">
+		<Device id="SPI_GEN_0_05" name="Generic SPI Flash, 0.05MHz" size="0" type="SPI">
 			<Param name="Speed">
 				1
 			</Param>
 		</Device>
-		<Device  id="SPI_gen_0_1" name="Generic SPI Flash, 0.1MHz" size="0" type="SPI">
+		<Device  id="SPI_GEN_0_1" name="Generic SPI Flash, 0.1MHz" size="0" type="SPI">
 			<Param name="Speed">
 				2
 			</Param>
 		</Device>
-		<Device id="SPI_gen_0_2" name="Generic SPI Flash, 0.2MHz" size="0" type="SPI">
+		<Device id="SPI_GEN_0_2" name="Generic SPI Flash, 0.2MHz" size="0" type="SPI">
 			<Param name="Speed">
 				3
 			</Param>
 		</Device>
-		<Device id="SPI_gen_0_5" name="Generic SPI Flash, 0.5MHz" size="0" type="SPI">
+		<Device id="SPI_GEN_0_5" name="Generic SPI Flash, 0.5MHz" size="0" type="SPI">
 			<Param name="Speed">
 				4
 			</Param>
 		</Device>
-		<Device id="SPI_gen_1" name="Generic SPI Flash, 1MHz" size="0" type="SPI">
+		<Device id="SPI_GEN_1" name="Generic SPI Flash, 1MHz" size="0" type="SPI">
 			<Param name="Speed">
 				5
 			</Param>
 		</Device>
-		<Device id="SPI_gen_1_25" name="Generic SPI Flash, 1.25MHz" size="0" type="SPI">
+		<Device id="SPI_GEN_1_25" name="Generic SPI Flash, 1.25MHz" size="0" type="SPI">
 			<Param name="Speed">
 				6
 			</Param>
 		</Device>
-		<Device id="SPI_gen_2" name="Generic SPI Flash, 2MHz" size="0" type="SPI">
+		<Device id="SPI_GEN_2" name="Generic SPI Flash, 2MHz" size="0" type="SPI">
 			<Param name="Speed">
 				7
 			</Param>
 		</Device>
-		<Device id="SPI_gen_2_5" name="Generic SPI Flash, 2.5MHz" size="0" type="SPI">
+		<Device id="SPI_GEN_2_5" name="Generic SPI Flash, 2.5MHz" size="0" type="SPI">
 			<Param name="Speed">
 				8
 			</Param>
 		</Device>
-		<Device id="SPI_gen_3_3" name="Generic SPI Flash, 3.3MHz" size="0" type="SPI">
+		<Device id="SPI_GEN_3_3" name="Generic SPI Flash, 3.3MHz" size="0" type="SPI">
 			<Param name="Speed">
 				9
 			</Param>
 		</Device>
-		<Device id="SPI_gen_5" name="Generic SPI Flash, 5MHz" size="0" type="SPI">
+		<Device id="SPI_GEN_5" name="Generic SPI Flash, 5MHz" size="0" type="SPI">
 			<Param name="Speed">
 				10
 			</Param>
 		</Device>
-		<Device id="SPI_gen_10" name="Generic SPI Flash, 10MHz" size="0" type="SPI">
+		<Device id="SPI_GEN_10" name="Generic SPI Flash, 10MHz" size="0" type="SPI">
 			<Param name="Speed">
 				11
 			</Param>
 		</Device>
-		<Device id="SPI_gen_12_5" name="Generic SPI Flash, 12.5MHz" size="0" type="SPI">
+		<Device id="SPI_GEN_12_5" name="Generic SPI Flash, 12.5MHz" size="0" type="SPI">
 			<Param name="Speed">
 				12
 			</Param>
 		</Device>
-		<Device id="SPI_gen_16_6" name="Generic SPI Flash, 16.6MHz" size="0" type="SPI">
+		<Device id="SPI_GEN_16_6" name="Generic SPI Flash, 16.6MHz" size="0" type="SPI">
 			<Param name="Speed">
 				13
 			</Param>
 		</Device>
-		<Device id="SPI_gen_25" name="Generic SPI Flash, 25.0MHz" size="0" type="SPI">
+		<Device id="SPI_GEN_25" name="Generic SPI Flash, 25.0MHz" size="0" type="SPI">
 			<Param name="Speed">
 				14
 			</Param>
 		</Device>
-		<Device id="SPI_gen_50" name="Generic SPI Flash, 50.0MHz" size="0" type="SPI">
+		<Device id="SPI_GEN_50" name="Generic SPI Flash, 50.0MHz" size="0" type="SPI">
 			<Param name="Speed">
 				15
 			</Param>
@@ -591,6 +591,151 @@ or      false, error message string
 	
 	
 	
+	<src netx_version="netx 56">
+		<Device id="I2C_gen_50" name="Generic I2C EEprom netX50, 50kHz" size="0" type="I2C">
+			<Param name="Speed">
+				0
+			</Param>
+		</Device>
+		<Device id="I2C_gen_100" name="Generic I2C EEprom netX50, 100kHz" size="0" type="I2C">
+			<Param name="Speed">
+				1
+			</Param>
+		</Device>
+		<Device id="I2C_gen_200" name="Generic I2C EEprom netX50, 200kHz" size="0" type="I2C">
+			<Param name="Speed">
+				2
+			</Param>
+		</Device>
+		<Device id="I2C_gen_400" name="Generic I2C EEprom netX50, 400kHz" size="0" type="I2C">
+			<Param name="Speed">
+				3
+			</Param>
+		</Device>
+		<Device id="I2C_gen_800" name="Generic I2C EEprom netX50, 800kHz" size="0" type="I2C">
+			<Param name="Speed">
+				4
+			</Param>
+		</Device>
+		<Device id="I2C_gen_1200" name="Generic I2C EEprom netX50, 1200kHz" size="0" type="I2C">
+			<Param name="Speed">
+				5
+			</Param>
+		</Device>
+		<Device id="I2C_gen_1700" name="Generic I2C EEprom netX50, 1700kHz" size="0" type="I2C">
+			<Param name="Speed">
+				6
+			</Param>
+		</Device>
+		<Device id="I2C_gen_3400" name="Generic I2C EEprom netX50, 3400kHz" size="0" type="I2C">
+			<Param name="Speed">
+				7
+			</Param>
+		</Device>
+
+		<Device id="SPI_AT45DB321D" name="Atmel AT45DB321D SPI Flash" size="4325376" type="SPI">
+			<Param name="Speed">
+				0x00040000
+			</Param>
+		</Device>
+		<Device id="SPI_GEN_1" name="Generic SPI Flash netX50, 1MHz" size="0" type="SPI">
+			<Param name="Speed">
+				0x08002900
+			</Param>
+		</Device>
+		<Device id="SPI_GEN_2" name="Generic SPI Flash netX50, 2MHz" size="0" type="SPI">
+			<Param name="Speed">
+				0x08005200
+			</Param>
+		</Device>
+		<Device id="SPI_GEN_5" name="Generic SPI Flash netX50, 5MHz" size="0" type="SPI">
+			<Param name="Speed">
+				0x0800cd00
+			</Param>
+		</Device>
+		<Device id="SPI_GEN_10" name="Generic SPI Flash netX50, 10MHz" size="0" type="SPI">
+			<Param name="Speed">
+				0x08019a00
+			</Param>
+		</Device>
+		<Device id="SPI_GEN_15" name="Generic SPI Flash netX50, 15MHz" size="0" type="SPI">
+			<Param name="Speed">
+				0x00026700
+			</Param>
+		</Device>
+		<Device id="SPI_GEN_20" name="Generic SPI Flash netX50, 20MHz" size="0" type="SPI">
+			<Param name="Speed">
+				0x00033400
+			</Param>
+		</Device>
+		<Device id="SPI_GEN_25" name="Generic SPI Flash netX50, 25MHz" size="0" type="SPI">
+			<Param name="Speed">
+				0x00040000
+			</Param>
+		</Device>
+		<Device id="SPI_GEN_50" name="Generic SPI Flash netX50, 50MHz" size="0" type="SPI">
+			<Param name="Speed">
+				0x00080000
+			</Param>
+		</Device>
+		<Device id="SRB_PF_S29GL128_N90" name="SRam Bus PFlash Spansion S29GL128N 90NS" size="16777216" type="SRB">
+			<Param name="MagCok">
+				0xF8BEAF16
+			</Param>
+			<Param name="MemCtrl">
+				0x01010008
+			</Param>
+		</Device>
+		<Device id="SRB_PF_GEN_08" name="Generic SRam Bus PFlash 8 bit" size="0" type="SRB">
+			<Param name="MagCok">
+				0xF8BEAF08
+			</Param>
+			<Param name="MemCtrl">
+				0x0003030f
+			</Param>
+		</Device>
+		<Device id="SRB_PF_GEN_16" name="Generic SRam Bus PFlash 16 bit" size="0" type="SRB">
+			<Param name="MagCok">
+				0xF8BEAF16
+			</Param>
+			<Param name="MemCtrl">
+				0x0103030f
+			</Param>
+		</Device>
+		<Device id="SRB_PF_GEN_32" name="Generic SRam Bus PFlash 32 bit" size="0" type="SRB">
+			<Param name="MagCok">
+				0xF8BEAF32
+			</Param>
+			<Param name="MemCtrl">
+				0x0203030f
+			</Param>
+		</Device>
+		<Device id="SRB_PF_S29AL032_D70" name="SRam Bus PFlash Spansion S29AL032D 70NS" size="16777216" type="SRB">
+			<Param name="MagCok">
+				0xF8BEAF16
+			</Param>
+			<Param name="MemCtrl">
+				0x01010006
+			</Param>
+		</Device>
+		<Device id="SRB_PF_JS28F256_J3" name="SRam Bus PFlash Numonyx JS28F256J3" size="33554432" type="SRB">
+			<Param name="MagCok">
+				0xF8BEAF16
+			</Param>
+			<Param name="MemCtrl">
+				0x0100010c
+			</Param>
+		</Device>
+		
+		<Device id="DPM" name="DPM" size="0" type="MMC">
+		</Device>
+		<Device id="MMC" name="MMC card" size="0" type="MMC">
+		</Device>
+		<Device id="SQI" name="SQI" size="0" type="MMC">
+		</Device>
+	</src>
+
+
 	<src netx_version="netx 50">
 		<Device id="I2C_gen_50" name="Generic I2C EEprom netX50, 50kHz" size="0" type="I2C">
 			<Param name="Speed">
@@ -638,42 +783,42 @@ or      false, error message string
 				0x00040000
 			</Param>
 		</Device>
-		<Device id="SPI_gen_1" name="Generic SPI Flash netX50, 1MHz" size="0" type="SPI">
+		<Device id="SPI_GEN_1" name="Generic SPI Flash netX50, 1MHz" size="0" type="SPI">
 			<Param name="Speed">
 				0x08002900
 			</Param>
 		</Device>
-		<Device id="SPI_gen_2" name="Generic SPI Flash netX50, 2MHz" size="0" type="SPI">
+		<Device id="SPI_GEN_2" name="Generic SPI Flash netX50, 2MHz" size="0" type="SPI">
 			<Param name="Speed">
 				0x08005200
 			</Param>
 		</Device>
-		<Device id="SPI_gen_5" name="Generic SPI Flash netX50, 5MHz" size="0" type="SPI">
+		<Device id="SPI_GEN_5" name="Generic SPI Flash netX50, 5MHz" size="0" type="SPI">
 			<Param name="Speed">
 				0x0800cd00
 			</Param>
 		</Device>
-		<Device id="SPI_gen_10" name="Generic SPI Flash netX50, 10MHz" size="0" type="SPI">
+		<Device id="SPI_GEN_10" name="Generic SPI Flash netX50, 10MHz" size="0" type="SPI">
 			<Param name="Speed">
 				0x08019a00
 			</Param>
 		</Device>
-		<Device id="SPI_gen_15" name="Generic SPI Flash netX50, 15MHz" size="0" type="SPI">
+		<Device id="SPI_GEN_15" name="Generic SPI Flash netX50, 15MHz" size="0" type="SPI">
 			<Param name="Speed">
 				0x00026700
 			</Param>
 		</Device>
-		<Device id="SPI_gen_20" name="Generic SPI Flash netX50, 20MHz" size="0" type="SPI">
+		<Device id="SPI_GEN_20" name="Generic SPI Flash netX50, 20MHz" size="0" type="SPI">
 			<Param name="Speed">
 				0x00033400
 			</Param>
 		</Device>
-		<Device id="SPI_gen_25" name="Generic SPI Flash netX50, 25MHz" size="0" type="SPI">
+		<Device id="SPI_GEN_25" name="Generic SPI Flash netX50, 25MHz" size="0" type="SPI">
 			<Param name="Speed">
 				0x00040000
 			</Param>
 		</Device>
-		<Device id="SPI_gen_50" name="Generic SPI Flash netX50, 50MHz" size="0" type="SPI">
+		<Device id="SPI_GEN_50" name="Generic SPI Flash netX50, 50MHz" size="0" type="SPI">
 			<Param name="Speed">
 				0x00080000
 			</Param>
@@ -726,7 +871,148 @@ or      false, error message string
 				0x0100010c
 			</Param>
 		</Device>
-		
+
+		<Device id="MMC" name="MMC card" size="0" type="MMC">
+		</Device>
+	</src>
+
+
+	<src netx_version="netx 10">
+		<Device id="I2C_gen_50" name="Generic I2C EEprom netX50, 50kHz" size="0" type="I2C">
+			<Param name="Speed">
+				0
+			</Param>
+		</Device>
+		<Device id="I2C_gen_100" name="Generic I2C EEprom netX50, 100kHz" size="0" type="I2C">
+			<Param name="Speed">
+				1
+			</Param>
+		</Device>
+		<Device id="I2C_gen_200" name="Generic I2C EEprom netX50, 200kHz" size="0" type="I2C">
+			<Param name="Speed">
+				2
+			</Param>
+		</Device>
+		<Device id="I2C_gen_400" name="Generic I2C EEprom netX50, 400kHz" size="0" type="I2C">
+			<Param name="Speed">
+				3
+			</Param>
+		</Device>
+		<Device id="I2C_gen_800" name="Generic I2C EEprom netX50, 800kHz" size="0" type="I2C">
+			<Param name="Speed">
+				4
+			</Param>
+		</Device>
+		<Device id="I2C_gen_1200" name="Generic I2C EEprom netX50, 1200kHz" size="0" type="I2C">
+			<Param name="Speed">
+				5
+			</Param>
+		</Device>
+		<Device id="I2C_gen_1700" name="Generic I2C EEprom netX50, 1700kHz" size="0" type="I2C">
+			<Param name="Speed">
+				6
+			</Param>
+		</Device>
+		<Device id="I2C_gen_3400" name="Generic I2C EEprom netX50, 3400kHz" size="0" type="I2C">
+			<Param name="Speed">
+				7
+			</Param>
+		</Device>
+
+		<Device id="SPI_AT45DB321D" name="Atmel AT45DB321D SPI Flash" size="4325376" type="SPI">
+			<Param name="Speed">
+				0x00040000
+			</Param>
+		</Device>
+		<Device id="SPI_GEN_1" name="Generic SPI Flash netX50, 1MHz" size="0" type="SPI">
+			<Param name="Speed">
+				0x08002900
+			</Param>
+		</Device>
+		<Device id="SPI_GEN_2" name="Generic SPI Flash netX50, 2MHz" size="0" type="SPI">
+			<Param name="Speed">
+				0x08005200
+			</Param>
+		</Device>
+		<Device id="SPI_GEN_5" name="Generic SPI Flash netX50, 5MHz" size="0" type="SPI">
+			<Param name="Speed">
+				0x0800cd00
+			</Param>
+		</Device>
+		<Device id="SPI_GEN_10" name="Generic SPI Flash netX50, 10MHz" size="0" type="SPI">
+			<Param name="Speed">
+				0x08019a00
+			</Param>
+		</Device>
+		<Device id="SPI_GEN_15" name="Generic SPI Flash netX50, 15MHz" size="0" type="SPI">
+			<Param name="Speed">
+				0x00026700
+			</Param>
+		</Device>
+		<Device id="SPI_GEN_20" name="Generic SPI Flash netX50, 20MHz" size="0" type="SPI">
+			<Param name="Speed">
+				0x00033400
+			</Param>
+		</Device>
+		<Device id="SPI_GEN_25" name="Generic SPI Flash netX50, 25MHz" size="0" type="SPI">
+			<Param name="Speed">
+				0x00040000
+			</Param>
+		</Device>
+		<Device id="SPI_GEN_50" name="Generic SPI Flash netX50, 50MHz" size="0" type="SPI">
+			<Param name="Speed">
+				0x00080000
+			</Param>
+		</Device>
+		<Device id="SRB_PF_S29GL128_N90" name="SRam Bus PFlash Spansion S29GL128N 90NS" size="16777216" type="SRB">
+			<Param name="MagCok">
+				0xF8BEAF16
+			</Param>
+			<Param name="MemCtrl">
+				0x01010008
+			</Param>
+		</Device>
+		<Device id="SRB_PF_GEN_8" name="Generic SRam Bus PFlash 8 bit" size="0" type="SRB">
+			<Param name="MagCok">
+				0xF8BEAF08
+			</Param>
+			<Param name="MemCtrl">
+				0x0003030f
+			</Param>
+		</Device>
+		<Device id="SRB_PF_GEN_16" name="Generic SRam Bus PFlash 16 bit" size="0" type="SRB">
+			<Param name="MagCok">
+				0xF8BEAF16
+			</Param>
+			<Param name="MemCtrl">
+				0x0103030f
+			</Param>
+		</Device>
+		<Device id="SRB_PF_GEN_32" name="Generic SRam Bus PFlash 32 bit" size="0" type="SRB">
+			<Param name="MagCok">
+				0xF8BEAF32
+			</Param>
+			<Param name="MemCtrl">
+				0x0203030f
+			</Param>
+		</Device>
+		<Device id="SRB_PF_S29AL032_D70" name="SRam Bus PFlash Spansion S29AL032D 70NS" size="16777216" type="SRB">
+			<Param name="MagCok">
+				0xF8BEAF16
+			</Param>
+			<Param name="MemCtrl">
+				0x01010006
+			</Param>
+		</Device>
+		<Device id="SRB_PF_JS28F256_J3" name="SRam Bus PFlash Numonyx JS28F256J3" size="33554432" type="SRB">
+			<Param name="MagCok">
+				0xF8BEAF16
+			</Param>
+			<Param name="MemCtrl">
+				0x0100010c
+			</Param>
+		</Device>
+
 		<Device id="MMC" name="MMC card" size="0" type="MMC">
 		</Device>
 	</src>
@@ -839,7 +1125,117 @@ or      false, error message string
 	</dst>
 
 	
+	<dst netx_version="netx 56">
+		<Device id="INTRAM" name="Internal Ram" size="0x0001fffc" type="INTRAM">
+		</Device>
+		<Device id="SD_MT48LC2M32B2" name="SDRam MT48LC2M32B2" size="0x00800000" type="SDRAM">
+			<Param name="SdramGeneralCtrl">
+				0x030D0001
+			</Param>
+			<Param name="SdramTimingCtrl">
+				0x00A12151
+			</Param>
+		</Device>
+		<Device id="SRB_PF_GEN_08" name="Generic SRam Bus PFlash 8 bit" size="0" type="SRB">
+			<Param name="SramCtrl">
+				0x0003030f
+			</Param>
+		</Device>
+		<Device id="SRB_PF_GEN_16" name="Generic SRam Bus PFlash 16 bit" size="0" type="SRB">
+			<Param name="SramCtrl">
+				0x0103030f
+			</Param>
+		</Device>
+		<Device id="SRB_PF_GEN_32" name="Generic SRam Bus PFlash 32 bit" size="0" type="SRB">
+			<Param name="SramCtrl">
+				0x0203030f
+			</Param>
+		</Device>
+		<Device id="SRB_PF_S29AL032_D70" name="SRam Bus PFlash Spansion S29AL032D 70NS" size="16777216" type="SRB">
+			<Param name="SramCtrl">
+				0x01010006
+			</Param>
+		</Device>
+		<Device id="SRB_PF_S29GL128_N90" name="SRam Bus PFlash Spansion S29GL128N 90NS" size="16777216" type="SRB">
+			<Param name="SramCtrl">
+				0x01010008
+			</Param>
+		</Device>
+		<Device id="SRB_PF_JS28F256_J3" name="SRam Bus PFlash Numonyx JS28F256J3" size="33554432" type="SRB">
+			<Param name="SramCtrl">
+				0x0100010c
+			</Param>
+		</Device>
+		<Device id="SD_MT48LC8M8A2" name="SDRam MT48LC8M8A2" size="0" type="SDRAM">
+			<Param name="SdramGeneralCtrl">
+				0x030c0111
+			</Param>
+			<Param name="SdramTimingCtrl">
+				0x01b242a2
+			</Param>
+			<Param name="IoRegMode1">
+				0x00000032
+			</Param>
+		</Device>
+		<Device id="SD_MT48LC16M16A2" name="SDRam MT48LC16M16A2" size="0" type="SDRAM">
+			<Param name="SdramGeneralCtrl">
+				0x030d0121
+			</Param>
+			<Param name="SdramTimingCtrl">
+				0x01b242a2
+			</Param>
+			<Param name="IoRegMode1">
+				0x00000022
+			</Param>
+		</Device>
+	</dst>
+
+
 	<dst netx_version="netx 50">
+		<Device id="INTRAM" name="Internal Ram" size="0x0001fffc" type="INTRAM">
+		</Device>
+		<Device id="SD_MT48LC2M32B2" name="SDRam MT48LC2M32B2" size="0x00800000" type="SDRAM">
+			<Param name="SdramGeneralCtrl">
+				0x030D0001
+			</Param>
+			<Param name="SdramTimingCtrl">
+				0x00A12151
+			</Param>
+		</Device>
+		<Device id="SRB_PF_GEN_8" name="Generic SRam Bus PFlash 8 bit" size="0" type="SRB">
+			<Param name="SramCtrl">
+				0x0003030f
+			</Param>
+		</Device>
+		<Device id="SRB_PF_GEN_16" name="Generic SRam Bus PFlash 16 bit" size="0" type="SRB">
+			<Param name="SramCtrl">
+				0x0103030f
+			</Param>
+		</Device>
+		<Device id="SRB_PF_GEN_32" name="Generic SRam Bus PFlash 32 bit" size="0" type="SRB">
+			<Param name="SramCtrl">
+				0x0203030f
+			</Param>
+		</Device>
+		<Device id="SRB_PF_S29AL032_D70" name="SRam Bus PFlash Spansion S29AL032D 70NS" size="16777216" type="SRB">
+			<Param name="SramCtrl">
+				0x01010006
+			</Param>
+		</Device>
+		<Device id="SRB_PF_S29GL128_N90" name="SRam Bus PFlash Spansion S29GL128N 90NS" size="16777216" type="SRB">
+			<Param name="SramCtrl">
+				0x01010008
+			</Param>
+		</Device>
+		<Device id="SRB_PF_JS28F256_J3" name="SRam Bus PFlash Numonyx JS28F256J3" size="33554432" type="SRB">
+			<Param name="SramCtrl">
+				0x0100010c
+			</Param>
+		</Device>
+	</dst>
+
+
+	<dst netx_version="netx 10">
 		<Device id="INTRAM" name="Internal Ram" size="0x0001fffc" type="INTRAM">
 		</Device>
 		<Device id="SD_MT48LC2M32B2" name="SDRam MT48LC2M32B2" size="0x00800000" type="SDRAM">
