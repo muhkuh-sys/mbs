@@ -46,7 +46,7 @@ def hexdump_action(target, source, env):
 	atSourceData = array.array(strArrayFormat)
 	atSourceData.fromstring(strSourceData)
 
-	strPrintFormat = ' %%0%dx\n' % iElemSize
+	strPrintFormat = ' %%0%dx\n' % (iElemSize*2)
 
 	# Loop over all elements.
 	for tElement in atSourceData:
