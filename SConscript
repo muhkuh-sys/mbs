@@ -40,6 +40,7 @@ import diff
 import flex_zip
 import gcc_symbol_template
 import gen_random_seq
+import hexdump
 import scons_common
 import svnversion
 import uuencode
@@ -156,6 +157,7 @@ diff.ApplyToEnv(env_default)
 flex_zip.ApplyToEnv(env_default)
 gcc_symbol_template.ApplyToEnv(env_default)
 gen_random_seq.ApplyToEnv(env_default)
+hexdump.ApplyToEnv(env_default)
 scons_common.ApplyToEnv(env_default)
 svnversion.ApplyToEnv(env_default)
 uuencode.ApplyToEnv(env_default)
