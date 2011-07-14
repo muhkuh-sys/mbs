@@ -122,7 +122,20 @@ def bootblock_action(target, source, env):
 	
 	# Generate a temp filename for the binary.
 	strBinFileName = strElfFileName + '.bin'
-	
+
+	# Get the chiptyp info.
+	iChipTyp = env['BOOTBLOCK_CHIPTYPE']
+	if iChipTyp==500:
+		strChipTyp = 'netx 500'
+	elif iChipTyp==56:
+		strChipTyp = 'netx 56'
+	elif iChipTyp==50:
+		strChipTyp = 'netx 50'
+	elif iChipTyp==10:
+		strChipTyp = 'netx 10'
+	else:
+		raise Exception('Invalid chip type: "%s"'%iChipTyp)
+
 	# Extract the segments.
 	atSegments = elf_support.get_segment_table(env, strElfFileName)
 	# Get the estimated binary size from the segments.
@@ -180,8 +193,6 @@ def bootblock_action(target, source, env):
 		# Read the xml file.
 		tNetxXml = xml.etree.ElementTree.ElementTree()
 		tNetxXml.parse(env['BOOTBLOCK_XML'])
-		# Generate the chiptyp info.
-		strChipTyp = 'netx 500'
 	
 	# Apply source options.
 	if isinstance(env['BOOTBLOCK_SRC'], dict):
@@ -232,6 +243,7 @@ def bootblock_action(target, source, env):
 def bootblock_emitter(target, source, env):
 	# Make the target depend on the xml file and the parameter.
 	Depends(target, env['BOOTBLOCK_XML'])
+	Depends(target, SCons.Node.Python.Value(env['BOOTBLOCK_CHIPTYPE']))
 	Depends(target, SCons.Node.Python.Value(env['BOOTBLOCK_SRC']))
 	Depends(target, SCons.Node.Python.Value(env['BOOTBLOCK_DST']))
 	Depends(target, SCons.Node.Python.Value(env['BOOTBLOCK_USERDATA']))
@@ -249,6 +261,7 @@ def ApplyToEnv(env):
 	# Add bootblock builder.
 	#
 	env['BOOTBLOCK_XML'] = os.path.join( os.path.dirname(os.path.realpath(__file__)), 'netx.xml')
+	env['BOOTBLOCK_CHIPTYPE'] = 'not selected'
 	env['BOOTBLOCK_SRC'] = ''
 	env['BOOTBLOCK_DST'] = ''
 	env['BOOTBLOCK_USERDATA'] = 0
