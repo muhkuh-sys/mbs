@@ -32,12 +32,25 @@ def hexdump_action(target, source, env):
 
 	# Read the source data into an array.
 	strSourceData = source[0].get_contents()
-	atSourceData = array.array('L')
+
+	iElemSize = env['HEXDUMP_ELEMENT_SIZE']
+	if iElemSize==1:
+		strArrayFormat = 'B'
+	elif iElemSize==2:
+		strArrayFormat = 'H'
+	elif iElemSize==4:
+		strArrayFormat = 'L'
+	else:
+		raise Exception('Invalid element size, must be 1, 2 or 3, but it is %d' % iElemSize)
+
+	atSourceData = array.array(strArrayFormat)
 	atSourceData.fromstring(strSourceData)
 
+	strPrintFormat = ' %%0%dx\n' % iElemSize
+
 	# Loop over all elements.
-	for ulElement in atSourceData:
-		file_target.write(' %08x\n'%ulElement)
+	for tElement in atSourceData:
+		file_target.write(strPrintFormat%tElement)
 
 	# Close the output file.
 	file_target.close()
