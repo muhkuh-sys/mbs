@@ -1077,6 +1077,14 @@ or      false, error message string
 				0x03c13261
 			</Param>
 		</Device>
+		<Device id="IS42S32800D_7BLI" name="IS42S32800D-7BLI" size="0x00800000" type="SDRAM">
+			<Param name="SdramGeneralCtrl">
+				0x030D0111
+			</Param>
+			<Param name="SdramTimingCtrl">
+				0x03c363a1
+			</Param>
+		</Device>
 		<Device id="2ND_STAGE_DEFAULT" name="2nd Stage loader with default settings" size="0" type="INTRAM">
 			<Param name="IoRegMode0">
 				0x00000000
