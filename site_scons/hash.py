@@ -1,0 +1,85 @@
+# -*- coding: utf-8 -*-
+#-------------------------------------------------------------------------#
+#   Copyright (C) 2011 by Christoph Thelen                                #
+#   doc_bacardi@users.sourceforge.net                                     #
+#                                                                         #
+#   This program is free software; you can redistribute it and/or modify  #
+#   it under the terms of the GNU General Public License as published by  #
+#   the Free Software Foundation; either version 2 of the License, or     #
+#   (at your option) any later version.                                   #
+#                                                                         #
+#   This program is distributed in the hope that it will be useful,       #
+#   but WITHOUT ANY WARRANTY; without even the implied warranty of        #
+#   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         #
+#   GNU General Public License for more details.                          #
+#                                                                         #
+#   You should have received a copy of the GNU General Public License     #
+#   along with this program; if not, write to the                         #
+#   Free Software Foundation, Inc.,                                       #
+#   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             #
+#-------------------------------------------------------------------------#
+
+import hashlib
+import os.path
+
+import SCons
+import SCons.Node.FS
+from SCons.Script import *
+
+
+def hash_action(target, source, env):
+	# Init the results array.
+	aHashes = []
+
+	# Get the directory path of the target file. This is the working dir and all paths in the hash file must be relative to this.
+	strWorkingDir = os.path.dirname(target[0].get_path())
+
+	# Create a new hash object with the requested algorithm.
+	try:
+		tHashBase = hashlib.new(env['HASH_ALGORITHM'])
+	except ValueError,e:
+		print 'Supported hash types: %s'%', '.join(hashlib.algorithms)
+		raise e
+
+	# Loop over all sources.
+	for tSource in source:
+		# Get a copy of the hast base.
+		tHash = tHashBase.copy()
+		# Process the complete file.
+		tHash.update(tSource.get_contents())
+		# Get the relative path to the working folder.
+		strRelPath = os.path.relpath(tSource.get_path(), strWorkingDir)
+		# Append the hash sum to the results.
+		strDigest = tHash.hexdigest()
+		aHashes.append('%s *%s\n'%(strDigest, strRelPath))
+
+	# Write all hashes to the target file.
+	tFileTarget = open(target[0].get_path(), 'w')
+	tFileTarget.writelines(aHashes)
+	tFileTarget.close()
+
+	return 0
+
+
+def hash_emitter(target, source, env):
+	# Make the target depend on the parameter.
+	Depends(target, SCons.Node.Python.Value(env['HASH_ALGORITHM']))
+
+	return target, source
+
+
+def hash_string(target, source, env):
+	return 'Hash %s' % target[0].get_path()
+
+
+def ApplyToEnv(env):
+	#----------------------------------------------------------------------------
+	#
+	# Add Hash builder.
+	#
+	env['HASH_ALGORITHM'] = 'sha1'
+
+	hash_act = SCons.Action.Action(hash_action, hash_string)
+	hash_bld = Builder(action=hash_act, emitter=hash_emitter)
+	env['BUILDERS']['Hash'] = hash_bld
+
