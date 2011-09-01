@@ -2,7 +2,7 @@
 
 <!--
    SVN Keywords
-  
+
    $Date: 2010-06-16 14:52:29 +0200 (Wed, 16 Jun 2010) $
    $Revision: 8396 $
    $Author: christoph $
@@ -11,7 +11,7 @@
 <!--
 extraction functions
 function (elf filename, raw binary filename)
-the function must generate the raw binary from the elf file and write it to the indicated filename, and 
+the function must generate the raw binary from the elf file and write it to the indicated filename, and
 return either true, load address, entry address
 or      false, error message string
 -->
@@ -23,7 +23,7 @@ or      false, error message string
 				function (strElfName, strBinName)
 					print("toolset", strElfName, strBinName)
 					require("utils")
-					
+
 					-- setup the paths to objcopy/readelf and the command strings
 					local strPath = os.getenv("PATH_GNU_ARM")
 					if not strPath or strPath:len()==0 then
@@ -36,33 +36,33 @@ or      false, error message string
 					local strObjdumpCmd = string.format(
 						[["%s\bin\arm-hitex-elf-objdump.exe" -f -h "%s"]],
 						strPath, strElfName)
-					
+
 					local ulLoadAddr = nil
 					local ulEntryAddr = nil
-				
+
 					-- build raw binary
 					local iRes, strOutput = utils.runcommand(strObjcopyCmd)
 					if iRes ~= 0 then
 						return false, "Can't extract binary"
 					end
-						
-					
+
+
 					-- extract load/entry address
 					iRes, strOutput = utils.runcommand(strObjdumpCmd)
 					if iRes ~= 0 then
 						return false, "objdump failed"
 					end
-					
+
 
 					-- parse loadable sections
 					-- 1 .itcm_data    000013f8  00000100  8000c000  00000100  2**2
-					--                  CONTENTS, ALLOC, LOAD, READONLY, CODE 
+					--                  CONTENTS, ALLOC, LOAD, READONLY, CODE
 					local lineend = "[^"..string.char(13,10).."]*" .. "["..string.char(13,10).."]+"
 					local section_pattern=
 					" +(%d+) +([^ ]+) +"--number/name
 					.."(%x+) +(%x+) +(%x+) +(%x+)"..lineend -- size, vma, lma, offset
 					.."[%u ,]+LOAD"..lineend
-					
+
 					local function printf(strFormat, ...) return print(string.format(strFormat, ...)) end
 					local strFormat = "%3d %-20s 0x%08s 0x%08s 0x%08s 0x%08s"
 
@@ -77,17 +77,17 @@ or      false, error message string
 					if not ulLoadAddr then
 						return false, "Can't extract load address from objdump output"
 					end
-					
+
 					local strEntryAddr = strOutput:match("start address (0x%x+)")
 					if not strEntryAddr then
 						return false, "Can't extract entry address from objdump output"
 					end
-					
+
 					ulEntryAddr = tonumber(strEntryAddr)
 					if not ulEntryAddr then
 						return false, "Can't parse entry address: " .. strEntryAddr
 					end
-					
+
 					printf("load addr: %08x  entry addr: %08x", ulLoadAddr, ulEntryAddr)
 					return true, ulLoadAddr, ulEntryAddr
 				end
@@ -98,7 +98,7 @@ or      false, error message string
 				function (strElfName, strBinName)
 					print("toolset", strElfName, strBinName)
 					require("utils")
-					
+
 					-- setup the paths to objcopy/readelf and the command strings
 					local strPath = "/home/christoph/.m2/depack/gcc/gcc-arm-elf-4.3.3/bin/arm-elf-"
 
@@ -108,24 +108,24 @@ or      false, error message string
 					local strReadelfCmd = string.format(
 						[["%sreadelf" -l "%s"]],
 						strPath, strElfName)
-					
+
 					local ulLoadAddr = nil
 					local ulEntryAddr = nil
-				
+
 					-- build raw binary
 					local iRes, strOutput = utils.runcommand(strObjcopyCmd)
 					if iRes ~= 0 then
 						return false, "Can't extract binary"
 					end
-						
-					
+
+
 					-- extract load/entry address
 					iRes, strOutput = utils.runcommand(strReadelfCmd)
 					if iRes ~= 0 then
 						return false, "readelf -l failed"
 					end
-					
-					
+
+
 					-- find all LOADable segments with Size > 0 and choose the one with the smallest
 					-- physical address as the load address
 					local ulPhysAddr, ulSize
@@ -141,30 +141,30 @@ or      false, error message string
 							ulLoadAddr = ulPhysAddr
 						end
 					end
-					
+
 					if not ulLoadAddr then
 						return false, "Can't extract load address from readelf output"
 					end
-					
+
 					local strEntryAddr = strOutput:match("Entry point (0x%x+)")
 					if not strEntryAddr then
 						return false, "Can't extract entry address from readelf output"
 					end
-					
+
 					ulEntryAddr = tonumber(strEntryAddr)
 					if not ulEntryAddr then
 						return false, "Can't parse entry address: " .. strEntryAddr
 					end
-					
+
 					print(string.format("load addr: %08x  entry addr: %08x", ulLoadAddr, ulEntryAddr))
 					return true, ulLoadAddr, ulEntryAddr
 				end
 			</lua>
 		</Toolset>
 	</bin>
-	
-<!-- 
-	Device descriptions. 
+
+<!--
+	Device descriptions.
 	src/dest tags must include netx_version attribute to indicate to which chip version the device descriptions apply.
 	for netx 100, use the value "netx 500", since the device parameters for netx 100 and 500 are equal.
 -->
@@ -509,7 +509,7 @@ or      false, error message string
 				7
 			</Param>
 		</Device>
-		
+
 		<Device id="SRB_PF_TE28F128J3" name="SRam Bus PFlash Intel TE28F128J3" size="16777216" type="SRB">
 			<Param name="MagCok">
 			        0xF8BEAF16
@@ -582,15 +582,15 @@ or      false, error message string
 				0x0100010c
 			</Param>
 		</Device>
-		
+
 		<Device id="MMC" name="MMC card" size="0" type="MMC">
 		</Device>
 	</src>
-	
-	
-	
-	
-	
+
+
+
+
+
 	<src netx_version="netx 56">
 		<Device id="I2C_gen_50" name="Generic I2C EEprom netX50, 50kHz" size="0" type="I2C">
 			<Param name="Speed">
@@ -726,7 +726,7 @@ or      false, error message string
 				0x0100010c
 			</Param>
 		</Device>
-		
+
 		<Device id="DPM" name="DPM" size="0" type="MMC">
 		</Device>
 		<Device id="MMC" name="MMC card" size="0" type="MMC">
@@ -1129,10 +1129,10 @@ or      false, error message string
 				0x0100010c
 			</Param>
 		</Device>
-		
+
 	</dst>
 
-	
+
 	<dst netx_version="netx 56">
 		<Device id="INTRAM" name="Internal Ram" size="0x0001fffc" type="INTRAM">
 		</Device>
@@ -1142,6 +1142,14 @@ or      false, error message string
 			</Param>
 			<Param name="SdramTimingCtrl">
 				0x00A12151
+			</Param>
+		</Device>
+		<Device id="SD_MT48LC4M16A2" name="SDRam MT48LC4M16A2" size="0" type="SDRAM">
+			<Param name="SdramGeneralCtrl">
+				0x030c0011
+			</Param>
+			<Param name="SdramTimingCtrl">
+				0x01b13251
 			</Param>
 		</Device>
 		<Device id="SRB_PF_GEN_08" name="Generic SRam Bus PFlash 8 bit" size="0" type="SRB">
