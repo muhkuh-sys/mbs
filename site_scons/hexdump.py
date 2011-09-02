@@ -28,45 +28,68 @@ from SCons.Script import *
 
 
 def hexdump_action(target, source, env):
-	file_target = open(target[0].get_path(), 'w')
-
 	# Read the source data into an array.
 	strSourceData = source[0].get_contents()
 
-	iElemSize = env['HEXDUMP_ELEMENT_SIZE']
+	iElemSize = float(env['HEXDUMP_ELEMENT_SIZE'])
 	if iElemSize==1:
 		strArrayFormat = 'B'
 	elif iElemSize==2:
 		strArrayFormat = 'H'
-	elif iElemSize==4:
+	elif iElemSize==4 or iElemSize==4.5:
 		strArrayFormat = 'L'
 	else:
-		raise Exception('Invalid element size, must be 1, 2 or 3, but it is %d' % iElemSize)
+		raise Exception('Invalid element size, must be 1, 2 4 or 4.5, but it is %d' % iElemSize)
 
 	atSourceData = array.array(strArrayFormat)
 	atSourceData.fromstring(strSourceData)
 
-	strPrintFormat = ' %%0%dx\n' % (iElemSize*2)
+	if iElemSize==4.5:
+		file_target_lo = open(target[0].get_path(), 'wt')
+		file_target_hi = open(target[1].get_path(), 'wt')
 
-	# Loop over all elements.
-	for tElement in atSourceData:
-		file_target.write(strPrintFormat%tElement)
+		# Loop over all elements.
+		for tElement in atSourceData:
+			file_target_lo.write(' %04x\n'%(tElement&0xffff))
+			file_target_hi.write(' %04x\n'%(tElement>>16))
 
-	# Close the output file.
-	file_target.close()
-	
+		# Close the output file.
+		file_target_lo.close()
+		file_target_hi.close()
+
+	else:
+		file_target = open(target[0].get_path(), 'w')
+
+		strPrintFormat = ' %%0%dx\n' % (iElemSize*2)
+
+		# Loop over all elements.
+		for tElement in atSourceData:
+			file_target.write(strPrintFormat%tElement)
+
+		# Close the output file.
+		file_target.close()
+
 	return 0
 
 
 def hexdump_emitter(target, source, env):
+	# Get the element size.
+	sizElement = float(env['HEXDUMP_ELEMENT_SIZE'])
+
 	# Make the target depend on the parameter.
-	Depends(target, SCons.Node.Python.Value(env['HEXDUMP_ELEMENT_SIZE']))
-	
+	Depends(target, SCons.Node.Python.Value(sizElement))
+
+	# The element size of 4.5 is special. It cuts the 32 bit words in 2 words with 16 bits each.
+	# The files are named after the first target.
+	if sizElement==4.5:
+		strPath,strExt = os.path.splitext(target[0].get_path())
+		target = [File(strPath+'_lo'+strExt), File(strPath+'_hi'+strExt)]
+
 	return target, source
 
 
 def hexdump_string(target, source, env):
-	return 'HexDump %s' % target[0].get_path()
+	return 'HexDump %s' % ', '.join([t.get_path() for t in target])
 
 
 def ApplyToEnv(env):
