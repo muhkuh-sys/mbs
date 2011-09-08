@@ -27,6 +27,9 @@ from SCons.Script import *
 
 
 def objimport_action(target, source, env):
+	# Get the section name.
+	strSectionName = env['OBJIMPORT_SECTIONNAME']
+
 	# Get the old path. This must be restored at the end of the function.
 	strOldPath = os.getcwd()
 
@@ -37,13 +40,20 @@ def objimport_action(target, source, env):
 
 	# Change to the folder of the sourcefile.
 	os.chdir(os.path.abspath(strSrcPath))
-	iReturnCode = subprocess.call([env['OBJCOPY'], '-v', '-I', 'binary', '-O', 'elf32-littlearm', '-B', 'ARM', '--rename-section', '.data=.rodata', strSrcFile, strDstPath])
+	iReturnCode = subprocess.call([env['OBJCOPY'], '-v', '-I', 'binary', '-O', 'elf32-littlearm', '-B', 'ARM', '--rename-section', '.data=%s'%strSectionName, strSrcFile, strDstPath])
 
 	# Move back to the old folder.
 	os.chdir(strOldPath)
 
 	if iReturnCode!=0:
 		raise Exception('Failed to convert the source to an object file!')
+
+
+def objimport_emitter(target, source, env):
+	# Make the target depend on the parameter.
+	Depends(target, SCons.Node.Python.Value(env['OBJIMPORT_SECTIONNAME']))
+
+	return target, source
 
 
 def objimport_string(target, source, env):
@@ -55,7 +65,9 @@ def ApplyToEnv(env):
 	#
 	# Add ObjImport builder.
 	#
+	env['OBJIMPORT_SECTIONNAME'] = '.rodata'
+
 	objimport_act = SCons.Action.Action(objimport_action, objimport_string)
-	objimport_bld = Builder(action=objimport_act, suffix='$OBJSUFFIX', single_source=1)
+	objimport_bld = Builder(action=objimport_act, emitter=objimport_emitter, suffix='$OBJSUFFIX', single_source=1)
 	env['BUILDERS']['ObjImport'] = objimport_bld
 
