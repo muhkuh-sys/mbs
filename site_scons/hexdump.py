@@ -28,8 +28,16 @@ from SCons.Script import *
 
 
 def hexdump_action(target, source, env):
+	sizSkip = long(env['HEXDUMP_SKIPBYTES'], 0)
+	sizMax = long(env['HEXDUMP_MAXSIZE'], 0)
+
 	# Read the source data into an array.
 	strSourceData = source[0].get_contents()
+	# A 0 for the maximum size means all data.
+	if sizMax==0:
+		sizMax = len(strSourceData)
+	# Limit the data to the requested part.
+	strSourceData = strSourceData[sizSkip:sizSkip+sizMax]
 
 	iElemSize = float(env['HEXDUMP_ELEMENT_SIZE'])
 	if iElemSize==1:
@@ -78,6 +86,7 @@ def hexdump_emitter(target, source, env):
 
 	# Make the target depend on the parameter.
 	Depends(target, SCons.Node.Python.Value(sizElement))
+	Depends(target, SCons.Node.Python.Value(env['HEXDUMP_SKIPBYTES']))
 
 	# The element size of 4.5 is special. It cuts the 32 bit words in 2 words with 16 bits each.
 	# The files are named after the first target.
@@ -98,6 +107,8 @@ def ApplyToEnv(env):
 	# Add hexdump builder.
 	#
 	env['HEXDUMP_ELEMENT_SIZE'] = 4
+	env['HEXDUMP_SKIPBYTES'] = '0'
+	env['HEXDUMP_MAXSIZE'] = '0'
 
 	hexdump_act = SCons.Action.Action(hexdump_action, hexdump_string)
 	hexdump_bld = Builder(action=hexdump_act, emitter=hexdump_emitter, suffix='.hex', single_source=1)
