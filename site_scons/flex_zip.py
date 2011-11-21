@@ -78,6 +78,7 @@ def zip_string(target, source, env):
 
 
 def ApplyToEnv(env):
+	env['ZIP_PATH_TRANSLATE'] = dict({})
 	zip_act = SCons.Action.Action(zip_action, zip_string)
 	zip_bld = Builder(action=zip_act, emitter=zip_emitter, suffix='.zip')
 	env['BUILDERS']['FlexZip'] = zip_bld
