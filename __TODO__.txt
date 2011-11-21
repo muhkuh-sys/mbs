@@ -1,0 +1,12 @@
+ToDo:
+-----
+
+* The zip builder syntax is too complicated. Files with custom paths must be listed twice.
+
+* The batch file name depends on the platform (.bat and .sh). Can this be unified?
+
+* Building the docs fails miserably if python is not in the path. This seems to be a problem of asciidoc.
+  Can this be fixed with an environment variable for the asciidoc call? Or should I try to patch asciidoc?
+
+* Maybe it is more comfortable to change the setup.xml syntax to maven. This would allow the user to copy
+  and paste dependencies from repository managers like nexus.
