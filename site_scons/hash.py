@@ -22,6 +22,8 @@
 import hashlib
 import os.path
 
+from string import Template
+
 import SCons
 import SCons.Node.FS
 from SCons.Script import *
@@ -30,6 +32,8 @@ from SCons.Script import *
 def hash_action(target, source, env):
 	# Init the results array.
 	aHashes = []
+
+	tTemplate = env['HASH_TEMPLATE_OBJECT']
 
 	# Get the directory path of the target file. This is the working dir and all paths in the hash file must be relative to this.
 	strWorkingDir = os.path.dirname(target[0].get_path())
@@ -43,15 +47,18 @@ def hash_action(target, source, env):
 
 	# Loop over all sources.
 	for tSource in source:
-		# Get a copy of the hast base.
+		# Get a copy of the hash base.
 		tHash = tHashBase.copy()
 		# Process the complete file.
 		tHash.update(tSource.get_contents())
 		# Get the relative path to the working folder.
 		strRelPath = os.path.relpath(tSource.get_path(), strWorkingDir)
 		# Append the hash sum to the results.
-		strDigest = tHash.hexdigest()
-		aHashes.append('%s *%s\n'%(strDigest, strRelPath))
+		aSubstitute = dict({
+			'HASH': tHash.hexdigest(),
+			'PATH': strRelPath
+		})
+		aHashes.append(tTemplate.safe_substitute(aSubstitute))
 
 	# Write all hashes to the target file.
 	tFileTarget = open(target[0].get_path(), 'w')
@@ -64,6 +71,10 @@ def hash_action(target, source, env):
 def hash_emitter(target, source, env):
 	# Make the target depend on the parameter.
 	Depends(target, SCons.Node.Python.Value(env['HASH_ALGORITHM']))
+	Depends(target, SCons.Node.Python.Value(env['HASH_TEMPLATE']))
+
+	# Create hash templete object.
+	env['HASH_TEMPLATE_OBJECT'] = Template(env['HASH_TEMPLATE'])
 
 	return target, source
 
@@ -78,6 +89,8 @@ def ApplyToEnv(env):
 	# Add Hash builder.
 	#
 	env['HASH_ALGORITHM'] = 'sha1'
+	env['HASH_TEMPLATE'] = '${HASH} *${PATH}\n'
+	
 
 	hash_act = SCons.Action.Action(hash_action, hash_string)
 	hash_bld = Builder(action=hash_act, emitter=hash_emitter)
