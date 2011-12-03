@@ -100,7 +100,7 @@ def check_sha1_sum(strSha1File, strBinFile):
 	bResult = False
 	strRemoteHash = None
 	
-	tRegObj = re.compile('([0-9a-fA-F]+)\*?[ \t]+'+ re.escape(os.path.basename(strBinFile)))
+	tRegObj = re.compile('([0-9a-fA-F]+)')
 	fInput = open(strSha1File, 'rt')
 	for strLine in fInput:
 		tMatchObj = tRegObj.match(strLine)
