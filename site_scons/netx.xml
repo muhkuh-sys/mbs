@@ -729,6 +729,8 @@ or      false, error message string
 
 		<Device id="DPM" name="DPM" size="0" type="MMC">
 		</Device>
+		<Device id="ETH" name="Ethernet" size="0" type="MMC">
+		</Device>
 		<Device id="MMC" name="MMC card" size="0" type="MMC">
 		</Device>
 		<Device id="SQI" name="SQI" size="0" type="MMC">
