@@ -189,7 +189,7 @@ def bootblock_action(target, source, env):
 	aBootBlock[0x0e] = 0x00000000                   # src type
 	
 	# Test if we need to read the xml file.
-	if isinstance(env['BOOTBLOCK_SRC'], str) or isinstance(env['BOOTBLOCK_DST'], str):
+	if isinstance(env['BOOTBLOCK_SRC'], basestring) or isinstance(env['BOOTBLOCK_DST'], basestring):
 		# Read the xml file.
 		tNetxXml = xml.etree.ElementTree.ElementTree()
 		tNetxXml.parse(env['BOOTBLOCK_XML'])
@@ -202,7 +202,7 @@ def bootblock_action(target, source, env):
 			if uiOffset<0 or uiOffset>16:
 				raise Exception('invalid offset in BOOTBLOCK_SRC parameters: %s' % uiOffset)
 			aBootBlock[uiOffset] = ulValue
-	elif isinstance(env['BOOTBLOCK_SRC'], str):
+	elif isinstance(env['BOOTBLOCK_SRC'], basestring):
 		# Find the source device.
 		tDeviceElement = find_device_node(tNetxXml, 'src', strChipTyp, env['BOOTBLOCK_SRC'])
 		apply_parameters(tDeviceElement, aBootBlock)
@@ -217,7 +217,7 @@ def bootblock_action(target, source, env):
 			if uiOffset<0 or uiOffset>16:
 				raise Exception('invalid offset in BOOTBLOCK_DST parameters: %s' % uiOffset)
 			aBootBlock[uiOffset] = ulValue
-	elif isinstance(env['BOOTBLOCK_DST'], str):
+	elif isinstance(env['BOOTBLOCK_DST'], basestring):
 		tDeviceElement = find_device_node(tNetxXml, 'dst', strChipTyp, env['BOOTBLOCK_DST'])
 		apply_parameters(tDeviceElement, aBootBlock)
 	else:
