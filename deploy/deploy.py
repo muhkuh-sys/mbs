@@ -11,7 +11,7 @@ import xml.dom.minidom
 
 import deploy_version
 import repository_driver_nexus
-import rest_driver_httplib
+#import rest_driver_httplib
 import rest_driver_httplib2
 
 
@@ -28,7 +28,6 @@ REVISION_MINOR    = 2
 class Deploy:
 	def __init__(self, strHost):
 		# Create the rest driver.
-		#tRestDriver = rest_driver_httplib.RestDriver()
 		tRestDriver = rest_driver_httplib2.RestDriver()
 
 		# Create the repository driver.
@@ -36,6 +35,79 @@ class Deploy:
 
 		# No Artifacts yet.
 		self.aArtifacts = dict({})
+
+		# No credentials yet.
+		self.aCredentials = dict({})
+
+
+
+	def read_credentials(self, strConfigPath):
+		strRealPath = os.path.abspath(os.path.expanduser(strConfigPath))
+		if os.path.isfile(strRealPath)==True:
+			tXml = ElementTree()
+			tXml.parse(strRealPath)
+
+			for tNode in tXml.findall('account'):
+				strId = tNode.get('id')
+				
+				strValue = tNode.findtext('user')
+				if strValue==None:
+					raise Exception('Account "%s" has no user node.' % strId)
+				strUser = strValue.strip()
+				if strUser=='':
+					raise Exception('Account "%s" has an empty user node.' % strId)
+
+				strValue = tNode.findtext('password')
+				if strValue==None:
+					raise Exception('Account "%s" has no password node.' % strId)
+				strPassword = strValue.strip()
+				if strPassword=='':
+					raise Exception('Account "%s" has an empty password node.' % strId)
+
+				tServerNode = tNode.find('server')
+				if tServerNode==None:
+					raise Exception('Account "%s" has no server information.' % strId)
+
+				strValue = tServerNode.findtext('base')
+				if strValue==None:
+					raise Exception('Account "%s" has no base node.' % strId)
+				strServerBase = strValue.strip()
+				if strServerBase=='':
+					raise Exception('Account "%s" has an empty base node.' % strId)
+
+				strValue = tServerNode.findtext('release')
+				if strValue==None:
+					raise Exception('Account "%s" has no release node.' % strId)
+				else:
+					strRepositoryRelease = strValue.strip()
+					if strRepositoryRelease=='':
+						raise Exception('Account "%s" has an empty release node.' % strId)
+
+				strValue = tServerNode.findtext('snapshots')
+				if strValue==None:
+					raise Exception('Account "%s" has no snapshots node.' % strId)
+				else:
+					strRepositorySnapshots = strValue.strip()
+					if strRepositorySnapshots=='':
+						raise Exception('Account "%s" has an empty snapshots node.' % strId)
+
+				aAttrib = dict({
+					'user': strUser,
+					'password': strPassword,
+					'base': strServerBase,
+					'release': strRepositoryRelease,
+					'snapshots': strRepositorySnapshots
+				})
+
+				self.aCredentials[strId] = aAttrib
+
+
+
+	def set_credentials(self, strId):
+		if not strId in self.aCredentials:
+			raise Exception('Requested credentials "%s" not found!' % strId)
+
+		self.tRepositoryDriver.set_credentials(self.aCredentials[strId])
 
 
 
@@ -121,6 +193,7 @@ class Deploy:
 		self.aArtifacts = aArtifacts
 
 
+
 	def write_xml(self, strFileName):
 		tXml = xml.dom.minidom.getDOMImplementation().createDocument(None, "Artifacts", None)
 		tNode_Project = tXml.documentElement.appendChild(tXml.createElement('Project'))
@@ -153,6 +226,7 @@ class Deploy:
 		tFile = open(strFileName, 'wt')
 		tXml.writexml(tFile, indent='', addindent='\t', newl='\n', encoding='UTF-8')
 		tFile.close()
+
 
 
 	def execute_scan(self):
@@ -294,6 +368,8 @@ def main():
 	                     help='Set the version of all filtered artifacts. The version can be MAJ, MIN, SNAPSHOT or an complete version string.')
 	tParser.add_argument('--report', action='store_true', dest='bReport', default=False,
 	                     help='Print a list of all artifacts wich will be deployed.')
+	tParser.add_argument('-c', '--credentials', dest='strCredentials', required=True, metavar='ID',
+	                     help='Use the credentials to connect to the server.')
 	tParser.add_argument('--deploy', action='store_true', dest='bDeploy', default=False,
 	                     help='Deploy all selected artifacts.')
 	tParser.add_argument('-v', '--verbose', action='store_true', dest='bVerbose', default=False,
@@ -307,6 +383,13 @@ def main():
 	print 'Welcome to deploy V1.0, written by Christoph Thelen in 2012.'
 
 	tDeploy = Deploy('nexus.netx01.hilscher.local')
+
+	# Read the credentials in the users home folder.
+	tDeploy.read_credentials('~/.mbs_credentials.xml')
+	# Add local credentials.
+	tDeploy.read_credentials('.mbs_credentials.xml')
+
+	tDeploy.set_credentials(aOptions.strCredentials)
 
 	# Read the artifact list.
 	aArtifacts = tDeploy.read_xml(aOptions.strInputFileName)

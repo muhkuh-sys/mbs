@@ -5,6 +5,7 @@ import hashlib
 import deploy_version
 
 from string import Template
+from urlparse import urlparse
 from xml.etree.ElementTree import XML
 
 
@@ -27,9 +28,6 @@ class RepositoryDriver:
 
 	strUrlLuceneSearchSha1 = 'service/local/lucene/search?sha1=%s'
 
-	strRepository_Snapshot = 'secmem_data_snapshots'
-	strRepository_Release = 'secmem_data'
-
 
 
 	def __init__(self, tRestDriver, strHost):
@@ -38,6 +36,16 @@ class RepositoryDriver:
 
 		# Create the base object for the hash sums.
 		self.tHashSha1Base = hashlib.new('sha1')
+
+
+
+	def set_credentials(self, aCredentials):
+		self.tServerBaseUrl = urlparse(aCredentials['base'])
+		self.strRepository_Release = aCredentials['release']
+		self.strRepository_Snapshot = aCredentials['snapshots']
+
+		# Pass the user and password to the rest driver.
+		self.tRestDriver.set_credentials(aCredentials['user'], aCredentials['password'])
 
 
 
@@ -79,8 +87,8 @@ class RepositoryDriver:
 	def getAllArtifactVersions(self, strGroupID, strArtifactID):
 		atVersions = []
 
-		strUrl = self.strUrlLuceneSearchGA % (strGroupID, strArtifactID)
-		aucContent = self.tRestDriver.get(self.strHost, strUrl)
+		strPath = self.strUrlLuceneSearchGA % (strGroupID, strArtifactID)
+		aucContent = self.tRestDriver.get(self.tServerBaseUrl, strPath)
 		tSearchResult = XML(aucContent)
 
 		# The search result must be complete.
@@ -110,8 +118,8 @@ class RepositoryDriver:
 		# Generate the SHA1 sum for the file.
 		strFileSha1 = self.generate_sha1_from_file(strFileName)
 
-		strUrl = self.strUrlLuceneSearchSha1 % strFileSha1
-		aucContent = self.tRestDriver.get(self.strHost, strUrl)
+		strPath = self.strUrlLuceneSearchSha1 % strFileSha1
+		aucContent = self.tRestDriver.get(self.tServerBaseUrl, strPath)
 		tSearchResult = XML(aucContent)
 
 		# The search result must be complete.
@@ -144,7 +152,6 @@ class RepositoryDriver:
 	def deploy(self, tArtifact):
 		# Is this a snapshot release?
 		bIsSnapshot = (tArtifact['deploy_as']==deploy_version.version(0, 0, 0))
-		print bIsSnapshot
 
 		# Get the version string.
 		strGID = tArtifact['gid']
@@ -152,8 +159,10 @@ class RepositoryDriver:
 		strPackaging = tArtifact['packaging']
 		strVersion = str(tArtifact['deploy_as'])
 
-		# Create the deploy path.
-		astrDeployPath = ['nexus', 'content', 'repositories']
+		astrDeployPath = []
+		# Add the path to the repositories.
+		# NOTE: This is fixed for nexus.
+		astrDeployPath = ['content', 'repositories']
 
 		# Append the repository name.
 		if bIsSnapshot==True:
@@ -168,7 +177,7 @@ class RepositoryDriver:
 
 		strLocalPath_Artifact = tArtifact['file']
 
-		strRemotePath_Base = '/%s/%s-%s.' % ('/'.join(astrDeployPath), strAID, strVersion)
+		strRemotePath_Base = '%s/%s-%s.' % ('/'.join(astrDeployPath), strAID, strVersion)
 
 		strRemotePath_Artifact     = strRemotePath_Base     + strPackaging
 		strRemotePath_ArtifactHash = strRemotePath_Artifact + '.sha1'
@@ -184,15 +193,15 @@ class RepositoryDriver:
 		strPomHash = self.generate_sha1_from_string(strPom)
 
 		# Upload the hash sum of the artifact.
-		self.tRestDriver.put_string(self.strHost, strRemotePath_ArtifactHash, strFileHash)
+		self.tRestDriver.put_string(self.tServerBaseUrl, strRemotePath_ArtifactHash, strFileHash)
 
 		# Upload the artifact.
-		self.tRestDriver.put_file(self.strHost, strRemotePath_Artifact, strLocalPath_Artifact)
+		self.tRestDriver.put_file(self.tServerBaseUrl, strRemotePath_Artifact, strLocalPath_Artifact)
 
 		# Upload the hash sum of the POM.
-		self.tRestDriver.put_string(self.strHost, strRemotePath_PomHash, strPomHash)
+		self.tRestDriver.put_string(self.tServerBaseUrl, strRemotePath_PomHash, strPomHash)
 
 		# Upload the POM.
-		self.tRestDriver.put_string(self.strHost, strRemotePath_Pom, strPom)
+		self.tRestDriver.put_string(self.tServerBaseUrl, strRemotePath_Pom, strPom)
 
 
