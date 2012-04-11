@@ -41,6 +41,7 @@ else:
 
 # Import all local modules.
 import archive
+import artifact
 import bootblock
 import build_properties
 import data_array
@@ -161,6 +162,7 @@ if strAsciidocVersion!=None:
 # Add all other tools to the default environment.
 #
 archive.ApplyToEnv(env_default)
+artifact.ApplyToEnv(env_default)
 bootblock.ApplyToEnv(env_default)
 build_properties.ApplyToEnv(env_default)
 data_array.ApplyToEnv(env_default)
