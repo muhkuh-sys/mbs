@@ -47,67 +47,39 @@ class Deploy:
 			tXml = ElementTree()
 			tXml.parse(strRealPath)
 
-			for tNode in tXml.findall('account'):
+			for tNode in tXml.findall('server'):
 				strId = tNode.get('id')
+				if strId==None:
+					raise Exception('A server has no "id" attribute.')
 				
+				strValue = tNode.findtext('url')
+				if strValue==None:
+					raise Exception('Account "%s" has no "url" node.' % strId)
+				strUrl = strValue.strip()
+				if strUrl=='':
+					raise Exception('Account "%s" has an empty "url" node.' % strId)
+
 				strValue = tNode.findtext('user')
 				if strValue==None:
-					raise Exception('Account "%s" has no user node.' % strId)
+					raise Exception('Account "%s" has no "user" node.' % strId)
 				strUser = strValue.strip()
 				if strUser=='':
-					raise Exception('Account "%s" has an empty user node.' % strId)
+					raise Exception('Account "%s" has an empty "user" node.' % strId)
 
 				strValue = tNode.findtext('password')
 				if strValue==None:
-					raise Exception('Account "%s" has no password node.' % strId)
+					raise Exception('Account "%s" has no "password" node.' % strId)
 				strPassword = strValue.strip()
 				if strPassword=='':
-					raise Exception('Account "%s" has an empty password node.' % strId)
-
-				tServerNode = tNode.find('server')
-				if tServerNode==None:
-					raise Exception('Account "%s" has no server information.' % strId)
-
-				strValue = tServerNode.findtext('base')
-				if strValue==None:
-					raise Exception('Account "%s" has no base node.' % strId)
-				strServerBase = strValue.strip()
-				if strServerBase=='':
-					raise Exception('Account "%s" has an empty base node.' % strId)
-
-				strValue = tServerNode.findtext('release')
-				if strValue==None:
-					raise Exception('Account "%s" has no release node.' % strId)
-				else:
-					strRepositoryRelease = strValue.strip()
-					if strRepositoryRelease=='':
-						raise Exception('Account "%s" has an empty release node.' % strId)
-
-				strValue = tServerNode.findtext('snapshots')
-				if strValue==None:
-					raise Exception('Account "%s" has no snapshots node.' % strId)
-				else:
-					strRepositorySnapshots = strValue.strip()
-					if strRepositorySnapshots=='':
-						raise Exception('Account "%s" has an empty snapshots node.' % strId)
+					raise Exception('Account "%s" has an empty "password" node.' % strId)
 
 				aAttrib = dict({
+					'url': strUrl,
 					'user': strUser,
-					'password': strPassword,
-					'base': strServerBase,
-					'release': strRepositoryRelease,
-					'snapshots': strRepositorySnapshots
+					'password': strPassword
 				})
 
 				self.aCredentials[strId] = aAttrib
-
-
-
-	def set_credentials(self, strId):
-		if not strId in self.aCredentials:
-			raise Exception('Requested credentials "%s" not found!' % strId)
-
-		self.tRepositoryDriver.set_credentials(self.aCredentials[strId])
 
 
 
@@ -368,8 +340,6 @@ def main():
 	                     help='Set the version of all filtered artifacts. The version can be MAJ, MIN, SNAPSHOT or an complete version string.')
 	tParser.add_argument('--report', action='store_true', dest='bReport', default=False,
 	                     help='Print a list of all artifacts wich will be deployed.')
-	tParser.add_argument('-c', '--credentials', dest='strCredentials', required=True, metavar='ID',
-	                     help='Use the credentials to connect to the server.')
 	tParser.add_argument('--deploy', action='store_true', dest='bDeploy', default=False,
 	                     help='Deploy all selected artifacts.')
 	tParser.add_argument('-v', '--verbose', action='store_true', dest='bVerbose', default=False,
@@ -388,8 +358,6 @@ def main():
 	tDeploy.read_credentials('~/.mbs_credentials.xml')
 	# Add local credentials.
 	tDeploy.read_credentials('.mbs_credentials.xml')
-
-	tDeploy.set_credentials(aOptions.strCredentials)
 
 	# Read the artifact list.
 	aArtifacts = tDeploy.read_xml(aOptions.strInputFileName)
