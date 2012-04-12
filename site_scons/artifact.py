@@ -10,43 +10,53 @@ import xml.dom.minidom
 aArtifacts = dict({})
 
 
-def add_artifact(tEnv, tFiles, strGroupID, strArtifactID, strPackaging):
-	# Process all files.
-	for tFile in tFiles:
-		print 'AddArtifact %s' % tFile.get_path()
-		
-		if not strGroupID in aArtifacts:
-			aArtifacts[strGroupID] = dict({})
+def add_artifact(tEnv, tFiles, strServerID, strGroupID, strArtifactID, strPackaging, **kwargs):
+	bGood = kwargs.get('GOOD', True)
 
-		aGroups = aArtifacts[strGroupID]
-		if strArtifactID in aGroups:
-			raise Exception('Double defined artifact "%s" in group "%s"!'%(strArtifactID, strGroupID))
+	if bGood==True:
+		# Process all files.
+		for tFile in tFiles:
+			print 'AddArtifact %s' % tFile.get_path()
 
-		aGroups[strArtifactID] = dict({
-			'file': tFile,
-			'packaging': strPackaging
-		})
+			if not strServerID in aArtifacts:
+				aArtifacts[strServerID] = dict({})
+			aServer = aArtifacts[strServerID]
+
+			if not strGroupID in aServer:
+				aServer[strGroupID] = dict({})
+			aGroup = aServer[strGroupID]
+
+			if strArtifactID in aGroup:
+				raise Exception('Double defined artifact "%s" in group "%s"!'%(strArtifactID, strGroupID))
+
+			aGroup[strArtifactID] = dict({
+				'file': tFile,
+				'packaging': strPackaging
+			})
+
 
 
 def artifact_action(target, source, env):
 	tXmlData = xml.dom.minidom.getDOMImplementation().createDocument(None, "Artifacts", None)
 	tNode_Project = tXmlData.documentElement.appendChild(tXmlData.createElement('Project'))
-	tNode_Targets = tNode_Project.appendChild(tXmlData.createElement('Targets'))
 
 	# Loop over all artifacts.
-	for (strGroupID,atFiles) in aArtifacts.items():
-		for (strArtifactID,tFileAttribs) in atFiles.items():
-			# Create a new Target node with the path to the file as
-			# 'file' attribute.
-			tNode_Target = tNode_Targets.appendChild(tXmlData.createElement('Target'))
-			tNode_Target.setAttribute('file', tFileAttribs['file'].get_path())
-			# Create ArtifactID, GroupID and Packaging children.
-			tNode_ArtifactID = tNode_Target.appendChild(tXmlData.createElement('ArtifactID'))
-			tNode_ArtifactID.appendChild(tXmlData.createTextNode(strArtifactID))
-			tNode_GroupID = tNode_Target.appendChild(tXmlData.createElement('GroupID'))
-			tNode_GroupID.appendChild(tXmlData.createTextNode(strGroupID))
-			tNode_Packaging = tNode_Target.appendChild(tXmlData.createElement('Packaging'))
-			tNode_Packaging.appendChild(tXmlData.createTextNode(tFileAttribs['packaging']))
+	for (strServerID,atGroups) in aArtifacts.iteritems():
+		tNode_Server = tNode_Project.appendChild(tXmlData.createElement('Server'))
+		tNode_Server.setAttribute('id', strServerID)
+		for (strGroupID,atFiles) in atGroups.iteritems():
+			for (strArtifactID,tFileAttribs) in atFiles.iteritems():
+				# Create a new Target node with the path to the file as
+				# 'file' attribute.
+				tNode_Target = tNode_Server.appendChild(tXmlData.createElement('Target'))
+				tNode_Target.setAttribute('file', tFileAttribs['file'].get_path())
+				# Create ArtifactID, GroupID and Packaging children.
+				tNode_ArtifactID = tNode_Target.appendChild(tXmlData.createElement('ArtifactID'))
+				tNode_ArtifactID.appendChild(tXmlData.createTextNode(strArtifactID))
+				tNode_GroupID = tNode_Target.appendChild(tXmlData.createElement('GroupID'))
+				tNode_GroupID.appendChild(tXmlData.createTextNode(strGroupID))
+				tNode_Packaging = tNode_Target.appendChild(tXmlData.createElement('Packaging'))
+				tNode_Packaging.appendChild(tXmlData.createTextNode(tFileAttribs['packaging']))
 
 	# Write the file to the target.
 	tFile = open(target[0].get_path(), 'wt')
@@ -59,9 +69,10 @@ def artifact_action(target, source, env):
 def artifact_emitter(target, source, env):
 	# Loop over all elements in the 'aArtifacts' dictionary and make the
 	# target depend on them.
-	for (strGroupID,atFiles) in aArtifacts.items():
-		for (strArtifactID,tFileAttribs) in atFiles.items():
-			Depends(target, tFileAttribs['file'])
+	for (strServerID,atGroups) in aArtifacts.items():
+		for (strGroupID,atFiles) in atGroups.items():
+			for (strArtifactID,tFileAttribs) in atFiles.items():
+				Depends(target, tFileAttribs['file'])
 
 	return target, source
 
