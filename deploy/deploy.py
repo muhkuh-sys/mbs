@@ -6,7 +6,6 @@ import hashlib
 import httplib2
 import os.path
 import re
-import xml.dom.minidom
 
 
 import deploy_version
@@ -32,9 +31,6 @@ class Deploy:
 
 		# Create the repository driver.
 		self.tRepositoryDriver = repository_driver_nexus.RepositoryDriver(tRestDriver, strHost)
-
-		# No Artifacts yet.
-		self.aArtifacts = dict({})
 
 		# No credentials yet.
 		self.aCredentials = dict({})
@@ -80,7 +76,7 @@ class Deploy:
 				})
 
 				self.aCredentials[strId] = aAttrib
-
+                                print 'Credential %s: %s, %s' % (strId, strUrl, strUser)
 
 
 	def to_bool(self, value):
@@ -94,110 +90,13 @@ class Deploy:
 
 	def read_xml(self, strFileName):
 		# Read the artifact list.
-		tXml = ElementTree()
-		tXml.parse(strFileName)
-
-		aArtifacts = dict({})
-
-		for tNode in tXml.findall('Project/Targets/Target'):
-			aAttrib = dict({})
-			strValue = tNode.get('file')
-			if strValue==None:
-				raise Exception('One of the Target nodes has no file attribute!')
-			else:
-				strFile = strValue.strip()
-				if strFile=='':
-					raise Exception('One of the Target nodes has an empty file attribute!')
-				aAttrib['file'] = strFile
-
-			strValue = tNode.get('selected', 'False')
-			bSelected = self.to_bool(strValue.strip())
-			aAttrib['selected'] = bSelected
-
-			strValue = tNode.get('deploy_as', '0.0.0')
-			strDeployAs = deploy_version.version(strValue.strip())
-			aAttrib['deploy_as'] = strDeployAs
-
-			strValue = tNode.findtext('ArtifactID')
-			if strValue==None:
-				raise Exception('One of the Target nodes has no ArtifactID child!')
-			else:
-				strArtifactID = strValue.strip()
-				if strArtifactID=='':
-					raise Exception('One of the Target nodes has an empty ArtifactID child!')
-				aAttrib['aid'] = strArtifactID
-
-			strValue = tNode.findtext('GroupID')
-			if strValue==None:
-				raise Exception('One of the Target nodes has no GroupID child!')
-			else:
-				strGroupID = strValue.strip()
-				if strGroupID=='':
-					raise Exception('One of the Target nodes has an empty GroupID child!')
-				aAttrib['gid'] = strGroupID
-
-			strValue = tNode.findtext('Packaging')
-			if strValue==None:
-				raise Exception('One of the Target nodes has no Packaging child!')
-			else:
-				strPackaging = strValue.strip()
-				if strPackaging=='':
-					raise Exception('One of the Target nodes has an empty Packaging child!')
-				aAttrib['packaging'] = strPackaging
-
-			# Read all versions.
-			aVersions = dict({})
-			for tVersionNode in tNode.findall('version'):
-				strVersion = tVersionNode.text.strip()
-				if strVersion=='':
-					raise Exception('One of the Target nodes has an empty version child!')
-				if strVersion in aVersions:
-					raise Exception('Double version!')
-				bMatch = self.to_bool(tVersionNode.get('match'))
-				aVersions[strVersion] = bMatch
-			aAttrib['versions'] = aVersions
-
-			strKey = '%s.%s' % (strGroupID, strArtifactID)
-			if strKey in aArtifacts:
-				raise Exception('Double key %s!' % strKey)
-			aArtifacts[strKey] = aAttrib
-
-		self.aArtifacts = aArtifacts
+		self.tXml = ElementTree()
+		self.tXml.parse(strFileName)
 
 
 
 	def write_xml(self, strFileName):
-		tXml = xml.dom.minidom.getDOMImplementation().createDocument(None, "Artifacts", None)
-		tNode_Project = tXml.documentElement.appendChild(tXml.createElement('Project'))
-		tNode_Targets = tNode_Project.appendChild(tXml.createElement('Targets'))
-
-		# Loop over all artifacts.
-		for aAttrib in self.aArtifacts.itervalues():
-			tNode_Target = tNode_Targets.appendChild(tXml.createElement('Target'))
-			tNode_Target.setAttribute('file', aAttrib['file'])
-			tNode_Target.setAttribute('selected', str(aAttrib['selected']))
-			tNode_Target.setAttribute('deploy_as', str(aAttrib['deploy_as']))
-
-			# Create ArtifactID, GroupID and Packaging children.
-			tNode_ArtifactID = tNode_Target.appendChild(tXml.createElement('ArtifactID'))
-			tNode_ArtifactID.appendChild(tXml.createTextNode(aAttrib['aid']))
-
-			tNode_GroupID = tNode_Target.appendChild(tXml.createElement('GroupID'))
-			tNode_GroupID.appendChild(tXml.createTextNode(aAttrib['gid']))
-
-			tNode_Packaging = tNode_Target.appendChild(tXml.createElement('Packaging'))
-			tNode_Packaging.appendChild(tXml.createTextNode(aAttrib['packaging']))
-
-			# Loop over all versions.
-			for (strVersion,bMatch) in aAttrib['versions'].iteritems():
-				tNode_Version = tNode_Target.appendChild(tXml.createElement('version'))
-				tNode_Version.setAttribute('match', str(bMatch))
-				tNode_Version.appendChild(tXml.createTextNode(strVersion))
-
-		# Write the file.
-		tFile = open(strFileName, 'wt')
-		tXml.writexml(tFile, indent='', addindent='\t', newl='\n', encoding='UTF-8')
-		tFile.close()
+		self.tXml.tostring(element, encoding="us-ascii", method="xml")
 
 
 
