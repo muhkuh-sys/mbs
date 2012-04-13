@@ -40,9 +40,7 @@ class RepositoryDriver:
 
 
 	def set_credentials(self, aCredentials):
-		self.tServerBaseUrl = urlparse(aCredentials['base'])
-		self.strRepository_Release = aCredentials['release']
-		self.strRepository_Snapshot = aCredentials['snapshots']
+		self.tServerBaseUrl = urlparse(aCredentials['url'])
 
 		# Pass the user and password to the rest driver.
 		self.tRestDriver.set_credentials(aCredentials['user'], aCredentials['password'])
@@ -149,7 +147,7 @@ class RepositoryDriver:
 
 
 
-	def deploy(self, tArtifact):
+	def deploy(self, tArtifact, strRepositoryRelease, strRepositorySnapshot):
 		# Is this a snapshot release?
 		bIsSnapshot = (tArtifact['deploy_as']==deploy_version.version(0, 0, 0))
 
@@ -166,9 +164,9 @@ class RepositoryDriver:
 
 		# Append the repository name.
 		if bIsSnapshot==True:
-			astrDeployPath.append(self.strRepository_Snapshot)
+			astrDeployPath.append(strRepositorySnapshot)
 		else:
-			astrDeployPath.append(self.strRepository_Release)
+			astrDeployPath.append(strRepositoryRelease)
 
 		# Generate the artifact specific part of the path.
 		astrDeployPath.extend(strGID.split('.'))

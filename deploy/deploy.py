@@ -14,9 +14,7 @@ import repository_driver_nexus
 import rest_driver_httplib2
 
 
-from xml.etree.ElementTree import ElementTree
-from xml.etree.ElementTree import SubElement
-from xml.etree.ElementTree import XML
+import xml.etree.ElementTree
 
 
 REVISION_SNAPSHOT = 0
@@ -40,7 +38,7 @@ class Deploy:
 	def read_credentials(self, strConfigPath):
 		strRealPath = os.path.abspath(os.path.expanduser(strConfigPath))
 		if os.path.isfile(strRealPath)==True:
-			tXml = ElementTree()
+			tXml = xml.etree.ElementTree.ElementTree()
 			tXml.parse(strRealPath)
 
 			for tNode in tXml.findall('server'):
@@ -79,6 +77,15 @@ class Deploy:
                                 print 'Credential %s: %s, %s' % (strId, strUrl, strUser)
 
 
+
+	def set_credentials(self, strId):
+		if not strId in self.aCredentials:
+			raise Exception('Requested credentials "%s" not found!' % strId)
+
+		self.tRepositoryDriver.set_credentials(self.aCredentials[strId])
+
+
+
 	def to_bool(self, value):
 		if str(value).lower() in ("yes", "y", "true",  "t", "1"):
 			return True
@@ -90,62 +97,150 @@ class Deploy:
 
 	def read_xml(self, strFileName):
 		# Read the artifact list.
-		self.tXml = ElementTree()
+		self.tXml = xml.etree.ElementTree.ElementTree()
 		self.tXml.parse(strFileName)
 
 
 
 	def write_xml(self, strFileName):
-		self.tXml.tostring(element, encoding="us-ascii", method="xml")
+		# Remove all 'filter' attributes. They are internal only.
+		for tNodeTarget in self.tXml.findall('Project/Server/Target'):
+			if 'filter' in tNodeTarget.attrib:
+				del tNodeTarget.attrib['filter']
+
+		# Convert the XML to a string.
+		strXml = xml.etree.ElementTree.tostring(self.tXml.getroot(), encoding="us-ascii", method="xml")
+		# Write the string to the destination file.
+		tFile = open(strFileName, 'wt')
+		tFile.write(strXml)
+		tFile.close()
+
+
+
+	def read_target_node(self, tNode):
+		aAttrib = dict({})
+		strValue = tNode.get('file')
+		if strValue==None:
+			raise Exception('One of the Target nodes has no file attribute!')
+		strFile = strValue.strip()
+		if strFile=='':
+			raise Exception('One of the Target nodes has an empty file attribute!')
+		aAttrib['file'] = strFile
+
+		strValue = tNode.get('selected', 'False')
+		bSelected = self.to_bool(strValue.strip())
+		aAttrib['selected'] = bSelected
+
+		strValue = tNode.get('deploy_as', '0.0.0')
+		strDeployAs = deploy_version.version(strValue.strip())
+		aAttrib['deploy_as'] = strDeployAs
+
+		strValue = tNode.findtext('ArtifactID')
+		if strValue==None:
+			raise Exception('One of the Target nodes has no ArtifactID child!')
+		strArtifactID = strValue.strip()
+		if strArtifactID=='':
+			raise Exception('One of the Target nodes has an empty ArtifactID child!')
+		aAttrib['aid'] = strArtifactID
+
+		strValue = tNode.findtext('GroupID')
+		if strValue==None:
+			raise Exception('One of the Target nodes has no GroupID child!')
+		strGroupID = strValue.strip()
+		if strGroupID=='':
+			raise Exception('One of the Target nodes has an empty GroupID child!')
+		aAttrib['gid'] = strGroupID
+
+		strValue = tNode.findtext('Packaging')
+		if strValue==None:
+			raise Exception('One of the Target nodes has no Packaging child!')
+		strPackaging = strValue.strip()
+		if strPackaging=='':
+			raise Exception('One of the Target nodes has an empty Packaging child!')
+		aAttrib['packaging'] = strPackaging
+
+		# Read all versions.
+		aVersions = dict({})
+		for tVersionNode in tNode.findall('version'):
+			strVersion = tVersionNode.text.strip()
+			if strVersion=='':
+				raise Exception('One of the Target nodes has an empty version child!')
+			if strVersion in aVersions:
+				raise Exception('Double version!')
+			bMatch = self.to_bool(tVersionNode.get('match'))
+			aVersions[strVersion] = bMatch
+		aAttrib['versions'] = aVersions
+
+		return aAttrib
 
 
 
 	def execute_scan(self):
-		sizArtifacts = len(self.aArtifacts)
+		sizArtifacts = len(self.tXml.findall('Project/Server/Target'))
 		print 'Found %d artifacts.' % sizArtifacts
 
 		# Process all Target nodes.
 		sizArtifactCnt = 0
-		for tArtifact in self.aArtifacts.itervalues():
-			sizArtifactCnt += 1
-			print 'Processing artifact %d/%d (%d%%)' % (sizArtifactCnt, sizArtifacts, sizArtifactCnt*100/sizArtifacts)
+		for tNodeServer in self.tXml.findall('Project/Server'):
+			# Get the server ID for all artifacts below.
+			strServerID = tNodeServer.get('id')
 
-			# Get all revisions of the artifact.
-			atGAVersions = self.tRepositoryDriver.getAllArtifactVersions(tArtifact['gid'], tArtifact['aid'])
+			# Set the credentials for this server.
+			self.set_credentials(strServerID)
 
-			# Get all repository versions with the same SHA1 sum.
-			atSha1Versions = self.tRepositoryDriver.findSha1Artifacts(tArtifact['file'], tArtifact['gid'], tArtifact['aid'])
+			# Loop over all targets for this server.
+			for tNodeTarget in tNodeServer.findall('Target'):
+				# One more Artifact found.
+				sizArtifactCnt += 1
+				print 'Processing artifact %d/%d (%d%%)' % (sizArtifactCnt, sizArtifacts, sizArtifactCnt*100/sizArtifacts)
 
-			# Sanity test: all matching versions must also exist.
-			for tVersion in atSha1Versions:
-				if not tVersion in atGAVersions:
-					raise Exception('Artifact %s.%s: version %s does not exist!' % (strGroupID, strArtifactID, str(tVersion)))
+				tArtifact = self.read_target_node(tNodeTarget)
 
-			# Add the revision information to the node.
-			aVersions = dict({})
-			for tVersion in atGAVersions:
-				bMatch = tVersion in atSha1Versions
-				aVersions[str(tVersion)] = bMatch
+				# Get all revisions of the artifact.
+				atGAVersions = self.tRepositoryDriver.getAllArtifactVersions(tArtifact['gid'], tArtifact['aid'])
 
-			tArtifact['versions'] = aVersions
+				# Get all repository versions with the same SHA1 sum.
+				atSha1Versions = self.tRepositoryDriver.findSha1Artifacts(tArtifact['file'], tArtifact['gid'], tArtifact['aid'])
+
+				# Sanity test: all matching versions must also exist.
+				for tVersion in atSha1Versions:
+					if not tVersion in atGAVersions:
+						raise Exception('Artifact %s.%s: version %s does not exist!' % (strGroupID, strArtifactID, str(tVersion)))
+
+				# Deselect the node.
+				tNodeTarget.set('selected', str(False))
+
+				# Remove any old version nodes.
+				for tVersionNode in tNodeTarget.findall('version'):
+					tNodeTarget.remove(tVersionNode)
+
+				# Add the revision information to the node.
+				for tVersion in atGAVersions:
+					bMatch = tVersion in atSha1Versions
+					tNodeVersion = xml.etree.ElementTree.SubElement(tNodeTarget, 'version', attrib={'match': str(bMatch)})
+					tNodeVersion.text=str(tVersion)
+
 
 
 	def filter_init_all(self):
-		for tArtifact in self.aArtifacts.itervalues():
-			tArtifact['filter'] = True
+		for tNodeTarget in self.tXml.findall('Project/Server/Target'):
+			tNodeTarget.set('filter', True)
+
 
 
 	def filter_init_changed(self):
 		tVersionSnapshot = deploy_version.version(0, 0, 0)
-		for tArtifact in self.aArtifacts.itervalues():
+		for tNodeTarget in self.tXml.findall('Project/Server/Target'):
 			bSelected = True
 			# Loop over all versions.
-			for (strVersion,bMatch) in tArtifact['versions'].iteritems():
-				tVersion = deploy_version.version(strVersion)
+			for tNodeVersion in tNodeTarget.findall('version'):
+				tVersion = deploy_version.version(tNodeVersion.text)
+				bMatch = self.to_bool(tNodeVersion.get('match'))
 				if tVersion!=tVersionSnapshot and bMatch==True:
 					bSelected = False
 					break
-			tArtifact['filter'] = bSelected
+			tNodeTarget.set('filter', bSelected)
+
 
 
 	def artifacts_filter(self, strFilter):
@@ -153,23 +248,29 @@ class Deploy:
 		tRegEx = re.compile(strFilter)
 
 		# Loop over all artifacts.
-		for tArtifact in self.aArtifacts.itervalues():
+		for tNodeTarget in self.tXml.findall('Project/Server/Target'):
 			# Only consider selected items.
-			if tArtifact['filter']==True:
+			if tNodeTarget.get('filter')==True:
+				tArtifact = self.read_target_node(tNodeTarget)
+
 				# Combine the group and artifact ID into one string.
 				strName = '%s.%s' % (tArtifact['gid'], tArtifact['aid'])
 				tMatch = tRegEx.search(strName)
 				if tMatch==None:
-					tArtifact['filter'] = False
+					tNodeTarget.set('filter', False)
+
 
 
 	def artifacts_filter_apply(self, strVersion):
 		# Loop over all artifacts.
-		for tArtifact in self.aArtifacts.itervalues():
+		for tNodeTarget in self.tXml.findall('Project/Server/Target'):
 			# Only consider selected items.
-			if tArtifact['filter']==True:
+			if tNodeTarget.get('filter')==True:
+				tArtifact = self.read_target_node(tNodeTarget)
+
 				# This artifact will be deployed.
-				tArtifact['selected'] = True
+				tNodeTarget.set('selected', str(True))
+
 				# Set the version.
 				if strVersion=='MAJ':
 					# Get the latest version.
@@ -192,26 +293,44 @@ class Deploy:
 				else:
 					tDeployVersion = deploy_version.version(strVersion)
 
-				tArtifact['deploy_as'] = tDeployVersion
+				tNodeTarget.set('deploy_as', str(tDeployVersion))
 
 				# Processed.
-				tArtifact['filter'] = False
+				tNodeTarget.set('filter', False)
+
 
 
 	def execute_report(self):
 		# Loop over all artifacts.
-		for tArtifact in self.aArtifacts.itervalues():
-			# Only consider selected items.
-			if tArtifact['selected']==True:
-				print '%s.%s : %s' % (tArtifact['gid'], tArtifact['aid'], str(tArtifact['deploy_as']))
+		for tNodeServer in self.tXml.findall('Project/Server'):
+			# Get the server ID for all nodes.
+			print 'Server %s:' % tNodeServer.get('id')
+
+			# Loop over all targets for this server.
+			for tNodeTarget in tNodeServer.findall('Target'):
+				tArtifact = self.read_target_node(tNodeTarget)
+				# Only consider selected items.
+				if tArtifact['selected']==True:
+					print '%s.%s : %s' % (tArtifact['gid'], tArtifact['aid'], str(tArtifact['deploy_as']))
+
 
 
 	def execute_deploy(self):
-		# Loop over all artifacts.
-		for tArtifact in self.aArtifacts.itervalues():
-			# Only consider selected items.
-			if tArtifact['selected']==True:
-				self.tRepositoryDriver.deploy(tArtifact)
+		for tNodeServer in self.tXml.findall('Project/Server'):
+			# Get the server ID for all nodes.
+			strServerID = tNodeServer.get('id')
+			strRepositoryRelease = tNodeServer.get('release')
+			strRepositorySnapshots = tNodeServer.get('snapshots')
+
+			# Set the credentials for this server.
+			self.set_credentials(strServerID)
+
+			# Loop over all targets for this server.
+			for tNodeTarget in tNodeServer.findall('Target'):
+				tArtifact = self.read_target_node(tNodeTarget)
+				# Only consider selected items.
+				if tArtifact['selected']==True:
+					self.tRepositoryDriver.deploy(tArtifact, strRepositoryRelease, strRepositorySnapshots)
 
 
 

@@ -10,14 +10,14 @@ import xml.dom.minidom
 aArtifacts = dict({})
 
 
-def add_artifact(tEnv, tFiles, strServerID, strGroupID, strArtifactID, strPackaging, **kwargs):
+def add_artifact(tEnv, tFiles, tServer, strGroupID, strArtifactID, strPackaging, **kwargs):
 	bGood = kwargs.get('GOOD', True)
 
 	if bGood==True:
 		# Process all files.
 		for tFile in tFiles:
-			print 'AddArtifact %s' % tFile.get_path()
-
+			# Combine all server attributes to a hashable string.
+			strServerID = tServer[0] + '\0' + tServer[1] + '\0'+ tServer[2]
 			if not strServerID in aArtifacts:
 				aArtifacts[strServerID] = dict({})
 			aServer = aArtifacts[strServerID]
@@ -42,8 +42,15 @@ def artifact_action(target, source, env):
 
 	# Loop over all artifacts.
 	for (strServerID,atGroups) in aArtifacts.iteritems():
+		# Split the server ID in the 3 components.
+		aAttribServer = strServerID.split('\0')
+
+		# Create the "Server" element with all attributes.
 		tNode_Server = tNode_Project.appendChild(tXmlData.createElement('Server'))
-		tNode_Server.setAttribute('id', strServerID)
+		tNode_Server.setAttribute('id', aAttribServer[0])
+		tNode_Server.setAttribute('release', aAttribServer[1])
+		tNode_Server.setAttribute('snapshots', aAttribServer[2])
+
 		for (strGroupID,atFiles) in atGroups.iteritems():
 			for (strArtifactID,tFileAttribs) in atFiles.iteritems():
 				# Create a new Target node with the path to the file as
@@ -73,6 +80,15 @@ def artifact_emitter(target, source, env):
 		for (strGroupID,atFiles) in atGroups.items():
 			for (strArtifactID,tFileAttribs) in atFiles.items():
 				Depends(target, tFileAttribs['file'])
+				# Combine the file name with the server, group and artifact ID.
+				aHash = [
+					strServerID,
+					strGroupID,
+					strArtifactID,
+					tFileAttribs['file'].get_path(),
+					tFileAttribs['packaging']
+				]
+				Depends(target, SCons.Node.Python.Value('\0'.join(aHash)))
 
 	return target, source
 
