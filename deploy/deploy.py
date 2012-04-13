@@ -261,7 +261,7 @@ class Deploy:
 
 
 
-	def artifacts_filter_apply(self, strVersion):
+	def artifacts_filter_apply(self, strDeployStrategy):
 		# Loop over all artifacts.
 		for tNodeTarget in self.tXml.findall('Project/Server/Target'):
 			# Only consider selected items.
@@ -272,7 +272,7 @@ class Deploy:
 				tNodeTarget.set('selected', str(True))
 
 				# Set the version.
-				if strVersion=='MAJ':
+				if strDeployStrategy=='MAJ':
 					# Get the latest version.
 					tDeployVersion = deploy_version.version(0, 0, 0)
 					for strVersion in tArtifact['versions'].iterkeys():
@@ -280,7 +280,7 @@ class Deploy:
 						if tVersion>tDeployVersion:
 							tDeployVersion = tVersion
 					tDeployVersion.next_major()
-				elif strVersion=='MIN':
+				elif strDeployStrategy=='MIN':
 					# Get the latest version.
 					tDeployVersion = deploy_version.version(0, 0, 0)
 					for strVersion in tArtifact['versions'].iterkeys():
@@ -288,7 +288,7 @@ class Deploy:
 						if tVersion>tDeployVersion:
 							tDeployVersion = tVersion
 					tDeployVersion.next_minor()
-				elif strVersion=='SNAPSHOT':
+				elif strDeployStrategy=='SNAPSHOT':
 					tDeployVersion = deploy_version.version(0, 0, 0)
 				else:
 					tDeployVersion = deploy_version.version(strVersion)
@@ -312,7 +312,6 @@ class Deploy:
 				# Only consider selected items.
 				if tArtifact['selected']==True:
 					print '%s.%s : %s' % (tArtifact['gid'], tArtifact['aid'], str(tArtifact['deploy_as']))
-
 
 
 	def execute_deploy(self):
