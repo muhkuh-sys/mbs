@@ -135,7 +135,7 @@ if strGccVersion!=None:
 	gcc_arm.ApplyToEnv(env_default)
 	env_default.Replace(CCFLAGS = Split(default_ccflags))
 	env_default.Replace(LIBS = ['m', 'c', 'gcc'])
-	env_default.Replace(LINKFLAGS = ['-nostdlib', '-static', '-Map=${TARGET}.map'])
+	env_default.Replace(LINKFLAGS = ['--gc-sections', '-nostdlib', '-static', '-Map=${TARGET}.map'])
 
 
 #----------------------------------------------------------------------------
