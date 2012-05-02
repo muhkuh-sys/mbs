@@ -874,6 +874,8 @@ or      false, error message string
 			</Param>
 		</Device>
 
+		<Device id="DPM" name="DPM" size="0" type="MMC">
+		</Device>
 		<Device id="MMC" name="MMC card" size="0" type="MMC">
 		</Device>
 	</src>
@@ -1015,6 +1017,8 @@ or      false, error message string
 			</Param>
 		</Device>
 
+		<Device id="DPM" name="DPM" size="0" type="MMC">
+		</Device>
 		<Device id="MMC" name="MMC card" size="0" type="MMC">
 		</Device>
 	</src>
