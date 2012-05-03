@@ -78,6 +78,8 @@ def PrintSummary():
 def ApplyToEnv(env):
 	global _g_env_help
 	
+	env['CFG_BUILD'] = _g_env_help['CFG_BUILD']
+	
 	strBuild = str.lower(_g_env_help['CFG_BUILD'])
 	if strBuild=='release':
 		# this is the release build
