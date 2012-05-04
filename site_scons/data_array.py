@@ -20,52 +20,93 @@
 #-------------------------------------------------------------------------#
 
 
+import array
 import os
 import string
 
 from SCons.Script import *
 
 
-def dataarray_action(target, source, env):
-	file_target = open(target[0].get_path(), 'w')
-	
-	aucSourceData = source[0].get_contents()
-	sizSourceData = len(aucSourceData)
-	
+def dataarray_action(target, source, env):	
 	strArrayName = env['DATAARRAY_NAME']
-	sizBytesPerLine = env['DATAARRAY_BYTES_PER_LINE']
+	sizBytesPerLine = long(env['DATAARRAY_BYTES_PER_LINE'])
+	sizElement = long(env['DATAARRAY_ELEMENT_SIZE'])
+
+	if sizBytesPerLine<1:
+		raise Exception('Invalid number of bytes per row! This value must be greater than 0.')
+
+	if sizElement==1:
+		strArrayFormat = 'B'
+		strCTypeName   = 'unsigned char'
+	elif sizElement==2:
+		strArrayFormat = 'H'
+		strCTypeName   = 'unsigned short'
+	elif sizElement==4:
+		strArrayFormat = 'I'
+		strCTypeName   = 'unsigned long'
+	else:
+		raise Exception('Invalid element size, must be 1, 2 or 4, but it is %d' % sizElement)
+	strPrintFormat = '0x%%0%dx' % (2*sizElement)
+
+	sizElementsPerLine = sizBytesPerLine / sizElement
+
+	# Read the complete input file in an array.
+	sizFile = os.stat(source[0].get_path()).st_size
+	if (sizFile % sizElement)!=0:
+		raise Exception('The file size (%d) is no multiple of the selected element size (%d).' % (sizFile,sizElement))
+	sizArray = sizFile / sizElement
+
+	atSourceData = array.array(strArrayFormat)
+	tFileSource = open(source[0].get_path(), 'rb')
+	atSourceData.fromfile(tFileSource, sizArray)
 	
-	file_target.write("const unsigned char %s[%d] =\n"%(strArrayName,sizSourceData))
-	file_target.write("{\n");
-	for iCnt in xrange(0, sizSourceData, sizBytesPerLine):
-		aucChunk = aucSourceData[iCnt:iCnt+sizBytesPerLine]
-		file_target.write("\t");
-		file_target.write(', '.join(['0x%02X'%ord(ucByte) for ucByte in aucChunk]))
-		if( iCnt+sizBytesPerLine<sizSourceData ):
-			file_target.write(',')
-		file_target.write("\n")
-	file_target.write("};\n");
-	file_target.close()
+	tFileTarget = open(target[0].get_path(), 'wt')
+	tFileTarget.write('const %s %s[%d] =\n' % (strCTypeName,strArrayName,sizArray))
+	tFileTarget.write('{\n');
+	sizElementCnt = 0
+	sizElementLineCnt = 0
+	strDump = ''
+	for tData in atSourceData:
+		# Print the current offset at the start of each line.
+		if sizElementLineCnt==0:
+			strDump = '\t'
+
+		strDump += strPrintFormat % tData
+		sizElementCnt += 1
+		sizElementLineCnt += 1
+
+		if sizElementCnt<sizArray:
+			strDump += ', '
+
+		if sizElementLineCnt==sizElementsPerLine:
+			strDump += '\n'
+			tFileTarget.write(strDump)
+			sizElementLineCnt = 0
+	if sizElementLineCnt>0:
+		strDump += '\n'
+		tFileTarget.write(strDump)
+	tFileTarget.write('};\n');
+	tFileTarget.close()
 	
 	
 	# Write the header file.
 	strDefineName = string.replace(string.upper(os.path.basename(target[1].get_path())), '.', '_')
-	file_target = open(target[1].get_path(), 'w')
-	file_target.write("#ifndef __%s__\n" % strDefineName)
-	file_target.write("#define __%s__\n" % strDefineName)
-	file_target.write("\n")
-	file_target.write("#ifdef __cplusplus\n")
-	file_target.write("extern \"C\" {\n")
-	file_target.write("#endif\n")
-	file_target.write("\n")
-	file_target.write("extern const unsigned char %s[%d];\n"%(strArrayName,sizSourceData))
-	file_target.write("\n")
-	file_target.write("#ifdef __cplusplus\n")
-	file_target.write("}\n")
-	file_target.write("#endif\n")
-	file_target.write("\n")
-	file_target.write("#endif  /* __%s__ */\n" % strDefineName)
-	file_target.write("\n")
+	file_target = open(target[1].get_path(), 'wt')
+	file_target.write('#ifndef __%s__\n' % strDefineName)
+	file_target.write('#define __%s__\n' % strDefineName)
+	file_target.write('\n')
+	file_target.write('#ifdef __cplusplus\n')
+	file_target.write('extern "C" {\n')
+	file_target.write('#endif\n')
+	file_target.write('\n')
+	file_target.write('extern const %s %s[%d];\n'%(strCTypeName,strArrayName,sizArray))
+	file_target.write('\n')
+	file_target.write('#ifdef __cplusplus\n')
+	file_target.write('}\n')
+	file_target.write('#endif\n')
+	file_target.write('\n')
+	file_target.write('#endif  /* __%s__ */\n' % strDefineName)
+	file_target.write('\n')
 	file_target.close()
 	
 	return 0
@@ -85,16 +126,25 @@ def dataarray_emitter(target, source, env):
 
 
 def dataarray_string(target, source, env):
-	return 'DataArray %s' % target[0].get_path()
+	return 'DataArray %s / .h' % target[0].get_path()
 
 
 def ApplyToEnv(env):
+	# Sanity checks.
+	if array.array('B').itemsize!=1:
+		raise Exception('The item size of an array of type "B" is not 8bit. This is an internal error or the bootblock builder.')
+	if array.array('H').itemsize!=2:
+		raise Exception('The item size of an array of type "H" is not 16bit. This is an internal error or the bootblock builder.')
+	if array.array('I').itemsize!=4:
+		raise Exception('The item size of an array of type "I" is not 32bit. This is an internal error or the bootblock builder.')
+
 	#----------------------------------------------------------------------------
 	#
 	# Add dataarray builder.
 	#
 	env['DATAARRAY_NAME'] = 'aucData'
 	env['DATAARRAY_BYTES_PER_LINE'] = 16
+	env['DATAARRAY_ELEMENT_SIZE'] = 1
 
 	dataarray_act = SCons.Action.Action(dataarray_action, dataarray_string)
 	dataarray_bld = Builder(action=dataarray_act, emitter=dataarray_emitter, suffix='.c', single_source=1)
