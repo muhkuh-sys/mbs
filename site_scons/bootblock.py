@@ -162,7 +162,7 @@ def bootblock_action(target, source, env):
 		strBinFile += '\0' * uiPadBytes
 	# Get the size of the evetually padded data.
 	ulApplicationDwordSize = len(strBinFile) / 4;
-	aulApplicationData = array.array('L')
+	aulApplicationData = array.array('I')
 	aulApplicationData.fromstring(strBinFile)
 	
 	# Build the application checksum.
@@ -171,7 +171,7 @@ def bootblock_action(target, source, env):
 		ulApplicationChecksum += ulData
 		ulApplicationChecksum &= 0xffffffff
 	
-	aBootBlock = array.array('L', [0]*16)
+	aBootBlock = array.array('I', [0]*16)
 	aBootBlock[0x00] = 0xf8beaf00                   # Magic cookie.
 	aBootBlock[0x01] = 0x00000000                   # unCtrl
 	aBootBlock[0x02] = ulExecAddress                # execution address
@@ -256,6 +256,10 @@ def bootblock_string(target, source, env):
 
 
 def ApplyToEnv(env):
+	# Sanity checks.
+	if array.array('I').itemsize!=4:
+		raise Exception('The item size of an array of type "I" is not 32bit. This is an internal error or the bootblock builder.')
+	
 	#----------------------------------------------------------------------------
 	#
 	# Add bootblock builder.

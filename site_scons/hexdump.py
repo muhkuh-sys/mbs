@@ -45,7 +45,7 @@ def hexdump_action(target, source, env):
 	elif iElemSize==2:
 		strArrayFormat = 'H'
 	elif iElemSize==4 or iElemSize==4.5:
-		strArrayFormat = 'L'
+		strArrayFormat = 'I'
 	else:
 		raise Exception('Invalid element size, must be 1, 2 4 or 4.5, but it is %d' % iElemSize)
 
@@ -102,6 +102,14 @@ def hexdump_string(target, source, env):
 
 
 def ApplyToEnv(env):
+	# Sanity checks.
+	if array.array('B').itemsize!=1:
+		raise Exception('The item size of an array of type "B" is not 8bit. This is an internal error or the bootblock builder.')
+	if array.array('H').itemsize!=2:
+		raise Exception('The item size of an array of type "H" is not 16bit. This is an internal error or the bootblock builder.')
+	if array.array('I').itemsize!=4:
+		raise Exception('The item size of an array of type "I" is not 32bit. This is an internal error or the bootblock builder.')
+
 	#----------------------------------------------------------------------------
 	#
 	# Add hexdump builder.
