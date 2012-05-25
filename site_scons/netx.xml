@@ -1224,6 +1224,14 @@ or      false, error message string
 				0x00A12151
 			</Param>
 		</Device>
+		<Device id="SD_IS42S32200E" name="SDRam IS42S32200E" size="0x00800000" type="SDRAM">
+			<Param name="SdramGeneralCtrl">
+				0x030D0001
+			</Param>
+			<Param name="SdramTimingCtrl">
+				0x00A23151
+			</Param>
+		</Device>
 		<Device id="SRB_PF_GEN_8" name="Generic SRam Bus PFlash 8 bit" size="0" type="SRB">
 			<Param name="SramCtrl">
 				0x0003030f
