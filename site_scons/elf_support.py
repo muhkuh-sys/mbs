@@ -73,6 +73,14 @@ def get_debug_info(env, strFileName):
 		ulValue = int(match_obj.group(2))
 		atSymbols[strName] = ulValue
 	
+	# Find all macro definitions.
+	# NOTE: This matches only macros without parameter.
+	strPattern  = '\s+DW_MACINFO_define - lineno : \d+ macro : (\w+)\s+(.*)'
+	for match_obj in re.finditer(strPattern, strOutput):
+		strName = match_obj.group(1)
+		strValue = match_obj.group(2)
+		atSymbols[strName] = strValue
+	
 # NOTE: this does not work yet! The structure name must be appended to the member name, maybe with a colon like this:
 #       STRUCT_NAME:MEMBER_NAME . Unfortunately I have no clue yet how to get the structure name.
 #
