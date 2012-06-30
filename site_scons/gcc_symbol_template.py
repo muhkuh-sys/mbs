@@ -31,7 +31,9 @@ from SCons.Script import *
 
 def gccsymboltemplate_action(target, source, env):
 	# Get the symbol table from the elf.
-	atSymbols = elf_support.get_symbol_table(env, source[0].get_path())
+	atSymbols = dict({})
+	atSymbols.update( elf_support.get_symbol_table(env, source[0].get_path()) )
+	atSymbols.update( elf_support.get_debug_info(env, source[0].get_path()) )
 
 	# Read the template.
 	strTemplateFilename = env['GCCSYMBOLTEMPLATE_TEMPLATE']

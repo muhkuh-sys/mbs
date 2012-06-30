@@ -58,6 +58,42 @@ def get_symbol_table(env, strFileName):
 	return atSymbols
 
 
+def get_debug_info(env, strFileName):
+	atSymbols = dict({})
+	aCmd = [env['OBJDUMP'], '-e', strFileName]
+	proc = subprocess.Popen(aCmd, stdout=subprocess.PIPE)
+	strOutput = proc.communicate()[0]
+	
+	# Find all enumeration values.
+	strPattern  = '^\s+<[0-9]+><[0-9a-f]+>: Abbrev Number: \d+ \(DW_TAG_enumerator\)\n'
+	strPattern +=  '\s+<[0-9a-f]+>\s+DW_AT_name\s*:\s+\(indirect string, offset: 0x[0-9a-f]+\):\s+(\w+)\s*\n'
+	strPattern +=  '\s+<[0-9a-f]+>\s+DW_AT_const_value\s*:\s+([0-9]+)\s*\n'
+	for match_obj in re.finditer(strPattern, strOutput, flags=re.MULTILINE):
+		strName = match_obj.group(1)
+		ulValue = int(match_obj.group(2))
+		atSymbols[strName] = ulValue
+	
+# NOTE: this does not work yet! The structure name must be appended to the member name, maybe with a colon like this:
+#       STRUCT_NAME:MEMBER_NAME . Unfortunately I have no clue yet how to get the structure name.
+#
+#	# Find all structure members and their offset.
+#	strPattern  = '^\s+<[0-9]+><[0-9a-f]+>: Abbrev Number: \d+ \(DW_TAG_member\)\n'
+#	strPattern +=  '\s+<[0-9a-f]+>\s+DW_AT_name\s*:\s+\(indirect string, offset: 0x[0-9a-f]+\):\s+(\w+)\s*\n'
+#	strPattern +=  '\s+<[0-9a-f]+>\s+DW_AT_decl_file\s*:\s+\d+\s*\n'
+#	strPattern +=  '\s+<[0-9a-f]+>\s+DW_AT_decl_line\s*:\s+\d+\s*\n'
+#	strPattern +=  '\s+<[0-9a-f]+>\s+DW_AT_type\s*:\s+<0x[0-9a-f]+>\s*\n'
+#	strPattern +=  '\s+<[0-9a-f]+>\s+DW_AT_data_member_location\s*:\s+\d+ byte block:\s+\d+\s+\d+\s+\(DW_OP_plus_uconst: (\d+)\)\s*\n'
+#	for match_obj in re.finditer(strPattern, strOutput, flags=re.MULTILINE):
+#		strName = match_obj.group(1)
+#		ulValue = int(match_obj.group(2))
+#		atSymbols[strName] = ulValue
+#		print "OFFS:", strName, ulValue
+	
+	return atSymbols
+
+
+
+
 def get_load_address(atSegments):
 	# Set an invalid lma
 	ulLowestLma = 0x100000000
