@@ -37,8 +37,8 @@ def version_action(target, source, env):
 	aSubst = dict({
 		'PROJECT_VERSION_MAJ':version_info[0],
 		'PROJECT_VERSION_MIN':version_info[1],
-		'PROJECT_VERSION_SUB':env['PROJECT_VERSION_SUB'],
-		'PROJECT_VERSION': '%s.%s.%s'%(version_info[0], version_info[1], env['PROJECT_VERSION_SUB']),
+		'PROJECT_VERSION_VCS':env['PROJECT_VERSION_VCS'],
+		'PROJECT_VERSION': '%s.%s.%s'%(version_info[0], version_info[1], env['PROJECT_VERSION_VCS']),
 	})
 	
 	# Read the template.
@@ -64,34 +64,34 @@ def version_emitter(target, source, env):
 	global PROJECT_VERSION
 	
 	
-	# Is the SVN version already set?
-	if not 'PROJECT_VERSION_SUB' in env:
+	# Is the VCS ID already set?
+	if not 'PROJECT_VERSION_VCS' in env:
 		# The default version is 'unknown'.
-		project_version_sub = 'unknown'
+		project_version_vcs = 'unknown'
 		
 		if os.path.exists('.hg'):
 			if env['MERCURIAL']:
 				# Get the mercurial ID.
 				child = os.popen(env['MERCURIAL']+' id -i')
-				project_version_sub = child.read()
+				project_version_vcs = 'HG' + child.read()
 				err = child.close()
 				if err:
-					project_version_sub = 'unknown'
+					project_version_vcs = 'unknown'
 		elif os.path.exists('.svn'):
 			if env['SVNVERSION']:
 				# get the svn version
 				child = os.popen(env['SVNVERSION'])
-				project_version_sub = child.read()
+				project_version_vcs = 'SVN' + child.read()
 				err = child.close()
 				if err:
-					project_version_sub = 'unknown'
+					project_version_vcs = 'unknown'
 		
 		# Add the version to the environment.
-		env['PROJECT_VERSION_SUB'] = string.strip(project_version_sub)
+		env['PROJECT_VERSION_VCS'] = string.strip(project_version_vcs)
 	
-	# Make the target depend on the project version and the SUB version.
+	# Make the target depend on the project version and the VCS ID.
 	Depends(target, SCons.Node.Python.Value(PROJECT_VERSION))
-	Depends(target, SCons.Node.Python.Value(env['PROJECT_VERSION_SUB']))
+	Depends(target, SCons.Node.Python.Value(env['PROJECT_VERSION_VCS']))
 	
 	return target, source
 
