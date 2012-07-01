@@ -22,6 +22,7 @@
 
 import elf_support
 import os
+import re
 import string
 
 from string import Template
@@ -31,9 +32,41 @@ from SCons.Script import *
 
 def gccsymboltemplate_action(target, source, env):
 	# Get the symbol table from the elf.
-	atSymbols = dict({})
-	atSymbols.update( elf_support.get_symbol_table(env, source[0].get_path()) )
-	atSymbols.update( elf_support.get_debug_info(env, source[0].get_path()) )
+	atSymbols = elf_support.get_symbol_table(env, source[0].get_path())
+	
+	# Get the debug information from the ELF file.
+	tXmlDebugInfo = elf_support.get_debug_info(env, source[0].get_path())
+	tRoot = tXmlDebugInfo.getroot()
+
+	# Find all enumeration values.
+	for tNode in tRoot.findall('.//enumeration_type'):
+		for tEnumNode in tNode.findall('enumerator'):
+			ulValue = int(tEnumNode.get('const_value'))
+			strName = tEnumNode.get('name')
+			if strName is None:
+				raise Exception('Missing name!')
+			atSymbols[strName] = ulValue
+
+	# Find all macro definitions.
+	for tNode in tRoot.findall('MergedMacros/Macro'):
+		strName = tNode.get('name')
+		strValue = tNode.get('value')
+		atSymbols[strName] = strValue
+	
+	# Find all structure members and their offset.
+	reLocation = re.compile('\d+ byte block: \d+ ([0-9a-f]+)')
+	for tNode in tRoot.findall('.//structure_type'):
+		strStructureName = tNode.get('name')
+		if not strStructureName is None:
+			for tStructNode in tNode.findall('member'):
+				strLoc = tStructNode.get('data_member_location')
+				strName = tStructNode.get('name')
+				if (not strLoc is None) and (not strName is None):
+					tObj = reLocation.match(strLoc)
+					if not tObj is None:
+						strMemberName = 'OFFSETOF:' + strStructureName + ':' + strName
+						ulOffset = int(tObj.group(1), 16)
+						atSymbols[strMemberName] = ulOffset
 
 	# Read the template.
 	strTemplateFilename = env['GCCSYMBOLTEMPLATE_TEMPLATE']

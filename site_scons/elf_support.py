@@ -20,9 +20,11 @@
 #-------------------------------------------------------------------------#
 
 
+import itertools
 import os
 import re
 import subprocess
+import xml.etree.ElementTree
 
 
 def get_segment_table(env, strFileName):
@@ -46,6 +48,7 @@ def get_segment_table(env, strFileName):
 	return atSegments
 
 
+
 def get_symbol_table(env, strFileName):
 	atSymbols = dict({})
 	aCmd = [env['READELF'], '-s', strFileName]
@@ -58,46 +61,124 @@ def get_symbol_table(env, strFileName):
 	return atSymbols
 
 
+
 def get_debug_info(env, strFileName):
-	atSymbols = dict({})
 	aCmd = [env['OBJDUMP'], '-e', strFileName]
 	proc = subprocess.Popen(aCmd, stdout=subprocess.PIPE)
 	strOutput = proc.communicate()[0]
 	
-	# Find all enumeration values.
-	strPattern  = '^\s+<[0-9]+><[0-9a-f]+>: Abbrev Number: \d+ \(DW_TAG_enumerator\)\n'
-	strPattern +=  '\s+<[0-9a-f]+>\s+DW_AT_name\s*:\s+\(indirect string, offset: 0x[0-9a-f]+\):\s+(\w+)\s*\n'
-	strPattern +=  '\s+<[0-9a-f]+>\s+DW_AT_const_value\s*:\s+([0-9]+)\s*\n'
-	for match_obj in re.finditer(strPattern, strOutput, flags=re.MULTILINE):
-		strName = match_obj.group(1)
-		ulValue = int(match_obj.group(2))
-		atSymbols[strName] = ulValue
+	# Split the output in the sections.
+#	astrSections = re.split('The section ([a-zA-Z0-9._]+) contains:', strOutput)
+	astrSections = re.split('(?:The section ([a-zA-Z0-9._]+) contains:)|(?:Contents of the ([a-zA-Z0-9._]+) section:)', strOutput)
+
+	# Expect at least one section. This makes 3 entries in the array:
+	#  [0] : the text before the first match
+	#  [1] : the first match, part 1
+	#  [2] : the first match, part 2
+	#  [3] : the text after the first match
+	# More matches give more [1], [2] and [3] entries.
+	sizSections = len(astrSections) 
+	if sizSections<4:
+		raise Exception('Failed to parse the debug sections: section start not found.')
 	
-	# Find all macro definitions.
+	# Make a dictionary with the section name as keys and the section dump as values.
+	atSections = dict({})
+	for iCnt in range(1, sizSections, 3):
+		strName = astrSections[iCnt] or astrSections[iCnt+1]
+		atSections[strName] = astrSections[iCnt+2]
+
+	# Process the '.debug_info' section.
+	if not '.debug_info' in atSections:
+		raise Exception('Section ".debug_info" not found!')
+	if not '.debug_macinfo' in atSections:
+		raise Exception('Section ".debug_macinfo" not found!')
+	
+	# Add all information to an XML file.
+	tRoot = xml.etree.ElementTree.Element('DebugInfo')
+	tXml = xml.etree.ElementTree.ElementTree(tRoot)
+	
+	# Prepare the regular expressions for the elements.
+	reElement = re.compile('\s+<([0-9]+)><([0-9a-f]+)>: Abbrev Number: (\d+) \(DW_TAG_(\w+)\)')
+	reAttribute_Str = re.compile('\s+<([0-9a-f]+)>\s+DW_AT_(\w+)\s*:\s+\(indirect string, offset: 0x[0-9a-f]+\):\s+(.+)')
+	reAttribute_Link = re.compile('\s+<([0-9a-f]+)>\s+DW_AT_(\w+)\s*:\s+<0x([0-9a-f]+)>')
+	reAttribute = re.compile('\s+<([0-9a-f]+)>\s+DW_AT_(\w+)\s*:\s+(.+)')
+	
+	# This is a list of all parent nodes. It supports a maximum depth of 64.
+	atParents = []
+	atParents.append(tRoot)
+	
+	# Loop over all lines in the ".debug_info" section.
+	for strLine in atSections['.debug_info'].split('\n'):
+		# Is this a new element?
+		tObj = reElement.match(strLine)
+		if not tObj is None:
+			uiNodeLevel = int(tObj.group(1))
+			ulNodeId = int(tObj.group(2), 16)
+			ulAbbrev = int(tObj.group(3))
+			strName = tObj.group(4)
+			
+			# Get the parent node.
+			if uiNodeLevel<0 or uiNodeLevel>=len(atParents):
+				raise Exception('Invalid node level: %d', uiNodeLevel)
+			tParentNode = atParents[uiNodeLevel]
+			if tParentNode==0:
+				raise Exception('Invalid parent!')
+			
+			# This is a new element. Clear all parents above the parent.
+			atParents = atParents[0:uiNodeLevel+1]
+			
+			# Create the new element.
+			tNode = xml.etree.ElementTree.SubElement(tParentNode, strName)
+			tNode.set('id', str(ulNodeId))
+			tNode.set('abbrev', str(ulAbbrev))
+			
+			# Append the new element to the list of parent elements.
+			atParents.append(tNode)
+		else:
+			tObj = reAttribute_Link.match(strLine)
+			if not tObj is None:
+				ulNodeId = int(tObj.group(1), 16)
+				strName = tObj.group(2)
+				ulValue = int(tObj.group(3), 16)
+				tNode = atParents[len(atParents)-1]
+				tNode.set(strName, str(ulValue))
+			else:
+				tObj = reAttribute_Str.match(strLine)
+				if tObj is None:
+					tObj = reAttribute.match(strLine)
+				
+				if not tObj is None:
+					ulNodeId = int(tObj.group(1), 16)
+					strName = tObj.group(2)
+					strValue = tObj.group(3).strip()
+					tNode = atParents[len(atParents)-1]
+					tNode.set(strName, strValue)
+
+
+	# Add all macros here.	
+	tMacroRoot = xml.etree.ElementTree.SubElement(tRoot, 'MergedMacros')
+
+	# FIXME: Macro extraction should respect different files.
 	# NOTE: This matches only macros without parameter.
-	strPattern  = '\s+DW_MACINFO_define - lineno : \d+ macro : (\w+)\s+(.*)'
-	for match_obj in re.finditer(strPattern, strOutput):
-		strName = match_obj.group(1)
-		strValue = match_obj.group(2)
-		atSymbols[strName] = strValue
+	reMacro = re.compile('\s+DW_MACINFO_define - lineno : \d+ macro : (\w+)\s+(.*)')
+	# Loop over all lines in the ".debug_macinfo" section.
+	for strLine in atSections['.debug_macinfo'].split('\n'):
+		# Is this a new element?
+		tObj = reMacro.match(strLine)
+		if not tObj is None:
+			strName = tObj.group(1)
+			strValue = tObj.group(2)
+			tNode = xml.etree.ElementTree.SubElement(tMacroRoot, 'Macro')
+			tNode.set('name', strName)
+			tNode.set('value', strValue)
 	
-# NOTE: this does not work yet! The structure name must be appended to the member name, maybe with a colon like this:
-#       STRUCT_NAME:MEMBER_NAME . Unfortunately I have no clue yet how to get the structure name.
-#
-#	# Find all structure members and their offset.
-#	strPattern  = '^\s+<[0-9]+><[0-9a-f]+>: Abbrev Number: \d+ \(DW_TAG_member\)\n'
-#	strPattern +=  '\s+<[0-9a-f]+>\s+DW_AT_name\s*:\s+\(indirect string, offset: 0x[0-9a-f]+\):\s+(\w+)\s*\n'
-#	strPattern +=  '\s+<[0-9a-f]+>\s+DW_AT_decl_file\s*:\s+\d+\s*\n'
-#	strPattern +=  '\s+<[0-9a-f]+>\s+DW_AT_decl_line\s*:\s+\d+\s*\n'
-#	strPattern +=  '\s+<[0-9a-f]+>\s+DW_AT_type\s*:\s+<0x[0-9a-f]+>\s*\n'
-#	strPattern +=  '\s+<[0-9a-f]+>\s+DW_AT_data_member_location\s*:\s+\d+ byte block:\s+\d+\s+\d+\s+\(DW_OP_plus_uconst: (\d+)\)\s*\n'
-#	for match_obj in re.finditer(strPattern, strOutput, flags=re.MULTILINE):
-#		strName = match_obj.group(1)
-#		ulValue = int(match_obj.group(2))
-#		atSymbols[strName] = ulValue
-#		print "OFFS:", strName, ulValue
+	# Write the XML tree to a test file.
+	astrXml = xml.etree.ElementTree.tostringlist(tXml.getroot(), encoding='UTF-8', method="xml")
+	tFile = open('/tmp/test.xml', 'wt')
+	tFile.write(''.join(astrXml))
+	tFile.close()
 	
-	return atSymbols
+	return tXml
 
 
 
