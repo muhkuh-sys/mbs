@@ -69,7 +69,12 @@ def gccsymboltemplate_action(target, source, env):
 						atSymbols[strMemberName] = ulOffset
 
 	# Read the template.
-	strTemplateFilename = env['GCCSYMBOLTEMPLATE_TEMPLATE']
+	tTemplateFilename = env['GCCSYMBOLTEMPLATE_TEMPLATE']
+	if isinstance(tTemplateFilename, basestring):
+		strTemplateFilename = tTemplateFilename
+	else:
+		# Assume this is a file.
+		strTemplateFilename = tTemplateFilename.get_path()
 	tFile = open(strTemplateFilename, 'rt')
 	strTemplateFile = tFile.read()
 	tFile.close()
