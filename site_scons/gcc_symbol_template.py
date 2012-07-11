@@ -64,7 +64,7 @@ def gccsymboltemplate_action(target, source, env):
 				if (not strLoc is None) and (not strName is None):
 					tObj = reLocation.match(strLoc)
 					if not tObj is None:
-						strMemberName = 'OFFSETOF:' + strStructureName + ':' + strName
+						strMemberName = 'OFFSETOF_' + strStructureName + '_' + strName
 						ulOffset = int(tObj.group(1), 16)
 						atSymbols[strMemberName] = ulOffset
 
