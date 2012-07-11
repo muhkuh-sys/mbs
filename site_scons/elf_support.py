@@ -172,11 +172,11 @@ def get_debug_info(env, strFileName):
 			tNode.set('name', strName)
 			tNode.set('value', strValue)
 	
-	# Write the XML tree to a test file.
-	astrXml = xml.etree.ElementTree.tostringlist(tXml.getroot(), encoding='UTF-8', method="xml")
-	tFile = open('/tmp/test.xml', 'wt')
-	tFile.write(''.join(astrXml))
-	tFile.close()
+#	# Write the XML tree to a test file.
+#	astrXml = xml.etree.ElementTree.tostringlist(tXml.getroot(), encoding='UTF-8', method="xml")
+#	tFile = open('/tmp/test.xml', 'wt')
+#	tFile.write(''.join(astrXml))
+#	tFile.close()
 	
 	return tXml
 
