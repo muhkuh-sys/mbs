@@ -26,10 +26,13 @@ def add_artifact(tEnv, tFiles, tServer, strGroupID, strArtifactID, strPackaging,
 				aServer[strGroupID] = dict({})
 			aGroup = aServer[strGroupID]
 
-			if strArtifactID in aGroup:
-				raise Exception('Double defined artifact "%s" in group "%s"!'%(strArtifactID, strGroupID))
+			# Combine the artifact ID and the packaging to get a unique packege ID.
+			strPackageID = strArtifactID + '\0' + strPackaging
+			if strPackageID in aGroup:
+				raise Exception('Double defined artifact "%s" with packaging "%s" in group "%s"!'%(strArtifactID, strPackaging, strGroupID))
 
-			aGroup[strArtifactID] = dict({
+			aGroup[strPackageID] = dict({
+				'artifact': strArtifactID,
 				'file': tFile,
 				'packaging': strPackaging
 			})
@@ -52,14 +55,14 @@ def artifact_action(target, source, env):
 		tNode_Server.setAttribute('snapshots', aAttribServer[2])
 
 		for (strGroupID,atFiles) in atGroups.iteritems():
-			for (strArtifactID,tFileAttribs) in atFiles.iteritems():
+			for (strPackageID,tFileAttribs) in atFiles.iteritems():
 				# Create a new Target node with the path to the file as
 				# 'file' attribute.
 				tNode_Target = tNode_Server.appendChild(tXmlData.createElement('Target'))
 				tNode_Target.setAttribute('file', tFileAttribs['file'].get_path())
 				# Create ArtifactID, GroupID and Packaging children.
 				tNode_ArtifactID = tNode_Target.appendChild(tXmlData.createElement('ArtifactID'))
-				tNode_ArtifactID.appendChild(tXmlData.createTextNode(strArtifactID))
+				tNode_ArtifactID.appendChild(tXmlData.createTextNode(tFileAttribs['artifact']))
 				tNode_GroupID = tNode_Target.appendChild(tXmlData.createElement('GroupID'))
 				tNode_GroupID.appendChild(tXmlData.createTextNode(strGroupID))
 				tNode_Packaging = tNode_Target.appendChild(tXmlData.createElement('Packaging'))
@@ -78,13 +81,13 @@ def artifact_emitter(target, source, env):
 	# target depend on them.
 	for (strServerID,atGroups) in aArtifacts.items():
 		for (strGroupID,atFiles) in atGroups.items():
-			for (strArtifactID,tFileAttribs) in atFiles.items():
+			for (strPackageID,tFileAttribs) in atFiles.items():
 				Depends(target, tFileAttribs['file'])
 				# Combine the file name with the server, group and artifact ID.
 				aHash = [
 					strServerID,
 					strGroupID,
-					strArtifactID,
+					tFileAttribs['artifact'],
 					tFileAttribs['file'].get_path(),
 					tFileAttribs['packaging']
 				]
