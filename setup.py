@@ -468,4 +468,6 @@ for strDst,strSrc in aCfg['filter'].items():
 # Run Scons (use aCfg['scons'] to get the path. All archives *must* create a folder with the name
 # '%s-%s'%(strName,strVersion) and have a 'scons.py' there.
 print 'Running scons (%s)' % aCfg['scons_path']
-subprocess.call([sys.executable, aCfg['scons_path']])
+astrArguments = [sys.executable, aCfg['scons_path']]
+astrArguments.extend(sys.argv[1:])
+subprocess.call(astrArguments)
