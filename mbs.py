@@ -36,8 +36,15 @@ import runpy
 import shutil
 import subprocess
 import tarfile
+
+# This is for download_file_urllib2.
 import urllib2
 import urlparse
+
+# This is for download_file_urlgrabber.
+import urlgrabber
+import urlgrabber.grabber
+import urlgrabber.progress
 
 from string import Template
 from xml.etree.ElementTree import ElementTree
@@ -52,7 +59,7 @@ def get_tool_path(aCfg, aTool):
 #
 # Returns 'True' on success, 'False' on error.
 #
-def download_file(strUrl, strFile):
+def download_file_urllib2(strUrl, strFile):
 	bResult = False
 	fOutput = None
 	sizDownloaded = 0
@@ -86,6 +93,27 @@ def download_file(strUrl, strFile):
 		fOutput.close()
 	
 	return bResult
+
+
+
+def download_file_urlgrabber(strUrl, strFile):
+	print 'Download "%s" to "%s"...' % (strUrl, strFile)
+	tProgressObj = urlgrabber.progress.text_progress_meter()
+	try:
+		urlgrabber.urlgrab(strUrl, strFile, progress_obj=tProgressObj)
+		print 'OK'
+		bResult = True
+	except urlgrabber.grabber.URLGrabError, e:
+		print 'Failed to download the package: %s'%e.strerror
+		bResult = False
+	
+	return bResult
+
+
+
+def download_file(strUrl, strFile):
+	return download_file_urlgrabber(strUrl, strFile)
+
 
 
 #
@@ -440,4 +468,6 @@ for strDst,strSrc in aCfg['filter'].items():
 # Run Scons (use aCfg['scons'] to get the path. All archives *must* create a folder with the name
 # '%s-%s'%(strName,strVersion) and have a 'scons.py' there.
 print 'Running scons (%s)' % aCfg['scons_path']
-subprocess.call([sys.executable, aCfg['scons_path']])
+astrArguments = [sys.executable, aCfg['scons_path']]
+astrArguments.extend(sys.argv[1:])
+subprocess.call(astrArguments)
