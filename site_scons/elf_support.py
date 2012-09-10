@@ -63,35 +63,9 @@ def get_symbol_table(env, strFileName):
 
 
 def get_debug_info(env, strFileName):
-	aCmd = [env['OBJDUMP'], '-e', strFileName]
+	aCmd = [env['READELF'], '--debug-dump=info', strFileName]
 	proc = subprocess.Popen(aCmd, stdout=subprocess.PIPE)
 	strOutput = proc.communicate()[0]
-	
-	# Split the output in the sections.
-#	astrSections = re.split('The section ([a-zA-Z0-9._]+) contains:', strOutput)
-	astrSections = re.split('(?:The section ([a-zA-Z0-9._]+) contains:)|(?:Contents of the ([a-zA-Z0-9._]+) section:)', strOutput)
-
-	# Expect at least one section. This makes 3 entries in the array:
-	#  [0] : the text before the first match
-	#  [1] : the first match, part 1
-	#  [2] : the first match, part 2
-	#  [3] : the text after the first match
-	# More matches give more [1], [2] and [3] entries.
-	sizSections = len(astrSections) 
-	if sizSections<4:
-		raise Exception('Failed to parse the debug sections: section start not found.')
-	
-	# Make a dictionary with the section name as keys and the section dump as values.
-	atSections = dict({})
-	for iCnt in range(1, sizSections, 3):
-		strName = astrSections[iCnt] or astrSections[iCnt+1]
-		atSections[strName] = astrSections[iCnt+2]
-
-	# Process the '.debug_info' section.
-	if not '.debug_info' in atSections:
-		raise Exception('Section ".debug_info" not found!')
-	if not '.debug_macinfo' in atSections:
-		raise Exception('Section ".debug_macinfo" not found!')
 	
 	# Add all information to an XML file.
 	tRoot = xml.etree.ElementTree.Element('DebugInfo')
@@ -108,7 +82,7 @@ def get_debug_info(env, strFileName):
 	atParents.append(tRoot)
 	
 	# Loop over all lines in the ".debug_info" section.
-	for strLine in atSections['.debug_info'].split('\n'):
+	for strLine in strOutput.split('\n'):
 		# Is this a new element?
 		tObj = reElement.match(strLine)
 		if not tObj is None:
@@ -153,16 +127,20 @@ def get_debug_info(env, strFileName):
 					strValue = tObj.group(3).strip()
 					tNode = atParents[len(atParents)-1]
 					tNode.set(strName, strValue)
-
-
-	# Add all macros here.	
+	
+	
+	aCmd = [env['READELF'], '--debug-dump=macro', strFileName]
+	proc = subprocess.Popen(aCmd, stdout=subprocess.PIPE)
+	strOutput = proc.communicate()[0]
+	
+	# Add all macros here.
 	tMacroRoot = xml.etree.ElementTree.SubElement(tRoot, 'MergedMacros')
-
+	
 	# FIXME: Macro extraction should respect different files.
 	# NOTE: This matches only macros without parameter.
 	reMacro = re.compile('\s+DW_MACINFO_define - lineno : \d+ macro : (\w+)\s+(.*)')
 	# Loop over all lines in the ".debug_macinfo" section.
-	for strLine in atSections['.debug_macinfo'].split('\n'):
+	for strLine in strOutput.split('\n'):
 		# Is this a new element?
 		tObj = reMacro.match(strLine)
 		if not tObj is None:
