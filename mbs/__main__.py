@@ -400,8 +400,8 @@ def read_project_config(strConfigPath, aCfg):
 	return aCfg
 
 
-# Get the relative path from the current folder to the muhkuh build system.
-strMbsDir = os.path.relpath(os.path.dirname(os.path.realpath(__file__)))
+# Get the relative path from the current folder to the Muhkuh build system.
+strMbsDir = os.path.relpath(os.path.join(os.path.dirname(os.path.realpath(__file__)),'..'))
 
 # Set the defaults.
 aCfg = dict({
