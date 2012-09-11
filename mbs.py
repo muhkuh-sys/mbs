@@ -41,11 +41,6 @@ import tarfile
 import urllib2
 import urlparse
 
-# This is for download_file_urlgrabber.
-import urlgrabber
-import urlgrabber.grabber
-import urlgrabber.progress
-
 from string import Template
 from xml.etree.ElementTree import ElementTree
 
@@ -54,12 +49,13 @@ def get_tool_path(aCfg, aTool):
 	return os.path.join(aCfg['depack_path'], aTool['group'], aTool['name'], '%s-%s'%(aTool['name'],aTool['version']))
 
 
+
 #
 # Download the URL 'strUrl' to the file 'strFile'.
 #
 # Returns 'True' on success, 'False' on error.
 #
-def download_file_urllib2(strUrl, strFile):
+def download_file(strUrl, strFile):
 	bResult = False
 	fOutput = None
 	sizDownloaded = 0
@@ -93,26 +89,6 @@ def download_file_urllib2(strUrl, strFile):
 		fOutput.close()
 	
 	return bResult
-
-
-
-def download_file_urlgrabber(strUrl, strFile):
-	print 'Download "%s" to "%s"...' % (strUrl, strFile)
-	tProgressObj = urlgrabber.progress.text_progress_meter()
-	try:
-		urlgrabber.urlgrab(strUrl, strFile, progress_obj=tProgressObj)
-		print 'OK'
-		bResult = True
-	except urlgrabber.grabber.URLGrabError, e:
-		print 'Failed to download the package: %s'%e.strerror
-		bResult = False
-	
-	return bResult
-
-
-
-def download_file(strUrl, strFile):
-	return download_file_urlgrabber(strUrl, strFile)
 
 
 
