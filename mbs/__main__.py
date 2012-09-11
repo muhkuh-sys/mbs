@@ -37,14 +37,7 @@ import shutil
 import subprocess
 import tarfile
 
-# This is for download_file_urllib2.
-import urllib2
-import urlparse
-
-# This is for download_file_urlgrabber.
-import urlgrabber
-import urlgrabber.grabber
-import urlgrabber.progress
+import download
 
 from string import Template
 from xml.etree.ElementTree import ElementTree
@@ -52,67 +45,6 @@ from xml.etree.ElementTree import ElementTree
 
 def get_tool_path(aCfg, aTool):
 	return os.path.join(aCfg['depack_path'], aTool['group'], aTool['name'], '%s-%s'%(aTool['name'],aTool['version']))
-
-
-#
-# Download the URL 'strUrl' to the file 'strFile'.
-#
-# Returns 'True' on success, 'False' on error.
-#
-def download_file_urllib2(strUrl, strFile):
-	bResult = False
-	fOutput = None
-	sizDownloaded = 0
-	
-	try:
-		aSocket = urllib2.urlopen(strUrl)
-		aInfo = aSocket.info()
-		try:
-			sizTotal = long(aInfo['content-length'])
-		except KeyError:
-			sizTotal = 0
-		
-		fOutput = open(strFile, 'wb')
-		while 1:
-			strChunk = aSocket.read(2048)
-			sizChunk = len(strChunk)
-			if sizChunk==0:
-				break
-			fOutput.write(strChunk)
-			sizDownloaded += sizChunk
-			if sizTotal!=0:
-				print '%d%% (%d/%d)' % (100.0*sizDownloaded/sizTotal, sizDownloaded, sizTotal)
-			else:
-				print '%d' % sizDownloaded
-		
-		bResult = True
-	except urllib2.HTTPError, e: 
-		print 'Failed to download %s: %d' % (strUrl,e.code)
-	
-	if fOutput:
-		fOutput.close()
-	
-	return bResult
-
-
-
-def download_file_urlgrabber(strUrl, strFile):
-	print 'Download "%s" to "%s"...' % (strUrl, strFile)
-	tProgressObj = urlgrabber.progress.text_progress_meter()
-	try:
-		urlgrabber.urlgrab(strUrl, strFile, progress_obj=tProgressObj)
-		print 'OK'
-		bResult = True
-	except urlgrabber.grabber.URLGrabError, e:
-		print 'Failed to download the package: %s'%e.strerror
-		bResult = False
-	
-	return bResult
-
-
-
-def download_file(strUrl, strFile):
-	return download_file_urlgrabber(strUrl, strFile)
 
 
 
@@ -226,9 +158,9 @@ def install_package(aCfg, aTool):
 				strPackageUrl = strRepositoryUrl + '/'.join(aPathElements) + '/' + strPackageName
 				strSha1Url = strPackageUrl + '.sha1'
 				
-				bDownloadOk = download_file(strSha1Url, strLocalSha1Path)
+				bDownloadOk = download.download_to_file(strSha1Url, strLocalSha1Path)
 				if bDownloadOk==True:
-					bDownloadOk = download_file(strPackageUrl, strLocalPackagePath)
+					bDownloadOk = download.download_to_file(strPackageUrl, strLocalPackagePath)
 					if bDownloadOk==True:
 						# Check the sha1 sum.
 						bDownloadOk = check_sha1_sum(strLocalSha1Path, strLocalPackagePath)
@@ -424,8 +356,8 @@ def read_project_config(strConfigPath, aCfg):
 	return aCfg
 
 
-# Get the relative path from the current folder to the muhkuh build system.
-strMbsDir = os.path.relpath(os.path.dirname(os.path.realpath(__file__)))
+# Get the relative path from the current folder to the Muhkuh build system.
+strMbsDir = os.path.relpath(os.path.join(os.path.dirname(os.path.realpath(__file__)),'..'))
 
 # Set the defaults.
 aCfg = dict({
