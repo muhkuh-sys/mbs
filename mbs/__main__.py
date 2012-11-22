@@ -28,16 +28,14 @@ iMinimumInterpreterVersion_hex = (iMinimumInterpreterVersion_maj<<24) | (iMinimu
 if sys.hexversion<iMinimumInterpreterVersion_hex:
 	sys.exit('The setup script needs at least python %d.%d to run. Please update!'%(iMinimumInterpreterVersion_maj, iMinimumInterpreterVersion_min))
 
-import hashlib
 import os
 import platform
 import re
 import runpy
 import shutil
 import subprocess
-import tarfile
 
-import download
+import install
 
 from string import Template
 from xml.etree.ElementTree import ElementTree
@@ -46,145 +44,6 @@ from xml.etree.ElementTree import ElementTree
 def get_tool_path(aCfg, aTool):
 	return os.path.join(aCfg['depack_path'], aTool['group'], aTool['name'], '%s-%s'%(aTool['name'],aTool['version']))
 
-
-
-#
-# Check the Sha1 sum for a file.
-# First extract the precalculated sha1 sum from the textfile 'strSha1File'.
-# Then build our own sha1 sum of file 'strBinFile' and compare it with the sum
-# from the textfile.
-#
-# Returns 'True' on success and 'False' on error.
-#
-def check_sha1_sum(strSha1File, strBinFile):
-	bResult = False
-	strRemoteHash = None
-	
-	tRegObj = re.compile('([0-9a-fA-F]+)')
-	fInput = open(strSha1File, 'rt')
-	for strLine in fInput:
-		tMatchObj = tRegObj.match(strLine)
-		if tMatchObj:
-			# Get the hash.
-			strRemoteHash = tMatchObj.group(1)
-			break
-	fInput.close()
-	
-	
-	if strRemoteHash:
-		tHashObj = hashlib.sha1()
-	
-		fInput = open(strBinFile, 'rb')
-		while 1:
-			strChunk = fInput.read(8192)
-			if len(strChunk)==0:
-				break
-			tHashObj.update(strChunk)
-		fInput.close()
-	
-		strLocalHash = tHashObj.hexdigest()
-		if strRemoteHash==strLocalHash:
-			bResult = True
-	
-	return bResult
-
-
-def install_package(aCfg, aTool):
-	print 'Processing package %s, version %s' % (aTool['name'], aTool['version'])
-	
-	# Construct the path for the depack marker.
-	strLocalMarkerFolder = aCfg['marker_path']
-	
-	# Construct the path to the repository folder.
-	strLocalRepositoryPath = aCfg['repository_path']
-	
-	# Construct the path to the depack folder.
-	strPacketDepackPath = os.path.join(aCfg['depack_path'], aTool['group'], aTool['name'])
-	
-	# Construct the package name.
-	strPackageName = '%s-%s.%s'%(aTool['package'],aTool['version'],aTool['typ'])
-	strSha1Name = strPackageName + '.sha1'
-	
-	aPathElements = aTool['group'].split('.')
-	aPathElements.append(aTool['package'])
-	aPathElements.append(aTool['version'])
-	
-	strLocalMarkerPath = os.path.join(strLocalMarkerFolder, '%s-%s-%s-%s.marker'%(aTool['group'],aTool['name'],aTool['typ'],aTool['version']))
-	
-	# Construct the path in the repository.
-	strLocalPackageFolder = os.path.join(strLocalRepositoryPath, *aPathElements)
-	strLocalPackagePath = os.path.join(strLocalPackageFolder, strPackageName)
-	strLocalSha1Path = strLocalPackagePath + '.sha1'
-	
-	# Create the directories.
-	if os.path.isdir(strLocalMarkerFolder)==False:
-		os.makedirs(strLocalMarkerFolder)
-	
-	if os.path.isdir(strLocalRepositoryPath)==False:
-		os.makedirs(strLocalRepositoryPath)
-	
-	if os.path.isdir(strLocalPackageFolder)==False:
-		os.makedirs(strLocalPackageFolder)
-	
-	if os.path.isdir(strPacketDepackPath)==False:
-		os.makedirs(strPacketDepackPath)
-	
-	if os.path.isfile(strLocalMarkerPath)==True:
-		print 'The package is already installed.'
-	else:
-		print 'The package is not installed yet.'
-		
-		# Both the package and the sha1 must exist.
-		bDownloadOk = os.path.isfile(strLocalPackagePath) and os.path.isfile(strLocalSha1Path)
-		
-		if bDownloadOk==True:
-			print 'The package was already downloaded, check the files.'
-			# Check the sha1 sum.
-			bDownloadOk = check_sha1_sum(strLocalSha1Path, strLocalPackagePath)
-			if bDownloadOk==True:
-				print 'The checksums match: OK!'
-			else:
-				print 'Checksum mismatch, discarding downloaded files!'
-				os.remove(strLocalPackagePath)
-				os.remove(strLocalSha1Path)
-		
-		if bDownloadOk==False:
-			print 'The package must be downloaded.'
-			
-			for strRepositoryUrl in aCfg['repositories']:
-				if strRepositoryUrl[-1]!='/':
-					strRepositoryUrl += '/'
-				print 'Trying repository at %s...' % strRepositoryUrl
-				strPackageUrl = strRepositoryUrl + '/'.join(aPathElements) + '/' + strPackageName
-				strSha1Url = strPackageUrl + '.sha1'
-				
-				bDownloadOk = download.download_to_file(strSha1Url, strLocalSha1Path)
-				if bDownloadOk==True:
-					bDownloadOk = download.download_to_file(strPackageUrl, strLocalPackagePath)
-					if bDownloadOk==True:
-						# Check the sha1 sum.
-						bDownloadOk = check_sha1_sum(strLocalSha1Path, strLocalPackagePath)
-						if bDownloadOk==True:
-							print 'The checksums match: OK!'
-							break
-						else:
-							print 'Checksum mismatch, discarding downloaded files!'
-							os.remove(strLocalPackagePath)
-							os.remove(strLocalSha1Path)
-			
-			if bDownloadOk==False:
-				raise Exception('Failed to download the package %s!'%strPackageName)
-		
-		if bDownloadOk==True:
-			# Unpack the archive.
-			print 'Unpacking...'
-			tArchive = tarfile.open(strLocalPackagePath)
-			tArchive.extractall(strPacketDepackPath)
-			tArchive.close()
-			
-			# Create the depack marker.
-			fMarker = open(strLocalMarkerPath, 'w')
-			fMarker.close()
 
 
 def create_substitute_dict(aCfg):
@@ -242,33 +101,18 @@ def filter_file(aSubstitute, strDstPath, strSrcPath):
 
 
 def read_tool(tNode):
-	aBaseMachine = dict({
-		'i486': 'i386',
-		'i586': 'i386',
-		'i686': 'i386'
-	})
-	
 	strGroup = tNode.findtext('group')
 	strName = tNode.findtext('name')
 	strPackage = tNode.findtext('package')
 	strVersion = tNode.findtext('version')
 	strTyp = tNode.findtext('typ')
 	
-	strMachineName = platform.machine()
-	if strMachineName in aBaseMachine:
-		strMachineName = aBaseMachine[strMachineName]
-	
-	aToolSubstutite = dict({
-		'platform': platform.system().lower(),
-		'machine': strMachineName
-	})
-	
 	tTemplate = Template(strPackage)
 	
 	return dict({
 		'group': strGroup,
 		'name': strName,
-		'package': tTemplate.safe_substitute(aToolSubstutite),
+		'package': tTemplate.safe_substitute(dict({ 'platform': platform.system().lower() })),
 		'version': strVersion,
 		'typ': strTyp
 	})
@@ -374,15 +218,22 @@ aCfg = dict({
 read_user_config('~/.mbs.xml', aCfg)
 read_project_config('setup.xml', aCfg)
 
+# Create the folders.
+if os.path.isdir(aCfg['marker_path'])==False:
+	os.makedirs(aCfg['marker_path'])	
+if os.path.isdir(aCfg['repository_path'])==False:
+	os.makedirs(aCfg['repository_path'])
+
+
 # Install Scons.
-install_package(aCfg, aCfg['scons'])
+install.process_package(aCfg, aCfg['scons'])
 aToolScons = aCfg['scons']
 aCfg['scons_path'] = os.path.join(get_tool_path(aCfg, aToolScons), 'scons.py')
 
 
 # Install all other tools.
 for aTool in aCfg['tools']:
-	install_package(aCfg, aTool)
+	install.process_package(aCfg, aTool)
 
 
 # Filter the files.
