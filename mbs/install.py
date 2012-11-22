@@ -103,18 +103,7 @@ def getToolAttributes(aCfg, aTool, strPackageMachine):
 	return aAttr
 
 
-"""
-	# Create the directories.
-	
-	
-	if os.path.isfile(strLocalMarkerPath)==True:
-		print 'The package is already installed.'
-	else:
-		print 'The package is not installed yet.'
-		
 
-
-"""
 def install_package(aCfg, aToolAttr):
 	if os.path.isdir(aToolAttr['LocalPackageFolder'])==False:
 		os.makedirs(aToolAttr['LocalPackageFolder'])
@@ -195,7 +184,6 @@ def process_package(aCfg, aTool):
 	# Does the package have a machine placeholder?
 	strPackage = aTool['package']
 	if string.find(strPackage, '${machine}') >- 1:
-		print 'The package %s is machine dependent.' % strPackage
 		# Get the machine name and possible alternatives.
 		strMachineName = platform.machine()
 		if strMachineName in atMachineFallbacks:
