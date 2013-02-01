@@ -84,7 +84,6 @@ def version_emitter(target, source, env):
 					pass
 				
 				# Is this version completely checked in?
-				print 'HG ID: %s %s' % (strHgId, strHgId[-1])
 				if strHgId[-1]=='+':
 					strProjectVersionLastCommit = 'SNAPSHOT'
 				else:
@@ -94,7 +93,7 @@ def version_emitter(target, source, env):
 						strHgDate = string.strip(strOutput)
 						tMatch = re.match('(\d+)\s+([+-]?\d+)', strHgDate)
 						if not tMatch is None:
-							tTimeStamp = datetime.datetime.fromtimestamp(tMatch.group(1))
+							tTimeStamp = datetime.datetime.fromtimestamp(float(tMatch.group(1)))
 							strProjectVersionLastCommit = '%04d%02d%02d_%02d%02d%02d' % (tTimeStamp.year, tTimeStamp.month, tTimeStamp.day, tTimeStamp.hour, tTimeStamp.minute, tTimeStamp.second)
 					except:
 						pass
