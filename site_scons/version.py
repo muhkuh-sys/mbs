@@ -20,8 +20,11 @@
 #-------------------------------------------------------------------------#
 
 
+import datetime
 import os
+import re
 import string
+import subprocess
 from string import Template
 
 from SCons.Script import *
@@ -67,31 +70,51 @@ def version_emitter(target, source, env):
 	# Is the VCS ID already set?
 	if not 'PROJECT_VERSION_VCS' in env:
 		# The default version is 'unknown'.
-		project_version_vcs = 'unknown'
+		strProjectVersionVCS = 'unknown'
+		strProjectVersionLastCommit = 'unknown'
 		
 		if os.path.exists('.hg'):
 			if env['MERCURIAL']:
 				# Get the mercurial ID.
-				child = os.popen(env['MERCURIAL']+' id -i')
-				project_version_vcs = 'HG' + child.read()
-				err = child.close()
-				if err:
-					project_version_vcs = 'unknown'
+				try:
+					strOutput = subprocess.check_output([env['MERCURIAL'], 'id', '-i'])
+					strHgId = string.strip(strOutput)
+					strProjectVersionVCS = 'HG' + strHgId
+				except:
+					pass
+				
+				# Is this version completely checked in?
+				print 'HG ID: %s %s' % (strHgId, strHgId[-1])
+				if strHgId[-1]=='+':
+					strProjectVersionLastCommit = 'SNAPSHOT'
+				else:
+					# Get the date of the last commit.
+					try:
+						strOutput = subprocess.check_output([env['MERCURIAL'], 'log', '-r', strHgId, '--template', '{date|hgdate}'])
+						strHgDate = string.strip(strOutput)
+						tMatch = re.match('(\d+)\s+([+-]?\d+)', strHgDate)
+						if not tMatch is None:
+							tTimeStamp = datetime.datetime.fromtimestamp(tMatch.group(1))
+							strProjectVersionLastCommit = '%04d%02d%02d_%02d%02d%02d' % (tTimeStamp.year, tTimeStamp.month, tTimeStamp.day, tTimeStamp.hour, tTimeStamp.minute, tTimeStamp.second)
+					except:
+						pass
 		elif os.path.exists('.svn'):
 			if env['SVNVERSION']:
-				# get the svn version
-				child = os.popen(env['SVNVERSION'])
-				project_version_vcs = 'SVN' + child.read()
-				err = child.close()
-				if err:
-					project_version_vcs = 'unknown'
+				# Get the SVN version.
+				try:
+					strSvnId = subprocess.check_output([env['SVNVERSION']])
+					strProjectVersionVCS = 'SVN' + strSvnId
+				except:
+					pass
 		
 		# Add the version to the environment.
-		env['PROJECT_VERSION_VCS'] = string.strip(project_version_vcs)
+		env['PROJECT_VERSION_VCS'] = strProjectVersionVCS
+		env['PROJECT_VERSION_LAST_COMMIT'] = strProjectVersionLastCommit
 	
 	# Make the target depend on the project version and the VCS ID.
 	Depends(target, SCons.Node.Python.Value(PROJECT_VERSION))
 	Depends(target, SCons.Node.Python.Value(env['PROJECT_VERSION_VCS']))
+	Depends(target, SCons.Node.Python.Value(env['PROJECT_VERSION_LAST_COMMIT']))
 	
 	return target, source
 
