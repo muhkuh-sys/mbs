@@ -42,6 +42,8 @@ def version_action(target, source, env):
 		'PROJECT_VERSION_MIN':version_info[1],
 		'PROJECT_VERSION_VCS':env['PROJECT_VERSION_VCS'],
 		'PROJECT_VERSION': '%s.%s.%s'%(version_info[0], version_info[1], env['PROJECT_VERSION_VCS']),
+		'PROJECT_VERSION_VCS_SYSTEM':env['PROJECT_VERSION_VCS_SYSTEM'],
+		'PROJECT_VERSION_VCS_VERSION':env['PROJECT_VERSION_VCS_VERSION'],
 	})
 	
 	# Read the template.
@@ -70,16 +72,20 @@ def version_emitter(target, source, env):
 	# Is the VCS ID already set?
 	if not 'PROJECT_VERSION_VCS' in env:
 		# The default version is 'unknown'.
+		strProjectVersionVcsSystem = 'unknown'
+		strProjectVersionVcsVersion = 'unknown'
 		strProjectVersionVCS = 'unknown'
 		strProjectVersionLastCommit = 'unknown'
 		
 		if os.path.exists('.hg'):
 			if env['MERCURIAL']:
+				strProjectVersionVcsSystem = 'HG'
 				# Get the mercurial ID.
 				try:
 					strOutput = subprocess.check_output([env['MERCURIAL'], 'id', '-i'])
 					strHgId = string.strip(strOutput)
-					strProjectVersionVCS = 'HG' + strHgId
+					strProjectVersionVcsVersion = strHgId
+					strProjectVersionVCS = strProjectVersionVcsSystem + strProjectVersionVcsVersion
 				except:
 					pass
 				
@@ -99,21 +105,28 @@ def version_emitter(target, source, env):
 						pass
 		elif os.path.exists('.svn'):
 			if env['SVNVERSION']:
+				strProjectVersionVcsSystem = 'SVN'
+				
 				# Get the SVN version.
 				try:
 					strSvnId = subprocess.check_output([env['SVNVERSION']])
-					strProjectVersionVCS = 'SVN' + strSvnId
+					strProjectVersionVcsVersion = strSvnId
+					strProjectVersionVCS = strProjectVersionVcsSystem + strProjectVersionVcsVersion
 				except:
 					pass
 		
 		# Add the version to the environment.
 		env['PROJECT_VERSION_VCS'] = strProjectVersionVCS
 		env['PROJECT_VERSION_LAST_COMMIT'] = strProjectVersionLastCommit
+		env['PROJECT_VERSION_VCS_SYSTEM'] = strProjectVersionVcsSystem
+		env['PROJECT_VERSION_VCS_VERSION'] = strProjectVersionVcsVersion
 	
 	# Make the target depend on the project version and the VCS ID.
 	Depends(target, SCons.Node.Python.Value(PROJECT_VERSION))
 	Depends(target, SCons.Node.Python.Value(env['PROJECT_VERSION_VCS']))
 	Depends(target, SCons.Node.Python.Value(env['PROJECT_VERSION_LAST_COMMIT']))
+	Depends(target, SCons.Node.Python.Value(env['PROJECT_VERSION_VCS_SYSTEM']))
+	Depends(target, SCons.Node.Python.Value(env['PROJECT_VERSION_VCS_VERSION']))
 	
 	return target, source
 
