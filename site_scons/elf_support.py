@@ -82,7 +82,7 @@ def get_debug_info(env, strFileName):
 	atParents.append(tRoot)
 	
 	# Loop over all lines in the ".debug_info" section.
-	for strLine in strOutput.split('\n'):
+	for strLine in strOutput.split(os.linesep):
 		# Is this a new element?
 		tObj = reElement.match(strLine)
 		if not tObj is None:
@@ -140,7 +140,7 @@ def get_debug_info(env, strFileName):
 	# NOTE: This matches only macros without parameter.
 	reMacro = re.compile('\s+DW_MACINFO_define - lineno : \d+ macro : (\w+)\s+(.*)')
 	# Loop over all lines in the ".debug_macinfo" section.
-	for strLine in strOutput.split('\n'):
+	for strLine in strOutput.split(os.linesep):
 		# Is this a new element?
 		tObj = reMacro.match(strLine)
 		if not tObj is None:
