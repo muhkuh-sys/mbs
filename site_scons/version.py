@@ -30,45 +30,7 @@ from string import Template
 from SCons.Script import *
 
 
-def version_action(target, source, env):
-	global PROJECT_VERSION
-	
-	# Split up the project version.
-	version_info = PROJECT_VERSION.split('.')
-	
-	# Apply the project version to the environment.
-	aSubst = dict({
-		'PROJECT_VERSION_MAJ':version_info[0],
-		'PROJECT_VERSION_MIN':version_info[1],
-		'PROJECT_VERSION_VCS':env['PROJECT_VERSION_VCS'],
-		'PROJECT_VERSION': '%s.%s.%s'%(version_info[0], version_info[1], env['PROJECT_VERSION_VCS']),
-		'PROJECT_VERSION_VCS_SYSTEM':env['PROJECT_VERSION_VCS_SYSTEM'],
-		'PROJECT_VERSION_VCS_VERSION':env['PROJECT_VERSION_VCS_VERSION'],
-	})
-	
-	# Read the template.
-	tTemplate = Template(source[0].get_contents())
-	
-	# Read the destination (if exists).
-	try:
-		dst_oldtxt = target[0].get_contents()
-	except IOError:
-		dst_oldtxt = ''
-	
-	# Filter the src file.
-	dst_newtxt = tTemplate.safe_substitute(aSubst)
-	if dst_newtxt!=dst_oldtxt:
-		# Overwrite the file.
-		dst_file = open(target[0].get_path(), 'w')
-		dst_file.write(dst_newtxt)
-		dst_file.close()
-
-
-
-def version_emitter(target, source, env):
-	global PROJECT_VERSION
-	
-	
+def build_version_strings(env):
 	# Is the VCS ID already set?
 	if not 'PROJECT_VERSION_VCS' in env:
 		# The default version is 'unknown'.
@@ -120,6 +82,73 @@ def version_emitter(target, source, env):
 		env['PROJECT_VERSION_LAST_COMMIT'] = strProjectVersionLastCommit
 		env['PROJECT_VERSION_VCS_SYSTEM'] = strProjectVersionVcsSystem
 		env['PROJECT_VERSION_VCS_VERSION'] = strProjectVersionVcsVersion
+
+
+
+def get_project_version_vcs(env):
+	build_version_strings(env)
+	return env['PROJECT_VERSION_VCS']
+
+
+
+def get_project_version_last_commit(env):
+	build_version_strings(env)
+	return env['PROJECT_VERSION_LAST_COMMIT']
+
+
+
+def get_project_version_vcs_system(env):
+	build_version_strings(env)
+	return env['PROJECT_VERSION_VCS_SYSTEM']
+
+
+
+def get_project_version_vcs_version(env):
+	build_version_strings(env)
+	return env['PROJECT_VERSION_VCS_VERSION']
+
+
+
+def version_action(target, source, env):
+	global PROJECT_VERSION
+	
+	# Split up the project version.
+	version_info = PROJECT_VERSION.split('.')
+	
+	# Apply the project version to the environment.
+	aSubst = dict({
+		'PROJECT_VERSION_MAJ':version_info[0],
+		'PROJECT_VERSION_MIN':version_info[1],
+		'PROJECT_VERSION_VCS':env['PROJECT_VERSION_VCS'],
+		'PROJECT_VERSION': '%s.%s.%s'%(version_info[0], version_info[1], env['PROJECT_VERSION_VCS']),
+		'PROJECT_VERSION_VCS_SYSTEM':env['PROJECT_VERSION_VCS_SYSTEM'],
+		'PROJECT_VERSION_VCS_VERSION':env['PROJECT_VERSION_VCS_VERSION'],
+	})
+	
+	# Read the template.
+	tTemplate = Template(source[0].get_contents())
+	
+	# Read the destination (if exists).
+	try:
+		dst_oldtxt = target[0].get_contents()
+	except IOError:
+		dst_oldtxt = ''
+	
+	# Filter the src file.
+	dst_newtxt = tTemplate.safe_substitute(aSubst)
+	if dst_newtxt!=dst_oldtxt:
+		# Overwrite the file.
+		dst_file = open(target[0].get_path(), 'w')
+		dst_file.write(dst_newtxt)
+		dst_file.close()
+
+
+
+def version_emitter(target, source, env):
+	global PROJECT_VERSION
+	
+	
+	build_version_strings(env)
 	
 	# Make the target depend on the project version and the VCS ID.
 	Depends(target, SCons.Node.Python.Value(PROJECT_VERSION))
@@ -146,4 +175,9 @@ def ApplyToEnv(env):
 	version_act = SCons.Action.Action(version_action, version_string)
 	version_bld = Builder(action=version_act, emitter=version_emitter, single_source=1)
 	env['BUILDERS']['Version'] = version_bld
+
+	env.AddMethod(get_project_version_vcs, "Version_GetVcsId")
+	env.AddMethod(get_project_version_last_commit, "Version_GetLastCommit")
+	env.AddMethod(get_project_version_vcs_system, "Version_GetVcsSystem")
+	env.AddMethod(get_project_version_vcs_version, "Version_GetVcsVersion")
 

@@ -30,7 +30,9 @@ def prn_action(target, source, env):
 	prn_seed = env['PRN_SEED']
 	prn_inc = env['PRN_INC']
 	
-	aBinData = array.array('L', [0]*prn_size)
+	aBinData = array.array('I', [0]*prn_size)
+	if aBinData.itemsize!=4:
+		raise Exception('The array item size is not 4! This is an internal error.')
 	
 	# Write the start and add value.
 	aBinData[0] = prn_seed
@@ -65,11 +67,11 @@ def prn_string(target, source, env):
 	return 'Prn %s' % target[0].get_path()
 
 
-def ApplyToEnv(env):                                                                                                                                                                                            
-	#----------------------------------------------------------------------------                                                                                                                           
-	#                                                                                                                                                                                                       
-	# Add secmem builder.                                                                                                                                                                                 
-	#                                                                                                                                                                                                       
+def ApplyToEnv(env):
+	#----------------------------------------------------------------------------
+	#
+	# Add secmem builder.
+	#
 	env['PRN_SIZE'] = 0x00080000
 	env['PRN_SEED'] = 269230517
 	env['PRN_INC']  = 275155577
