@@ -67,12 +67,12 @@ build_properties.Read()
 Help("""
 This SConstruct file is part of a Muhkuh buildsystem project. Run
 
-  'python path/to/setup.py'
+  'python path/to/mbs'
 
 from your project's root folder to setup the project environment. Usually
 this will be
 
-  'python mbs/setup.py'
+  'python mbs/mbs'
 
 
 This will also download all missing tools.
@@ -132,7 +132,7 @@ except NameError:
 			strGccVersion = strName
 			break
 if strGccVersion!=None:
-	gcc_arm = scons_common.get_tool(strGccVersion)
+	gcc_arm = scons_common.get_tool(env_default, strGccVersion)
 	gcc_arm.ApplyToEnv(env_default)
 	env_default.Replace(CCFLAGS = Split(default_ccflags))
 	env_default.Replace(LIBS = ['m', 'c', 'gcc'])
@@ -154,7 +154,7 @@ except NameError:
 			strAsciidocVersion = strName
 			break
 if strAsciidocVersion!=None:
-	asciidoc = scons_common.get_tool(strAsciidocVersion)
+	asciidoc = scons_common.get_tool(env_default, strAsciidocVersion)
 	asciidoc.ApplyToEnv(env_default)
 
 

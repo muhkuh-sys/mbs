@@ -63,7 +63,7 @@ import atexit
 atexit.register(display_build_status)
 
 
-def get_tool(strToolName):
+def get_tool(env, strToolName):
 	global TOOLS
 
 	tMod = None
@@ -81,7 +81,7 @@ def get_tool(strToolName):
 		pass
 
 	if tMod==None:
-		raise Exception(strToolName, 'The requested tool is not part of the configuration. Add it to setup.xml and rerun setup.py')
+		raise Exception(strToolName, 'The requested tool is not part of the configuration. Add it to setup.xml and rerun mbs.')
 
 	return tMod
 
@@ -134,3 +134,4 @@ def create_compiler_environment(env, strAsicTyp, aAttributes):
 def ApplyToEnv(env):
 	env.AddMethod(set_build_path, 'SetBuildPath')
 	env.AddMethod(create_compiler_environment, 'CreateCompilerEnv')
+	env.AddMethod(get_tool, 'GetTool')
