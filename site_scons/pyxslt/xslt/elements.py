@@ -99,7 +99,7 @@ class Output(Element):
 			output['method'] = qnameProperty(node, 'method', \
 				namespaces=options['namespaces'], resolveDefault=False)
 		if node.hasAttribute('indent'): 
-			output['indent'] = boolsProperty(node, 'indent')
+			output['indent'] = boolProperty(node, 'indent')
 		if node.hasAttribute('encoding'): 
 			output['encoding'] = stringProperty(node, 'encoding')
 		if node.hasAttribute('version'): 
