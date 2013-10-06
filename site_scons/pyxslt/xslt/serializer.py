@@ -35,7 +35,10 @@ class XMLSerializer(object):
 		
 	def serialize(self, node, writer, indent=0):
 		if node.nodeType == xml.dom.Node.ATTRIBUTE_NODE:
-			writer.write(' %s=%s' % (node.name, quoteattr(node.value)))
+			if node.value is None:
+				writer.write(' %s' % node.name)
+			else:
+				writer.write(' %s=%s' % (node.name, quoteattr(node.value)))
 			
 		elif node.nodeType == xml.dom.Node.CDATA_SECTION_NODE:
 			s = node.data.replace(']]>', ']]]]><![CDATA[>')
