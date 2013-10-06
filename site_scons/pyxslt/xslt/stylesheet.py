@@ -87,6 +87,10 @@ class Stylesheet(object):
 			ser = serializer.XMLSerializer(self.output)
 		elif method == (None, 'text'):
 			ser = serializer.TextSerializer(self.output)
+		elif method == (None, 'html'):
+			ser = serializer.XMLSerializer(self.output)
+		else:
+			ser = None
 			
 		if ser is not None:
 			return ser.serializeResult(frag)
