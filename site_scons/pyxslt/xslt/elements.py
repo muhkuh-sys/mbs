@@ -329,7 +329,7 @@ class Sort(object):
 		self.upperFirst = caseOrder == 'upper-first'
 	
 	
-	def compare(context, node1, node2):
+	def compare(self, context, node1, node2):
 		subContext = context.copy()
 		
 		subContext.nodeset = [node1]
