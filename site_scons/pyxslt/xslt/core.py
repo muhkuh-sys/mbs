@@ -228,6 +228,7 @@ class TemplateContent(object):
 						if options['forwardsCompatible']:
 							e = self._ef.new('_perform_fallback', templateNode, stylesheet, options)
 						else:
+							print 'Element %s not yet implemented!' % templateNode.localName
 							raise NotImplemented # TODO: forwards-compatible
 				else:
 					if templateNode.namespaceURI in options['extensionElementsNS']:
