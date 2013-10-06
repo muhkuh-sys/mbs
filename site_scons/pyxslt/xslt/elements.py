@@ -320,9 +320,9 @@ class Sort(object):
 	def __init__(self, element, stylesheet, options):
 		self.select = exprProperty(element, 'select', default='.')
 		self.lang = stringProperty(element, 'lang')
-		self.dataType = stringProperty(element, 'data-type', default='text', choises=['text', 'number'])
+		self.dataType = stringProperty(element, 'data-type', default='text', choices=['text', 'number'])
 		
-		order = stringProperty(element, 'order', defauld='ascending', choices=['ascending', 'descending'])
+		order = stringProperty(element, 'order', default='ascending', choices=['ascending', 'descending'])
 		self.asc = order == 'ascending'
 		
 		caseOrder = stringProperty(element, 'case-order', default='upper-first', choices=['upper-first', 'lower-first'])
