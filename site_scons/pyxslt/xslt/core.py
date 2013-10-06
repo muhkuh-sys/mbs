@@ -68,7 +68,8 @@ def fixNamespaces(node):
 	if node.nodeType == xml.dom.Node.ELEMENT_NODE:
 		ns = tools.getNamespaceBindings(node)
 		if node.namespaceURI not in ns.values():
-			node.setAttributeNS(xml.dom.XMLNS_NAMESPACE, 'xmlns:'+node.prefix, node.namespaceURI)
+			if not node.prefix is None:
+				node.setAttributeNS(xml.dom.XMLNS_NAMESPACE, 'xmlns:'+node.prefix, node.namespaceURI)
 		for i in range(node.attributes.length):
 			attr = node.attributes.item(i)
 			if attr.namespaceURI not in ns.values() and attr.namespaceURI != xml.dom.XMLNS_NAMESPACE:
