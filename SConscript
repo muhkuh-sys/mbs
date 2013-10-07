@@ -56,6 +56,7 @@ import scons_common
 import svnversion
 import uuencode
 import version
+import xsl_transform
 
 
 build_properties.Read()
@@ -178,5 +179,8 @@ scons_common.ApplyToEnv(env_default)
 svnversion.ApplyToEnv(env_default)
 uuencode.ApplyToEnv(env_default)
 version.ApplyToEnv(env_default)
+xsl_transform.ApplyToEnv(env_default)
+
+
 Export('env_default')
 
