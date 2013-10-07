@@ -337,12 +337,12 @@ class Sort(object):
 		subContext.nodeset = [node2]
 		v2 = self.select.find(subContext)
 		
-		if self.dataType == (None, 'text'):
-			v1 = xpath.expr.string(v1)
-			v2 = xpath.expr.string(v2)
-		if self.dataType == (None, 'number'):
-			v1 = xpath.expr.number(v1)
-			v2 = xpath.expr.number(v2)
+		if self.dataType == 'text':
+			v1 = xpath.tools.string(v1, subContext)
+			v2 = xpath.tools.string(v2, subContext)
+		if self.dataType == 'number':
+			v1 = xpath.tools.number(v1, subContext)
+			v2 = xpath.tools.number(v2, subContext)
 			
 		r = cmp(v1, v2)
 		if not self.asc:
