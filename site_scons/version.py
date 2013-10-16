@@ -39,7 +39,10 @@ def build_version_strings(env):
 		strProjectVersionVCS = 'unknown'
 		strProjectVersionLastCommit = 'unknown'
 		
-		if os.path.exists('.hg'):
+		# Use the root folder to get the version. This is important for HG and SVN>=1.7 .
+		strSconsRoot = Dir('#').abspath
+		
+		if os.path.exists(os.path.join(strSconsRoot, '.hg')):
 			if env['MERCURIAL']:
 				strProjectVersionVcsSystem = 'HG'
 				# Get the mercurial ID.
@@ -65,7 +68,7 @@ def build_version_strings(env):
 							strProjectVersionLastCommit = '%04d%02d%02d_%02d%02d%02d' % (tTimeStamp.year, tTimeStamp.month, tTimeStamp.day, tTimeStamp.hour, tTimeStamp.minute, tTimeStamp.second)
 					except:
 						pass
-		elif os.path.exists('.svn'):
+		elif os.path.exists(os.path.join(strSconsRoot, '.svn')):
 			if env['SVNVERSION']:
 				strProjectVersionVcsSystem = 'SVN'
 				
