@@ -138,17 +138,22 @@ def get_debug_info(env, strFileName):
 	
 	# FIXME: Macro extraction should respect different files.
 	# NOTE: This matches only macros without parameter.
-	reMacro = re.compile('\s+DW_MACINFO_define - lineno : \d+ macro : (\w+)\s+(.*)')
+	areMacro = [
+		re.compile('\s+DW_MACINFO_define - lineno : \d+ macro : (\w+)\s+(.*)'),
+		re.compile('\s+DW_MACRO_GNU_define_indirect - lineno : \d+ macro : (\w+)\s+(.*)')
+	]
 	# Loop over all lines in the ".debug_macinfo" section.
 	for strLine in strOutput.split(os.linesep):
 		# Is this a new element?
-		tObj = reMacro.match(strLine)
-		if not tObj is None:
-			strName = tObj.group(1)
-			strValue = tObj.group(2)
-			tNode = xml.etree.ElementTree.SubElement(tMacroRoot, 'Macro')
-			tNode.set('name', strName)
-			tNode.set('value', strValue)
+		for reMacro in areMacro:
+			tObj = reMacro.match(strLine)
+			if not tObj is None:
+				strName = tObj.group(1)
+				strValue = tObj.group(2)
+				tNode = xml.etree.ElementTree.SubElement(tMacroRoot, 'Macro')
+				tNode.set('name', strName)
+				tNode.set('value', strValue)
+	
 	
 #	# Write the XML tree to a test file.
 #	astrXml = xml.etree.ElementTree.tostringlist(tXml.getroot(), encoding='UTF-8', method="xml")
