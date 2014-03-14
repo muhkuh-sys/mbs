@@ -42,7 +42,18 @@ def build_version_strings(env):
 		# Use the root folder to get the version. This is important for HG and SVN>=1.7 .
 		strSconsRoot = Dir('#').abspath
 		
-		if os.path.exists(os.path.join(strSconsRoot, '.hg')):
+		if os.path.exists(os.path.join(strSconsRoot, '.git')):
+			if env['GIT']:
+				strProjectVersionVcsSystem = 'GIT'
+				# Get the GIT ID.
+				try:
+					strOutput = subprocess.check_output([env['GIT'], 'rev-parse', '--short=12', '--verify', 'HEAD'])
+					strGitId = string.strip(strOutput)
+					strProjectVersionVcsVersion = strGitId
+					strProjectVersionVCS = strProjectVersionVcsSystem + strProjectVersionVcsVersion
+				except:
+					pass
+		elif os.path.exists(os.path.join(strSconsRoot, '.hg')):
 			if env['MERCURIAL']:
 				strProjectVersionVcsSystem = 'HG'
 				# Get the mercurial ID.
@@ -172,6 +183,7 @@ def ApplyToEnv(env):
 	#
 	# Add version builder.
 	#
+	env['GIT'] = env.Detect('git') or 'git'
 	env['MERCURIAL'] = env.Detect('hg') or env.Detect('thg') or 'hg'
 	env['SVNVERSION'] = env.Detect('svnversion') or 'svnversion'
 	
