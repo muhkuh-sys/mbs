@@ -47,7 +47,7 @@ def build_version_strings(env):
 				strProjectVersionVcsSystem = 'GIT'
 				# Get the GIT ID.
 				try:
-					strOutput = subprocess.check_output([env['GIT'], 'rev-parse', '--short=12', '--verify', 'HEAD'])
+					strOutput = subprocess.check_output([env['GIT'], 'describe', '--abbrev=12', '--always', '--dirty=+'])
 					strGitId = string.strip(strOutput)
 					strProjectVersionVcsVersion = strGitId
 					strProjectVersionVCS = strProjectVersionVcsSystem + strProjectVersionVcsVersion
