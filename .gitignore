@@ -1,5 +1,2 @@
-# Switch to glob syntax.
-syntax: glob
-
 # Ignore all compiled python modules.
 *.pyc
