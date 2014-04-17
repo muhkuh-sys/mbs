@@ -49,7 +49,23 @@ def build_version_strings(env):
 				try:
 					strOutput = subprocess.check_output([env['GIT'], 'describe', '--abbrev=12', '--always', '--dirty=+'])
 					strGitId = string.strip(strOutput)
-					strProjectVersionVcsVersion = strGitId
+					tMatch = re.match('[0-9a-f]{12}\+?$', strGitId)
+					if not tMatch is None:
+						# This is a repository with no tags. Use the raw SHA sum.
+						strProjectVersionVcsVersion = strGitId
+					else:
+						tMatch = re.match('v\d+\.\d+\.\d+$', strGitId)
+						if not tMatch is None:
+							# This is a repository which is exactly on a tag. Use the tag name.
+							strProjectVersionVcsVersion = strGitId
+						else:
+							tMatch = re.match('v\d+\.\d+\.\d+-\d+-g([0-9a-f]{12}\+?)$', strGitId)
+							if not tMatch is None:
+								# This is a repository with commits after the last tag.
+								strProjectVersionVcsVersion = tMatch.group(1)
+							else:
+								# The description has an unknown format.
+								strProjectVersionVcsVersion = strGitId
 					strProjectVersionVCS = strProjectVersionVcsSystem + strProjectVersionVcsVersion
 				except:
 					pass
