@@ -54,10 +54,10 @@ def build_version_strings(env):
 						# This is a repository with no tags. Use the raw SHA sum.
 						strProjectVersionVcsVersion = strGitId
 					else:
-						tMatch = re.match('v\d+\.\d+\.\d+$', strGitId)
+						tMatch = re.match('v(\d+\.\d+\.\d+)$', strGitId)
 						if not tMatch is None:
 							# This is a repository which is exactly on a tag. Use the tag name.
-							strProjectVersionVcsVersion = strGitId
+							strProjectVersionVcsVersion = tMatch.group(1)
 						else:
 							tMatch = re.match('v\d+\.\d+\.\d+-\d+-g([0-9a-f]{12}\+?)$', strGitId)
 							if not tMatch is None:
