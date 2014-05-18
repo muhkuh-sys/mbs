@@ -42,6 +42,7 @@ else:
 # Import all local modules.
 import archive
 import artifact
+import artifact_version
 import bootblock
 import build_properties
 import data_array
@@ -165,6 +166,7 @@ if strAsciidocVersion!=None:
 #
 archive.ApplyToEnv(env_default)
 artifact.ApplyToEnv(env_default)
+artifact_version.ApplyToEnv(env_default)
 bootblock.ApplyToEnv(env_default)
 build_properties.ApplyToEnv(env_default)
 data_array.ApplyToEnv(env_default)
