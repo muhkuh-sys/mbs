@@ -185,7 +185,7 @@ def process_package(aCfg, aTool):
 	strPackage = aTool['package']
 	if string.find(strPackage, '${machine}') >- 1:
 		# Get the machine name and possible alternatives.
-		strMachineName = platform.machine()
+		strMachineName = platform.machine().lower()
 		if strMachineName in atMachineFallbacks:
 			astrMachines = atMachineFallbacks[strMachineName]
 		else:
