@@ -172,7 +172,7 @@ atMachineFallbacks = dict({
 	'i686': ['i686', 'i586', 'i486', 'i386'],
 
 	# Windows 64 bit.
-	'amd64': ['amd64', 'x68']
+	'amd64': ['amd64', 'x86']
 })
 
 def process_package(aCfg, aTool):
