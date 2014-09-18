@@ -49,7 +49,7 @@ configuration.read_project_config('setup.xml', aCfg)
 
 # Create the folders.
 if os.path.isdir(aCfg['marker_path'])==False:
-	os.makedirs(aCfg['marker_path'])	
+	os.makedirs(aCfg['marker_path'])
 if os.path.isdir(aCfg['repository_path'])==False:
 	os.makedirs(aCfg['repository_path'])
 

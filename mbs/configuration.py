@@ -77,8 +77,9 @@ def read_project_config(strConfigPath, aCfg):
 		tXml = xml.etree.ElementTree.ElementTree()
 		tXml.parse(strConfigPath)
 		
-		aCfg['project_version_maj'] = long(tXml.findtext('project_version/major'))
-		aCfg['project_version_min'] = long(tXml.findtext('project_version/minor'))
+		aCfg['project_version_major'] = long(tXml.findtext('project_version/major'))
+		aCfg['project_version_minor'] = long(tXml.findtext('project_version/minor'))
+		aCfg['project_version_micro'] = long(tXml.findtext('project_version/micro'))
 		
 		strPath = tXml.findtext('paths/marker')
 		if strPath!=None:

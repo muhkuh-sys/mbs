@@ -51,7 +51,7 @@
 						<b>Version:</b>
 					</td>
 					<td valign="BOTTOM" width="70%">
-						<xsl:value-of select="project_version/major"/>.<xsl:value-of select="project_version/minor"/>
+						<xsl:value-of select="project_version/major"/>.<xsl:value-of select="project_version/minor"/>.<xsl:value-of select="project_version/micro"/>
 					</td>
 				</tr>
 				<tr>
