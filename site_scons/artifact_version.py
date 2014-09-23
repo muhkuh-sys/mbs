@@ -68,7 +68,8 @@ def get_artifact_version(env):
 def artifact_version_action(target, source, env):
 	# Apply the artifact version to the environment.
 	aSubst = dict({
-		'ARTIFACT_VERSION': env['ARTIFACT_VERSION']
+		'ARTIFACT_VERSION': env['ARTIFACT_VERSION'],
+		'PROJECT_VERSION': PROJECT_VERSION
 	})
 	
 	# Read the template.
