@@ -10,7 +10,7 @@ import xml.dom.minidom
 aArtifacts = dict({})
 
 
-def add_artifact(tEnv, tFiles, tServer, strGroupID, strArtifactID, strPackaging, **kwargs):
+def add_artifact(tEnv, tFiles, tServer, strGroupID, strArtifactID, strVersion, strPackaging, **kwargs):
 	bGood = kwargs.get('GOOD', True)
 
 	if bGood==True:
@@ -34,6 +34,7 @@ def add_artifact(tEnv, tFiles, tServer, strGroupID, strArtifactID, strPackaging,
 			aGroup[strPackageID] = dict({
 				'artifact': strArtifactID,
 				'file': tFile,
+				'version': strVersion,
 				'packaging': strPackaging
 			})
 
@@ -65,6 +66,8 @@ def artifact_action(target, source, env):
 				tNode_ArtifactID.appendChild(tXmlData.createTextNode(tFileAttribs['artifact']))
 				tNode_GroupID = tNode_Target.appendChild(tXmlData.createElement('GroupID'))
 				tNode_GroupID.appendChild(tXmlData.createTextNode(strGroupID))
+				tNode_Version = tNode_Target.appendChild(tXmlData.createElement('Version'))
+				tNode_Version.appendChild(tXmlData.createTextNode(tFileAttribs['version']))
 				tNode_Packaging = tNode_Target.appendChild(tXmlData.createElement('Packaging'))
 				tNode_Packaging.appendChild(tXmlData.createTextNode(tFileAttribs['packaging']))
 
