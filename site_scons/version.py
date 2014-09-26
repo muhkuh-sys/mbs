@@ -147,10 +147,11 @@ def version_action(target, source, env):
 	
 	# Apply the project version to the environment.
 	aSubst = dict({
-		'PROJECT_VERSION_MAJ':version_info[0],
-		'PROJECT_VERSION_MIN':version_info[1],
+		'PROJECT_VERSION_MAJOR':version_info[0],
+		'PROJECT_VERSION_MINOR':version_info[1],
+		'PROJECT_VERSION_MICRO':version_info[2],
 		'PROJECT_VERSION_VCS':env['PROJECT_VERSION_VCS'],
-		'PROJECT_VERSION': '%s.%s.%s'%(version_info[0], version_info[1], env['PROJECT_VERSION_VCS']),
+		'PROJECT_VERSION': PROJECT_VERSION,
 		'PROJECT_VERSION_VCS_SYSTEM':env['PROJECT_VERSION_VCS_SYSTEM'],
 		'PROJECT_VERSION_VCS_VERSION':env['PROJECT_VERSION_VCS_VERSION'],
 	})
