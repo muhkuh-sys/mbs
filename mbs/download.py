@@ -33,8 +33,8 @@ def download_to_file(strUrl, strFile):
 
 		tProgress.finish()
 		bResult = True
-	except urllib2.HTTPError, e: 
-		print 'Failed to download %s: %d' % (strUrl,e.code)
+	except Exception as e: 
+		print 'Failed to download %s: %s' % (strUrl,e)
 	
 	if fOutput:
 		fOutput.close()
