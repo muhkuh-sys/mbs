@@ -99,7 +99,6 @@ default_ccflags = """
 	-Wpointer-arith
 	-Wmissing-prototypes
 	-Wstrict-prototypes
-	-mapcs
 	-g3
 	-gdwarf-2
 	-std=c99
