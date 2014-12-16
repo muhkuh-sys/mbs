@@ -27,8 +27,7 @@ import string
 from SCons.Script import *
 
 
-def dataarray_action(target, source, env):	
-	strArrayName = env['DATAARRAY_NAME']
+def dataarray_action(target, source, env):
 	sizBytesPerLine = long(env['DATAARRAY_BYTES_PER_LINE'])
 	sizElement = long(env['DATAARRAY_ELEMENT_SIZE'])
 
@@ -36,20 +35,29 @@ def dataarray_action(target, source, env):
 		raise Exception('Invalid number of bytes per row! This value must be greater than 0.')
 
 	if sizElement==1:
-		strArrayFormat = 'B'
-		strCTypeName   = 'unsigned char'
+		strArrayFormat      = 'B'
+		strCTypeName        = 'unsigned char'
+		strDefaultArrayName = 'aucData'
 	elif sizElement==2:
-		strArrayFormat = 'H'
-		strCTypeName   = 'unsigned short'
+		strArrayFormat      = 'H'
+		strCTypeName        = 'unsigned short'
+		strDefaultArrayName = 'ausData'
 	elif sizElement==4:
-		strArrayFormat = 'I'
-		strCTypeName   = 'unsigned long'
+		strArrayFormat      = 'I'
+		strCTypeName        = 'unsigned long'
+		strDefaultArrayName = 'aulData'
 	else:
 		raise Exception('Invalid element size, must be 1, 2 or 4, but it is %d' % sizElement)
 	strPrintFormat = '0x%%0%dx' % (2*sizElement)
 
 	sizElementsPerLine = sizBytesPerLine / sizElement
 
+	# Get the array name.
+	if( (env['DATAARRAY_NAME'] is None) or ((not env['DATAARRAY_NAME'] is None) and len(env['DATAARRAY_NAME'])==0) ):
+		strArrayName = strDefaultArrayName
+	else:
+		strArrayName = env['DATAARRAY_NAME']
+	
 	# Read the complete input file in an array.
 	sizFile = os.stat(source[0].get_path()).st_size
 	if (sizFile % sizElement)!=0:
@@ -116,6 +124,7 @@ def dataarray_emitter(target, source, env):
 	# Make the target depend on the parameter.
 	Depends(target, SCons.Node.Python.Value(env['DATAARRAY_NAME']))
 	Depends(target, SCons.Node.Python.Value(env['DATAARRAY_BYTES_PER_LINE']))
+	Depends(target, SCons.Node.Python.Value(env['DATAARRAY_ELEMENT_SIZE']))
 	
 	# Add the header file to the list of targets.
 	strBase,strOldExt = os.path.splitext(target[0].get_path())
@@ -142,7 +151,7 @@ def ApplyToEnv(env):
 	#
 	# Add dataarray builder.
 	#
-	env['DATAARRAY_NAME'] = 'aucData'
+	env['DATAARRAY_NAME'] = ''
 	env['DATAARRAY_BYTES_PER_LINE'] = 16
 	env['DATAARRAY_ELEMENT_SIZE'] = 1
 
