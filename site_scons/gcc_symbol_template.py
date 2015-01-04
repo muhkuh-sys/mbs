@@ -30,43 +30,19 @@ from string import Template
 from SCons.Script import *
 
 
+
+
 def gccsymboltemplate_action(target, source, env):
 	# Get the symbol table from the elf.
 	atSymbols = elf_support.get_symbol_table(env, source[0].get_path())
 	
-	# Get the debug information from the ELF file.
-	tXmlDebugInfo = elf_support.get_debug_info(env, source[0].get_path())
-	tRoot = tXmlDebugInfo.getroot()
-
-	# Find all enumeration values.
-	for tNode in tRoot.findall('.//enumeration_type'):
-		for tEnumNode in tNode.findall('enumerator'):
-			ulValue = int(tEnumNode.get('const_value'))
-			strName = tEnumNode.get('name')
-			if strName is None:
-				raise Exception('Missing name!')
-			atSymbols[strName] = ulValue
-
-	# Find all macro definitions.
-	for tNode in tRoot.findall('MergedMacros/Macro'):
-		strName = tNode.get('name')
-		strValue = tNode.get('value')
-		atSymbols[strName] = strValue
+	# Get the macros from the ELF file.
+	atElfMacros = elf_support.get_macro_definitions(env, source[0].get_path())
+	atSymbols.update(atElfMacros)
 	
-	# Find all structure members and their offset.
-	reLocation = re.compile('\d+ byte block: \d+ ([0-9a-f]+)')
-	for tNode in tRoot.findall('.//structure_type'):
-		strStructureName = tNode.get('name')
-		if not strStructureName is None:
-			for tStructNode in tNode.findall('member'):
-				strLoc = tStructNode.get('data_member_location')
-				strName = tStructNode.get('name')
-				if (not strLoc is None) and (not strName is None):
-					tObj = reLocation.match(strLoc)
-					if not tObj is None:
-						strMemberName = 'OFFSETOF_' + strStructureName + '_' + strName
-						ulOffset = int(tObj.group(1), 16)
-						atSymbols[strMemberName] = ulOffset
+	# Get the debug information from the ELF file.
+	atElfDebugSymbols = elf_support.get_debug_symbols(env, source[0].get_path())
+	atSymbols.update(atElfDebugSymbols)
 
 	# Read the template.
 	tTemplateFilename = env['GCCSYMBOLTEMPLATE_TEMPLATE']
@@ -90,6 +66,7 @@ def gccsymboltemplate_action(target, source, env):
 	return 0
 
 
+
 def gccsymboltemplate_emitter(target, source, env):
 	# Make the target depend on the parameter.
 	Depends(target, File(env['GCCSYMBOLTEMPLATE_TEMPLATE']))
@@ -97,8 +74,10 @@ def gccsymboltemplate_emitter(target, source, env):
 	return target, source
 
 
+
 def gccsymboltemplate_string(target, source, env):
 	return 'GccSymbolTemplate %s' % target[0].get_path()
+
 
 
 def ApplyToEnv(env):

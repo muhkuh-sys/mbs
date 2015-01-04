@@ -24,7 +24,10 @@ import itertools
 import os
 import re
 import subprocess
-import xml.etree.ElementTree
+#import xml.etree.ElementTree
+
+# NOTE: this is only for debug.
+import datetime
 
 
 def get_segment_table(env, strFileName):
@@ -62,14 +65,17 @@ def get_symbol_table(env, strFileName):
 
 
 
-def get_debug_info(env, strFileName):
+def get_debug_structure(env, strFileName):
 	aCmd = [env['READELF'], '--debug-dump=info', strFileName]
 	proc = subprocess.Popen(aCmd, stdout=subprocess.PIPE)
 	strOutput = proc.communicate()[0]
 	
+	time_start = datetime.datetime.now()
+	
 	# Add all information to an XML file.
-	tRoot = xml.etree.ElementTree.Element('DebugInfo')
-	tXml = xml.etree.ElementTree.ElementTree(tRoot)
+	#tRoot = xml.etree.ElementTree.Element('DebugInfo')
+	#tXml = xml.etree.ElementTree.ElementTree(tRoot)
+	atDebugInfo = dict({'name': None, 'abbrev': None, 'children': [], 'attributes': dict({})})
 	
 	# Prepare the regular expressions for the elements.
 	reElement = re.compile('\s+<([0-9]+)><([0-9a-f]+)>: Abbrev Number: (\d+) \(DW_TAG_(\w+)\)')
@@ -78,8 +84,8 @@ def get_debug_info(env, strFileName):
 	reAttribute = re.compile('\s+<([0-9a-f]+)>\s+DW_AT_(\w+)\s*:\s+(.+)')
 	
 	# This is a list of all parent nodes. It supports a maximum depth of 64.
-	atParents = []
-	atParents.append(tRoot)
+	atParentNode = []
+	atParentNode.append(atDebugInfo)
 	
 	# Loop over all lines in the ".debug_info" section.
 	for strLine in strOutput.split(os.linesep):
@@ -92,30 +98,32 @@ def get_debug_info(env, strFileName):
 			strName = tObj.group(4)
 			
 			# Get the parent node.
-			if uiNodeLevel<0 or uiNodeLevel>=len(atParents):
+			if uiNodeLevel<0 or uiNodeLevel>=len(atParentNode):
 				raise Exception('Invalid node level: %d', uiNodeLevel)
-			tParentNode = atParents[uiNodeLevel]
-			if tParentNode==0:
+			tParentNode = atParentNode[uiNodeLevel]
+			if tParentNode is None:
 				raise Exception('Invalid parent!')
-			
+
 			# This is a new element. Clear all parents above the parent.
-			atParents = atParents[0:uiNodeLevel+1]
+			atParentNode = atParentNode[0:uiNodeLevel+1]
 			
 			# Create the new element.
-			tNode = xml.etree.ElementTree.SubElement(tParentNode, strName)
-			tNode.set('id', str(ulNodeId))
-			tNode.set('abbrev', str(ulAbbrev))
+			#tNode = xml.etree.ElementTree.SubElement(tParentNode, strName)
+			#tNode.set('id', str(ulNodeId))
+			#tNode.set('abbrev', str(ulAbbrev))
+			atNodeData = dict({'name': strName, 'id': ulNodeId, 'attributes': dict({'abbrev': ulAbbrev}), 'children': []})
+			tParentNode['children'].append(atNodeData)
 			
 			# Append the new element to the list of parent elements.
-			atParents.append(tNode)
+			atParentNode.append(atNodeData)
 		else:
 			tObj = reAttribute_Link.match(strLine)
 			if not tObj is None:
 				ulNodeId = int(tObj.group(1), 16)
 				strName = tObj.group(2)
 				ulValue = int(tObj.group(3), 16)
-				tNode = atParents[len(atParents)-1]
-				tNode.set(strName, str(ulValue))
+				tNode = atParentNode[-1]
+				tNode['attributes'][strName] = ulValue
 			else:
 				tObj = reAttribute_Str.match(strLine)
 				if tObj is None:
@@ -125,16 +133,76 @@ def get_debug_info(env, strFileName):
 					ulNodeId = int(tObj.group(1), 16)
 					strName = tObj.group(2)
 					strValue = tObj.group(3).strip()
-					tNode = atParents[len(atParents)-1]
-					tNode.set(strName, strValue)
+					tNode = atParentNode[-1]
+					tNode['attributes'][strName] = strValue
 	
+	time_end = datetime.datetime.now()
+	print 'Time used:', str(time_end-time_start)
+
+#	# Write the XML tree to a test file.
+#	astrXml = xml.etree.ElementTree.tostringlist(tXml.getroot(), encoding='UTF-8', method="xml")
+#	tFile = open('/tmp/test.xml', 'wt')
+#	tFile.write('\n'.join(astrXml))
+#	tFile.close()
 	
+	return atDebugInfo
+
+
+
+s_reLocation = re.compile('\d+ byte block: \d+ ([0-9a-f]+)')
+
+def __iter_debug_info(tNode, atSymbols):
+	strName = tNode['name']
+	tAttr = tNode['attributes']
+	
+	# Is this an enumerator type?
+	if strName=='enumerator':
+		if not 'const_value' in tAttr:
+			raise Exception('Missing const_value')
+		if not 'name' in tAttr:
+			raise Exception('Missing name')
+		
+		
+		ulValue = int(tAttr['const_value'])
+		strName = tAttr['name']
+		atSymbols[strName] = ulValue
+	elif strName=='structure_type':
+		if 'name' in tAttr:
+			strStructureName = tAttr['name']
+			for tMember in tNode['children']:
+				if tMember['name']=='member':
+					tMemberAttr = tMember['attributes']
+					strLoc = tMemberAttr['data_member_location']
+					strName = tMemberAttr['name']
+					if (not strLoc is None) and (not strName is None):
+						tObj = s_reLocation.match(strLoc)
+						if not tObj is None:
+							strMemberName = 'OFFSETOF_' + strStructureName + '_' + strName
+							ulOffset = int(tObj.group(1), 16)
+							atSymbols[strMemberName] = ulOffset
+	else:
+		for tChild in tNode['children']:
+			__iter_debug_info(tChild, atSymbols)
+
+
+
+def get_debug_symbols(env, strFileName):
+	atDebugInfo = get_debug_structure(env, strFileName)
+	atAllSymbols = dict({})
+	__iter_debug_info(atDebugInfo, atAllSymbols)
+	return atAllSymbols
+
+
+
+def get_macro_definitions(env, strFileName):
 	aCmd = [env['READELF'], '--debug-dump=macro', strFileName]
 	proc = subprocess.Popen(aCmd, stdout=subprocess.PIPE)
 	strOutput = proc.communicate()[0]
+
+	time_start = datetime.datetime.now()
 	
-	# Add all macros here.
-	tMacroRoot = xml.etree.ElementTree.SubElement(tRoot, 'MergedMacros')
+	# All macros are collected in this dict.
+	atMergedMacros = dict({})
 	
 	# FIXME: Macro extraction should respect different files.
 	# NOTE: This matches only macros without parameter.
@@ -150,19 +218,20 @@ def get_debug_info(env, strFileName):
 			if not tObj is None:
 				strName = tObj.group(1)
 				strValue = tObj.group(2)
-				tNode = xml.etree.ElementTree.SubElement(tMacroRoot, 'Macro')
-				tNode.set('name', strName)
-				tNode.set('value', strValue)
+				
+				# Does the macro already exist?
+				if strName in atMergedMacros:
+					# Yes, it exists already. Is the value the same?
+					if not(atMergedMacros[strName] is None) and (atMergedMacros[strName]!=strValue):
+						# The macro exists more than one time with different values. Now that's a problem.
+						atMergedMacros[strName] = None
+				else:
+					atMergedMacros[strName] = strValue
 	
-	
-#	# Write the XML tree to a test file.
-#	astrXml = xml.etree.ElementTree.tostringlist(tXml.getroot(), encoding='UTF-8', method="xml")
-#	tFile = open('/tmp/test.xml', 'wt')
-#	tFile.write('\n'.join(astrXml))
-#	tFile.close()
-	
-	return tXml
+	time_end = datetime.datetime.now()
+	print 'Time used:', str(time_end-time_start)
 
+	return atMergedMacros
 
 
 
@@ -182,6 +251,7 @@ def get_load_address(atSegments):
 	return ulLowestLma
 
 
+
 def get_estimated_bin_size(atSegments):
 	ulLoadAddress = get_load_address(atSegments)
 	ulBiggestOffset = 0
@@ -195,6 +265,7 @@ def get_estimated_bin_size(atSegments):
 				ulBiggestOffset = ulOffset
 	
 	return ulBiggestOffset
+
 
 
 def get_exec_address(env, strElfFileName):
