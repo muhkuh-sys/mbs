@@ -53,14 +53,21 @@ def get_segment_table(env, strFileName):
 
 
 def get_symbol_table(env, strFileName):
-	atSymbols = dict({})
-	aCmd = [env['READELF'], '-s', strFileName]
+	aCmd = [env['READELF'], '--symbols', '--wide', strFileName]
 	proc = subprocess.Popen(aCmd, stdout=subprocess.PIPE)
 	strOutput = proc.communicate()[0]
-	for match_obj in re.finditer('[ \t]+[0-9]+\:[ \t]+([0-9a-fA-F]+)[ \t]+[0-9]+[ \t]+[A-Z]+[ \t]+[A-Z]+[ \t]+[A-Z]+[ \t]+[A-Z0-9]+[ \t]+([_a-zA-Z0-9]+)', strOutput):
-		ulValue = int(match_obj.group(1), 16)
-		strName = match_obj.group(2)
-		atSymbols[strName] = ulValue
+
+	atSymbols = dict({})
+	
+	reSymbol = re.compile('\s+\d+:\s([0-9a-fA-F]+)\s+[0-9a-fA-F]+\s+\w+\s+GLOBAL\s+\w+\s+\d+\s+([\S]+)')
+
+	for strLine in strOutput.split(os.linesep):
+		tObj = reSymbol.match(strLine)
+		if not tObj is None:
+			ulValue = long(tObj.group(1), 16)
+			strName = tObj.group(2)
+			atSymbols[strName] = ulValue
+	
 	return atSymbols
 
 
