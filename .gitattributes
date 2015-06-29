@@ -1,0 +1,7 @@
+# Set the default behavior, in case people don't have core.autocrlf set.
+* text=auto
+
+# The windows batch file needs CRLF line endings, the linux shell script
+# needs LF line endings.
+autopy_win32.bat text eol=crlf
+autopy_linux.bat text eol=lf
