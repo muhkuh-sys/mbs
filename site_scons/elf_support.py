@@ -176,6 +176,10 @@ def __iter_debug_info(tNode, atSymbols):
 	elif strName=='structure_type':
 		if 'name' in tAttr:
 			strStructureName = tAttr['name']
+			# Generate a symbol with the size of the structure.
+			strMemberName = 'SIZEOF_' + strStructureName
+			atSymbols[strMemberName] = tAttr['byte_size']
+			# Generate symbols for the offset of each member.
 			for tMember in tNode['children']:
 				if tMember['name']=='member':
 					tMemberAttr = tMember['attributes']
