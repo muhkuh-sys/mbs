@@ -25,6 +25,7 @@ from SCons.Script import *
 import elf_support
 
 import array
+import os.path
 import subprocess
 import re
 import xml.etree.ElementTree
@@ -118,11 +119,8 @@ def apply_parameters(tDeviceElement, aBootblock):
 
 def bootblock_action(target, source, env):
 	# Get the source filename.
-	strElfFileName = source[0].get_path()
+	strSourceFileName = source[0].get_path()
 	
-	# Generate a temp filename for the binary.
-	strBinFileName = strElfFileName + '.bin'
-
 	# Get the chiptyp info.
 	iChipTyp = env['BOOTBLOCK_CHIPTYPE']
 	if iChipTyp==500:
@@ -135,59 +133,97 @@ def bootblock_action(target, source, env):
 		strChipTyp = 'netx 10'
 	else:
 		raise Exception('Invalid chip type: "%s"'%iChipTyp)
+	
+	# If this is an ELF file it should end with ".elf".
+	strDummy,strExt = os.path.splitext(strSourceFileName)
+	if strExt=='.elf':
+		# This seems to be an ELF file.
+		
+		# Generate a temp filename for the binary.
+		strBinFileName = strSourceFileName + '.bin'
+		
+		# Extract the segments.
+		atSegments = elf_support.get_segment_table(env, strSourceFileName)
+		# Get the estimated binary size from the segments.
+		ulEstimatedBinSize = elf_support.get_estimated_bin_size(atSegments)
+		# Do not create files larger than 512MB.
+		if ulEstimatedBinSize>=0x20000000:
+			raise Exception("The resulting file seems to extend 512MBytes. Too scared to continue!")
+		
+		# Extract the binaries.
+		subprocess.check_call([env['OBJCOPY'], '-O', 'binary', strSourceFileName, strBinFileName])
+		
+		ulExecAddress = elf_support.get_exec_address(env, strSourceFileName)
+		ulLoadAddress = elf_support.get_load_address(atSegments)
+		
+		# Get the application data.
+		tBinFile = open(strBinFileName, 'rb')
+		strBinFile = tBinFile.read()
+		tBinFile.close()
+		
+		# Pad the application size to a multiple of dwords.
+		uiPadBytes = len(strBinFile) & 3;
+		if uiPadBytes!=0:
+			uiPadBytes = 4 - uiPadBytes
+			strBinFile += '\0' * uiPadBytes
+		# Get the size of the evetually padded data.
+		ulApplicationDwordSize = len(strBinFile) / 4;
+		aulApplicationData = array.array('I')
+		aulApplicationData.fromstring(strBinFile)
+		
+		# Build the application checksum.
+		ulApplicationChecksum = 0
+		for ulData in aulApplicationData:
+			ulApplicationChecksum += ulData
+			ulApplicationChecksum &= 0xffffffff
+		
+		aBootBlock = array.array('I', [0]*16)
+		aBootBlock[0x00] = 0xf8beaf00                   # Magic cookie.
+		aBootBlock[0x01] = 0x00000000                   # unCtrl
+		aBootBlock[0x02] = ulExecAddress                # execution address
+		aBootBlock[0x03] = ulApplicationChecksum        # application checksum
+		aBootBlock[0x04] = ulApplicationDwordSize       # application dword size
+		aBootBlock[0x05] = ulLoadAddress                # load address
+		aBootBlock[0x06] = 0x5854454e                   # 'NETX' signature
+		aBootBlock[0x07] = 0x00000000                   # krams
+		aBootBlock[0x08] = 0x00000000                   # krams
+		aBootBlock[0x09] = 0x00000000                   # krams
+		aBootBlock[0x0a] = 0x00000000                   # krams
+		aBootBlock[0x0b] = 0x00000000                   # krams
+		aBootBlock[0x0c] = 0x00000001                   # misc_asic_ctrl dummy
+		aBootBlock[0x0d] = 0x00000000                   # user data
+		aBootBlock[0x0e] = 0x00000000                   # src type
+	else:
+		# Try to interpret the file as a bootable image.
+		# For now just check for the magic cookie at the start.
+		
+		tBinFile = open(strSourceFileName, 'rb')
+		strHeader = tBinFile.read(64)
+		strApp    = tBinFile.read()
+		tBinFile.close()
+		
+		aBootBlock = array.array('I', strHeader)
+		aulApplicationData = array.array('I', strApp)
+		
+		if aBootBlock[0x00]==0xf8beaf00:
+			# This seems to be a boot image.
+			
+			# Build the application checksum.
+			ulApplicationChecksum = 0
+			for ulData in aulApplicationData:
+				ulApplicationChecksum += ulData
+				ulApplicationChecksum &= 0xffffffff
+			
+			# Get the application size in 32bit chunks.
+			ulApplicationDwordSize = len(aulApplicationData)
+			
+			# Override the application checksum and size in the header.
+			aBootBlock[0x03] = ulApplicationChecksum
+			aBootBlock[0x04] = ulApplicationDwordSize
+		else:
+			# This is an unknown image.
+			raise Exception('The input file could not be identified as an ELF file or a boot image!')
 
-	# Extract the segments.
-	atSegments = elf_support.get_segment_table(env, strElfFileName)
-	# Get the estimated binary size from the segments.
-	ulEstimatedBinSize = elf_support.get_estimated_bin_size(atSegments)
-	# Do not create files larger than 512MB.
-	if ulEstimatedBinSize>=0x20000000:
-		raise Exception("The resulting file seems to extend 512MBytes. Too scared to continue!")
-	
-	# Extract the binaries.
-	subprocess.check_call([env['OBJCOPY'], '-O', 'binary', strElfFileName, strBinFileName])
-	
-	ulExecAddress = elf_support.get_exec_address(env, strElfFileName)
-	ulLoadAddress = elf_support.get_load_address(atSegments)
-	
-	# Get the application data.
-	tBinFile = open(strBinFileName, 'rb')
-	strBinFile = tBinFile.read()
-	tBinFile.close()
-	
-	# Pad the application size to a multiple of dwords.
-	uiPadBytes = len(strBinFile) & 3;
-	if uiPadBytes!=0:
-		uiPadBytes = 4 - uiPadBytes
-		strBinFile += '\0' * uiPadBytes
-	# Get the size of the evetually padded data.
-	ulApplicationDwordSize = len(strBinFile) / 4;
-	aulApplicationData = array.array('I')
-	aulApplicationData.fromstring(strBinFile)
-	
-	# Build the application checksum.
-	ulApplicationChecksum = 0
-	for ulData in aulApplicationData:
-		ulApplicationChecksum += ulData
-		ulApplicationChecksum &= 0xffffffff
-	
-	aBootBlock = array.array('I', [0]*16)
-	aBootBlock[0x00] = 0xf8beaf00                   # Magic cookie.
-	aBootBlock[0x01] = 0x00000000                   # unCtrl
-	aBootBlock[0x02] = ulExecAddress                # execution address
-	aBootBlock[0x03] = ulApplicationChecksum        # application checksum
-	aBootBlock[0x04] = ulApplicationDwordSize       # application dword size
-	aBootBlock[0x05] = ulLoadAddress                # load address
-	aBootBlock[0x06] = 0x5854454e                   # 'NETX' signature
-	aBootBlock[0x07] = 0x00000000                   # krams
-	aBootBlock[0x08] = 0x00000000                   # krams
-	aBootBlock[0x09] = 0x00000000                   # krams
-	aBootBlock[0x0a] = 0x00000000                   # krams
-	aBootBlock[0x0b] = 0x00000000                   # krams
-	aBootBlock[0x0c] = 0x00000001                   # misc_asic_ctrl dummy
-	aBootBlock[0x0d] = 0x00000000                   # user data
-	aBootBlock[0x0e] = 0x00000000                   # src type
-	
 	# Test if we need to read the xml file.
 	if isinstance(env['BOOTBLOCK_SRC'], basestring) or isinstance(env['BOOTBLOCK_DST'], basestring):
 		# Read the xml file.
@@ -225,8 +261,8 @@ def bootblock_action(target, source, env):
 	
 	# Build the bootblock checksum.
 	ulBootblockChecksum = 0
-	for ulData in aBootBlock:
-		ulBootblockChecksum += ulData
+	for uiCnt in range(0,15):
+		ulBootblockChecksum += aBootBlock[uiCnt]
 		ulBootblockChecksum &= 0xffffffff
 	ulBootblockChecksum = (ulBootblockChecksum-1)^0xffffffff
 	aBootBlock[0x0f] = ulBootblockChecksum
