@@ -281,10 +281,10 @@ def get_estimated_bin_size(atSegments):
 
 def get_exec_address(env, strElfFileName):
 	# Get the start address.
-	aCmd = [env['OBJDUMP'], '-f', strElfFileName]
+	aCmd = [env['READELF'], '--syms', strElfFileName]
 	proc = subprocess.Popen(aCmd, stdout=subprocess.PIPE)
 	strOutput = proc.communicate()[0]
-	match_obj = re.search('start address 0x([0-9a-fA-F]+)', strOutput)
+	match_obj = re.search('\s+\d+:\s+([0-9a-fA-F]+)\s+\d+\s+FUNC\s+GLOBAL\s+DEFAULT\s+\d+\s+start', strOutput)
 	if not match_obj:
 		print 'Failed to extract start address.'
 		print 'Command:', aCmd
