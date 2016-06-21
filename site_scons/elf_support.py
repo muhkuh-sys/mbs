@@ -176,6 +176,10 @@ def __iter_debug_info(tNode, atSymbols):
 	elif strName=='structure_type':
 		if 'name' in tAttr:
 			strStructureName = tAttr['name']
+			# Generate a symbol with the size of the structure.
+			strMemberName = 'SIZEOF_' + strStructureName
+			atSymbols[strMemberName] = tAttr['byte_size']
+			# Generate symbols for the offset of each member.
 			for tMember in tNode['children']:
 				if tMember['name']=='member':
 					tMemberAttr = tMember['attributes']
@@ -277,10 +281,10 @@ def get_estimated_bin_size(atSegments):
 
 def get_exec_address(env, strElfFileName):
 	# Get the start address.
-	aCmd = [env['OBJDUMP'], '-f', strElfFileName]
+	aCmd = [env['READELF'], '--syms', strElfFileName]
 	proc = subprocess.Popen(aCmd, stdout=subprocess.PIPE)
 	strOutput = proc.communicate()[0]
-	match_obj = re.search('start address 0x([0-9a-fA-F]+)', strOutput)
+	match_obj = re.search('\s+\d+:\s+([0-9a-fA-F]+)\s+\d+\s+FUNC\s+GLOBAL\s+DEFAULT\s+\d+\s+start', strOutput)
 	if not match_obj:
 		print 'Failed to extract start address.'
 		print 'Command:', aCmd
