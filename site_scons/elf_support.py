@@ -58,7 +58,7 @@ def get_symbol_table(env, strFileName):
 	strOutput = proc.communicate()[0]
 
 	atSymbols = dict({})
-	
+
 	reSymbol = re.compile('\s+\d+:\s([0-9a-fA-F]+)\s+[0-9a-fA-F]+\s+\w+\s+GLOBAL\s+\w+\s+\d+\s+([\S]+)')
 
 	for strLine in strOutput.split(os.linesep):
@@ -67,7 +67,7 @@ def get_symbol_table(env, strFileName):
 			ulValue = long(tObj.group(1), 16)
 			strName = tObj.group(2)
 			atSymbols[strName] = ulValue
-	
+
 	return atSymbols
 
 
@@ -76,24 +76,24 @@ def get_debug_structure(env, strFileName):
 	aCmd = [env['READELF'], '--debug-dump=info', strFileName]
 	proc = subprocess.Popen(aCmd, stdout=subprocess.PIPE)
 	strOutput = proc.communicate()[0]
-	
+
 	time_start = datetime.datetime.now()
-	
+
 	# Add all information to an XML file.
 	#tRoot = xml.etree.ElementTree.Element('DebugInfo')
 	#tXml = xml.etree.ElementTree.ElementTree(tRoot)
 	atDebugInfo = dict({'name': None, 'abbrev': None, 'children': [], 'attributes': dict({})})
-	
+
 	# Prepare the regular expressions for the elements.
 	reElement = re.compile('\s+<([0-9]+)><([0-9a-f]+)>: Abbrev Number: (\d+) \(DW_TAG_(\w+)\)')
 	reAttribute_Str = re.compile('\s+<([0-9a-f]+)>\s+DW_AT_(\w+)\s*:\s+\(indirect string, offset: 0x[0-9a-f]+\):\s+(.+)')
 	reAttribute_Link = re.compile('\s+<([0-9a-f]+)>\s+DW_AT_(\w+)\s*:\s+<0x([0-9a-f]+)>')
 	reAttribute = re.compile('\s+<([0-9a-f]+)>\s+DW_AT_(\w+)\s*:\s+(.+)')
-	
+
 	# This is a list of all parent nodes. It supports a maximum depth of 64.
 	atParentNode = []
 	atParentNode.append(atDebugInfo)
-	
+
 	# Loop over all lines in the ".debug_info" section.
 	for strLine in strOutput.split(os.linesep):
 		# Is this a new element?
@@ -103,7 +103,7 @@ def get_debug_structure(env, strFileName):
 			ulNodeId = int(tObj.group(2), 16)
 			ulAbbrev = int(tObj.group(3))
 			strName = tObj.group(4)
-			
+
 			# Get the parent node.
 			if uiNodeLevel<0 or uiNodeLevel>=len(atParentNode):
 				raise Exception('Invalid node level: %d', uiNodeLevel)
@@ -113,14 +113,14 @@ def get_debug_structure(env, strFileName):
 
 			# This is a new element. Clear all parents above the parent.
 			atParentNode = atParentNode[0:uiNodeLevel+1]
-			
+
 			# Create the new element.
 			#tNode = xml.etree.ElementTree.SubElement(tParentNode, strName)
 			#tNode.set('id', str(ulNodeId))
 			#tNode.set('abbrev', str(ulAbbrev))
 			atNodeData = dict({'name': strName, 'id': ulNodeId, 'attributes': dict({'abbrev': ulAbbrev}), 'children': []})
 			tParentNode['children'].append(atNodeData)
-			
+
 			# Append the new element to the list of parent elements.
 			atParentNode.append(atNodeData)
 		else:
@@ -135,14 +135,14 @@ def get_debug_structure(env, strFileName):
 				tObj = reAttribute_Str.match(strLine)
 				if tObj is None:
 					tObj = reAttribute.match(strLine)
-				
+
 				if not tObj is None:
 					ulNodeId = int(tObj.group(1), 16)
 					strName = tObj.group(2)
 					strValue = tObj.group(3).strip()
 					tNode = atParentNode[-1]
 					tNode['attributes'][strName] = strValue
-	
+
 	time_end = datetime.datetime.now()
 	print 'Time used:', str(time_end-time_start)
 
@@ -151,7 +151,7 @@ def get_debug_structure(env, strFileName):
 #	tFile = open('/tmp/test.xml', 'wt')
 #	tFile.write('\n'.join(astrXml))
 #	tFile.close()
-	
+
 	return atDebugInfo
 
 
@@ -161,15 +161,15 @@ s_reLocation = re.compile('\d+ byte block: \d+ ([0-9a-f]+)')
 def __iter_debug_info(tNode, atSymbols):
 	strName = tNode['name']
 	tAttr = tNode['attributes']
-	
+
 	# Is this an enumerator type?
 	if strName=='enumerator':
 		if not 'const_value' in tAttr:
 			raise Exception('Missing const_value')
 		if not 'name' in tAttr:
 			raise Exception('Missing name')
-		
-		
+
+
 		ulValue = int(tAttr['const_value'])
 		strName = tAttr['name']
 		atSymbols[strName] = ulValue
@@ -207,10 +207,10 @@ def get_macro_definitions(env, strFileName):
 	strOutput = proc.communicate()[0]
 
 	time_start = datetime.datetime.now()
-	
+
 	# All macros are collected in this dict.
 	atMergedMacros = dict({})
-	
+
 	# FIXME: Macro extraction should respect different files.
 	# NOTE: This matches only macros without parameter.
 	areMacro = [
@@ -225,7 +225,7 @@ def get_macro_definitions(env, strFileName):
 			if not tObj is None:
 				strName = tObj.group(1)
 				strValue = tObj.group(2)
-				
+
 				# Does the macro already exist?
 				if strName in atMergedMacros:
 					# Yes, it exists already. Is the value the same?
@@ -234,7 +234,7 @@ def get_macro_definitions(env, strFileName):
 						atMergedMacros[strName] = None
 				else:
 					atMergedMacros[strName] = strValue
-	
+
 	time_end = datetime.datetime.now()
 	print 'Time used:', str(time_end-time_start)
 
@@ -245,16 +245,16 @@ def get_macro_definitions(env, strFileName):
 def get_load_address(atSegments):
 	# Set an invalid lma
 	ulLowestLma = 0x100000000
-	
+
 	# Loop over all segments.
 	for tSegment in atSegments:
 		# Get the segment with the lowest 'lma' entry which has also the flags 'CONTENTS', 'ALLOC' and 'LOAD'.
 		if (tSegment['lma']<ulLowestLma) and ('CONTENTS' in tSegment['flags']) and ('ALLOC' in tSegment['flags']) and ('LOAD' in tSegment['flags']):
 			ulLowestLma = tSegment['lma']
-	
+
 	if ulLowestLma==0x100000000:
 		raise Exception("failed to extract load address!")
-	
+
 	return ulLowestLma
 
 
@@ -262,7 +262,7 @@ def get_load_address(atSegments):
 def get_estimated_bin_size(atSegments):
 	ulLoadAddress = get_load_address(atSegments)
 	ulBiggestOffset = 0
-	
+
 	# Loop over all segments.
 	for tSegment in atSegments:
 		# Get the segment with the biggest offset to ulLoadAddress which has also the flags 'CONTENTS', 'ALLOC' and 'LOAD'.
@@ -270,7 +270,7 @@ def get_estimated_bin_size(atSegments):
 			ulOffset = tSegment['lma'] + tSegment['size'] - ulLoadAddress
 			if ulOffset>ulBiggestOffset:
 				ulBiggestOffset = ulOffset
-	
+
 	return ulBiggestOffset
 
 
@@ -286,6 +286,6 @@ def get_exec_address(env, strElfFileName):
 		print 'Command:', aCmd
 		print 'Output:', strOutput
 		raise Exception('Failed to extract start address.')
-	
+
 	return long(match_obj.group(1), 16)
 
