@@ -51,6 +51,7 @@ import flex_zip
 import gcc_symbol_template
 import gen_random_seq
 import hash
+import hboot_image
 import hexdump
 import objimport
 import scons_common
@@ -174,6 +175,7 @@ flex_zip.ApplyToEnv(env_default)
 gcc_symbol_template.ApplyToEnv(env_default)
 gen_random_seq.ApplyToEnv(env_default)
 hash.ApplyToEnv(env_default)
+hboot_image.ApplyToEnv(env_default)
 hexdump.ApplyToEnv(env_default)
 objimport.ApplyToEnv(env_default)
 scons_common.ApplyToEnv(env_default)
