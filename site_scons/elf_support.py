@@ -284,7 +284,7 @@ def get_exec_address(env, strElfFileName):
 	aCmd = [env['READELF'], '--syms', strElfFileName]
 	proc = subprocess.Popen(aCmd, stdout=subprocess.PIPE)
 	strOutput = proc.communicate()[0]
-	match_obj = re.search('\s+\d+:\s+([0-9a-fA-F]+)\s+\d+\s+FUNC\s+GLOBAL\s+DEFAULT\s+\d+\s+start', strOutput)
+	match_obj = re.search('\s+\d+:\s+([0-9a-fA-F]+)\s+\d+\s+\w+\s+GLOBAL\s+DEFAULT\s+\d+\s+start', strOutput)
 	if not match_obj:
 		print 'Failed to extract start address.'
 		print 'Command:', aCmd
