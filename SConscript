@@ -40,25 +40,8 @@ else:
 	_load_site_scons_dir(Dir('#'), 'site_scons')
 
 # Import all local modules.
-import archive
-import artifact
-import artifact_version
-import bootblock
 import build_properties
-import data_array
-import diff
-import flex_zip
-import gcc_symbol_template
-import gen_random_seq
-import hash
-import hboot_image
-import hexdump
-import objimport
 import scons_common
-import svnversion
-import uuencode
-import version
-import xsl_transform
 
 
 build_properties.Read()
@@ -86,42 +69,14 @@ build_properties.GenerateHelp()
 
 #----------------------------------------------------------------------------
 
-
-default_ccflags = """
-	-ffreestanding
-	-mlong-calls
-	-Wall
-	-Wextra
-	-Wconversion
-	-Wshadow
-	-Wcast-qual
-	-Wwrite-strings
-	-Wcast-align
-	-Wpointer-arith
-	-Wmissing-prototypes
-	-Wstrict-prototypes
-	-g3
-	-gdwarf-2
-	-std=c99
-	-pedantic
-"""
-
-
 # Show summary of the build properties.
 build_properties.PrintSummary()
 
 
-#----------------------------------------------------------------------------
-#
-# Create the default environment.
-#
-env_default = Environment()
-env_default.Decider('MD5')
-
 
 #----------------------------------------------------------------------------
 #
-# Add the Compiler to the environment.
+# Get the Compiler for the default environment.
 #
 strGccVersion = None
 try:
@@ -129,21 +84,12 @@ try:
 	strGccVersion = MBS_GCC_VERSION
 except NameError:
 	# The default is to take the first available GCC version from the tools.
-	for strName in TOOLS:
-		if strName.startswith('gcc')==True:
-			strGccVersion = strName
-			break
-if strGccVersion!=None:
-	gcc_arm = scons_common.get_tool(env_default, strGccVersion)
-	gcc_arm.ApplyToEnv(env_default)
-	env_default.Replace(CCFLAGS = Split(default_ccflags))
-	env_default.Replace(LIBS = ['m', 'c', 'gcc'])
-	env_default.Replace(LINKFLAGS = ['--gc-sections', '-nostdlib', '-static'])
+	strGccVersion = scons_common.find_first_tool("^gcc")
 
 
 #----------------------------------------------------------------------------
 #
-# Add Asciidoc to the environment.
+# Get the Asciidoc version for the default environment.
 #
 strAsciidocVersion = None
 try:
@@ -151,39 +97,14 @@ try:
 	strAsciidocVersion = MBS_ASCIIDOC_VERSION
 except NameError:
 	# The default is to take the first available Asciidoc version from the tools.
-	for strName in TOOLS:
-		if strName.startswith('asciidoc')==True:
-			strAsciidocVersion = strName
-			break
-if strAsciidocVersion!=None:
-	asciidoc = scons_common.get_tool(env_default, strAsciidocVersion)
-	asciidoc.ApplyToEnv(env_default)
+	strAsciidocVersion = scons_common.find_first_tool("^asciidoc")
 
 
 #----------------------------------------------------------------------------
 #
-# Add all other tools to the default environment.
+# Create the default environment.
 #
-archive.ApplyToEnv(env_default)
-artifact.ApplyToEnv(env_default)
-artifact_version.ApplyToEnv(env_default)
-bootblock.ApplyToEnv(env_default)
-build_properties.ApplyToEnv(env_default)
-data_array.ApplyToEnv(env_default)
-diff.ApplyToEnv(env_default)
-flex_zip.ApplyToEnv(env_default)
-gcc_symbol_template.ApplyToEnv(env_default)
-gen_random_seq.ApplyToEnv(env_default)
-hash.ApplyToEnv(env_default)
-hboot_image.ApplyToEnv(env_default)
-hexdump.ApplyToEnv(env_default)
-objimport.ApplyToEnv(env_default)
-scons_common.ApplyToEnv(env_default)
-svnversion.ApplyToEnv(env_default)
-uuencode.ApplyToEnv(env_default)
-version.ApplyToEnv(env_default)
-xsl_transform.ApplyToEnv(env_default)
-
+env_default = scons_common.CreateEnvironment(env=None, strGccPattern=strGccVersion, astrGccFlags=None, strAsciiDocPattern=strAsciidocVersion)
 
 Export('env_default')
 

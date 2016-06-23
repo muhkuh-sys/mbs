@@ -29,6 +29,28 @@ import sys
 from SCons.Script import *
 
 
+# Import all local modules.
+import archive
+import artifact
+import artifact_version
+import bootblock
+import build_properties
+import data_array
+import diff
+import flex_zip
+import gcc_symbol_template
+import gen_random_seq
+import hash
+import hboot_image
+import hexdump
+import objimport
+import svnversion
+import uuencode
+import version
+import xsl_transform
+
+
+
 #----------------------------------------------------------------------------
 #
 # Accept 'clean' target like make as an alternative to '-c'. This makes it
@@ -63,6 +85,22 @@ import atexit
 atexit.register(display_build_status)
 
 
+
+def find_first_tool(strToolPattern):
+	global TOOLS
+	strToolName = None
+
+	tPattern = re.compile(strToolPattern)
+	for strKey in TOOLS.iterkeys():
+		tMatch = re.search(tPattern, strKey)
+		if not tMatch is None:
+			strToolName = strKey
+			break
+
+	return strToolName
+
+
+
 def get_tool(env, strToolName):
 	global TOOLS
 
@@ -84,6 +122,78 @@ def get_tool(env, strToolName):
 		raise Exception(strToolName, 'The requested tool is not part of the configuration. Add it to setup.xml and rerun mbs.')
 
 	return tMod
+
+
+
+def CreateEnvironment(env=None, strGccPattern=None, astrGccFlags=None, strAsciiDocPattern=None):
+	astrDefaultGccFlags = Split("""
+		-ffreestanding
+		-mlong-calls
+		-Wall
+		-Wextra
+		-Wconversion
+		-Wshadow
+		-Wcast-qual
+		-Wwrite-strings
+		-Wcast-align
+		-Wpointer-arith
+		-Wmissing-prototypes
+		-Wstrict-prototypes
+		-g3
+		-gdwarf-2
+		-std=c99
+		-pedantic
+	""")
+
+	# Create the new environment.
+	env = Environment()
+	env.Decider('MD5')
+
+	if strGccPattern!=None:
+		strGccId = find_first_tool(strGccPattern)
+		if strGccId is None:
+			raise Exception('No match found searching for a compiler matching the pattern "%s".' % strGccPattern)
+		if astrGccFlags is None:
+			astrGccFlags = astrDefaultGccFlags
+		add_tool_to_environment(env, strGccId)
+		env.Replace(CCFLAGS = Split(astrGccFlags))
+		env.Replace(LIBS = ['m', 'c', 'gcc'])
+		env.Replace(LINKFLAGS = ['--gc-sections', '-nostdlib', '-static'])
+
+	if strAsciiDocPattern!=None:
+		strAsciiDocId = find_first_tool(strAsciiDocPattern)
+		if strAsciiDocId is None:
+			raise Exception('No match found searching for AsciiDoc matching the pattern "%s".' % strAsciiDocPattern)
+		add_tool_to_environment(env, strAsciiDocId)
+
+	archive.ApplyToEnv(env)
+	artifact.ApplyToEnv(env)
+	artifact_version.ApplyToEnv(env)
+	bootblock.ApplyToEnv(env)
+	build_properties.ApplyToEnv(env)
+	data_array.ApplyToEnv(env)
+	diff.ApplyToEnv(env)
+	flex_zip.ApplyToEnv(env)
+	gcc_symbol_template.ApplyToEnv(env)
+	gen_random_seq.ApplyToEnv(env)
+	hash.ApplyToEnv(env)
+	hboot_image.ApplyToEnv(env)
+	hexdump.ApplyToEnv(env)
+	objimport.ApplyToEnv(env)
+	ApplyToEnv(env)
+	svnversion.ApplyToEnv(env)
+	uuencode.ApplyToEnv(env)
+	version.ApplyToEnv(env)
+	xsl_transform.ApplyToEnv(env)
+
+	return env
+
+
+
+def add_tool_to_environment(env, strToolIdAndVersion):
+	tTool = get_tool(env, strToolIdAndVersion)
+	tTool.ApplyToEnv(env)
+
 
 
 def set_build_path(env, build_path, source_path, sources):
@@ -135,3 +245,4 @@ def ApplyToEnv(env):
 	env.AddMethod(set_build_path, 'SetBuildPath')
 	env.AddMethod(create_compiler_environment, 'CreateCompilerEnv')
 	env.AddMethod(get_tool, 'GetTool')
+	env.AddMethod(CreateEnvironment, "CreateEnvironment")
