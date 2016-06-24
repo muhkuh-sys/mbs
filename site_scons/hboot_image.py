@@ -80,7 +80,17 @@ def hboot_image_action(target, source, env):
 	if tSource is None:
 		raise Exception('No source specified!')
 	if tPatchDefinition is None:
-		raise Exception('No patch definition specified!')
+		# No patch definition defined yet. Use the default definition.
+		
+		# Get the chip type.
+		iChipTyp = env['BOOTBLOCK_CHIPTYPE']
+		strPatchDefinition = None
+		if iChipTyp==4000:
+			strPatchDefinition = 'hboot_netx4000_patch_table.xml'
+		else:
+			raise Exception('Invalid chip type: "%s"'%iChipTyp)
+		
+		tPatchDefinition = os.path.join(os.path.dirname(os.path.abspath(__file__)), strPatchDefinition)
 
 	tCompiler = hboot_image_compiler.HbootImage(env, strKeyRom)
 	tCompiler.set_patch_definitions(tPatchDefinition)
