@@ -204,37 +204,42 @@ def set_build_path(env, build_path, source_path, sources):
 	return [src.replace(source_path, build_path) for src in sources]
 
 
-def create_compiler_environment(env, strAsicTyp, aAttributes):
+def create_compiler_environment(env, strAsicTyp, aAttributesCommon, aAttributesLinker=None):
 	# Find the library paths for gcc and newlib.
 
+	# Use the common attributes both for the detect and the linker phase if no special linker attributes were specified.
+	if aAttributesLinker is None:
+		aAttributesLinker = aAttributesCommon
+
 	# Prepend an 'm' to each attribute and create a set from this list.
-	aMAttributes = set(['m'+strAttr for strAttr in aAttributes])
+	aMAttributesCommon = set(['m'+strAttr for strAttr in aAttributesCommon])
 
 	# Prepend an '-m' to each attribute.
-	aOptAttributes = ['-m'+strAttr for strAttr in aAttributes]
+	aOptAttributesCommon = ['-m'+strAttr for strAttr in aAttributesCommon]
+	aOptAttributesLinker = ['-m'+strAttr for strAttr in aAttributesLinker]
 
 	# Get the mapping for multiple library search directories.
 	strMultilibPath = None
 	aCmd = [env['CC']]
-	aCmd.extend(aOptAttributes)
+	aCmd.extend(aOptAttributesCommon)
 	aCmd.append('-print-multi-lib')
 	proc = subprocess.Popen(aCmd, stdout=subprocess.PIPE)
 	strOutput = proc.communicate()[0]
 	for match_obj in re.finditer('^([^;]+);@?([^\r\n\t ]+)', strOutput, re.MULTILINE):
 		strPath = match_obj.group(1)
 		aAttr = set(match_obj.group(2).split('@'))
-		if aAttr==aMAttributes:
+		if aAttr==aMAttributesCommon:
 			strMultilibPath = strPath
 			break
 
 	if strMultilibPath==None:
-		raise Exception('Could not find multilib configuration for attributes %s' % (','.join(aAttributes)))
+		raise Exception('Could not find multilib configuration for attributes %s' % (','.join(aAttributesCommon)))
 
 	strGccLibPath = os.path.join(env['GCC_LIBRARY_DIR_COMPILER'], strMultilibPath)
 	strNewlibPath = os.path.join(env['GCC_LIBRARY_DIR_ARCHITECTURE'], strMultilibPath)
 
 	env_new = env.Clone()
-	env_new.Append(CCFLAGS = aOptAttributes)
+	env_new.Append(CCFLAGS = aOptAttributesLinker)
 	env_new.Replace(LIBPATH = [strGccLibPath, strNewlibPath])
 	env_new.Append(CPPDEFINES = [['ASIC_TYP', '%s'%strAsicTyp]])
 
