@@ -125,46 +125,17 @@ def get_tool(env, strToolName):
 
 
 
-def CreateEnvironment(env=None, strGccPattern=None, astrGccFlags=None, strAsciiDocPattern=None):
-	astrDefaultGccFlags = Split("""
-		-ffreestanding
-		-mlong-calls
-		-Wall
-		-Wextra
-		-Wconversion
-		-Wshadow
-		-Wcast-qual
-		-Wwrite-strings
-		-Wcast-align
-		-Wpointer-arith
-		-Wmissing-prototypes
-		-Wstrict-prototypes
-		-g3
-		-gdwarf-2
-		-std=c99
-		-pedantic
-	""")
-
+def CreateEnvironment(env=None, astrToolPatterns=None):
 	# Create the new environment.
 	env = Environment()
 	env.Decider('MD5')
 
-	if strGccPattern!=None:
-		strGccId = find_first_tool(strGccPattern)
-		if strGccId is None:
-			raise Exception('No match found searching for a compiler matching the pattern "%s".' % strGccPattern)
-		if astrGccFlags is None:
-			astrGccFlags = astrDefaultGccFlags
-		add_tool_to_environment(env, strGccId)
-		env.Replace(CCFLAGS = Split(astrGccFlags))
-		env.Replace(LIBS = ['m', 'c', 'gcc'])
-		env.Replace(LINKFLAGS = ['--gc-sections', '-nostdlib', '-static'])
-
-	if strAsciiDocPattern!=None:
-		strAsciiDocId = find_first_tool(strAsciiDocPattern)
-		if strAsciiDocId is None:
-			raise Exception('No match found searching for AsciiDoc matching the pattern "%s".' % strAsciiDocPattern)
-		add_tool_to_environment(env, strAsciiDocId)
+	if not astrToolPatterns is None:
+		for strToolPattern in astrToolPatterns:
+			strId = find_first_tool(strToolPattern)
+			if strId is None:
+				raise Exception('Nothing found searching for a tool matching the pattern "%s".' % strToolPattern)
+			add_tool_to_environment(env, strId)
 
 	archive.ApplyToEnv(env)
 	artifact.ApplyToEnv(env)

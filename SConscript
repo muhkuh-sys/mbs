@@ -74,6 +74,9 @@ build_properties.PrintSummary()
 
 
 
+# Collect the tools in this list.
+astrTools = []
+
 #----------------------------------------------------------------------------
 #
 # Get the Compiler for the default environment.
@@ -85,7 +88,8 @@ try:
 except NameError:
 	# The default is to take the first available GCC version from the tools.
 	strGccVersion = scons_common.find_first_tool("^gcc")
-
+if not strGccVersion is None:
+	astrTools.append(strGccVersion)
 
 #----------------------------------------------------------------------------
 #
@@ -98,13 +102,15 @@ try:
 except NameError:
 	# The default is to take the first available Asciidoc version from the tools.
 	strAsciidocVersion = scons_common.find_first_tool("^asciidoc")
+if not strAsciidocVersion is None:
+	astrTools.append(strAsciidocVersion)
 
 
 #----------------------------------------------------------------------------
 #
 # Create the default environment.
 #
-env_default = scons_common.CreateEnvironment(env=None, strGccPattern=strGccVersion, astrGccFlags=None, strAsciiDocPattern=strAsciidocVersion)
+env_default = scons_common.CreateEnvironment(env=None, astrToolPatterns=astrTools)
 
 Export('env_default')
 
