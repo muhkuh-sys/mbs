@@ -976,6 +976,10 @@ class HbootImage:
 		for tNode in tExecuteNode.childNodes:
 			# Is this a node element with the name 'Options'?
 			if tNode.nodeType==tNode.ELEMENT_NODE and tNode.localName=='File':
+				# Is there already an exec function?
+				if pfnExecFunction is not None:
+					raise Exception('More than one execution address specified!')
+
 				# Get the file name.
 				strFileName = tNode.getAttribute('name')
 				if len(strFileName)==0:
@@ -1000,6 +1004,12 @@ class HbootImage:
 				if not strStartSymbol in atSymbols:
 					raise Exception('The symbol for the start startaddress "%s" could not be found!' % strStartSymbol)
 				pfnExecFunction = long(atSymbols[strStartSymbol])
+			elif tNode.nodeType==tNode.ELEMENT_NODE and tNode.localName=='Address':
+				# Is there already an exec function?
+				if pfnExecFunction is not None:
+					raise Exception('More than one execution address specified!')
+
+				pfnExecFunction = self.__parse_numeric_expression(self.__xml_get_all_text(tNode))
 			elif tNode.nodeType==tNode.ELEMENT_NODE and tNode.localName=='R0':
 				ulR0 = self.__parse_numeric_expression(self.__xml_get_all_text(tNode))
 			elif tNode.nodeType==tNode.ELEMENT_NODE and tNode.localName=='R1':
