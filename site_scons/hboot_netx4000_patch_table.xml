@@ -2339,5 +2339,7 @@
 		<Definition name="UART_MODE_ENABLE_RTSCTS" value="0x01"/>
 		<Definition name="UART_MODE_EVEN_PARITY" value="0x04"/>
 		<Definition name="UART_MODE_PARITY_ENABLE" value="0x02"/>
+		<Definition name="WFE_Loop" value="68211600"/>
+		<Definition name="WFI_Loop" value="68211592"/>
 	</Definitions>
 </PatchDefinitions>
