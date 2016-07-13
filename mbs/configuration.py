@@ -133,7 +133,7 @@ def create():
 		'marker_path': os.path.abspath(os.path.expanduser('~/.mbs/depack')),
 		'repository_path': os.path.abspath(os.path.expanduser('~/.mbs/repository')),
 		'depack_path': os.path.abspath(os.path.expanduser('~/.mbs/depack')),
-		'repositories': ['http://downloads.sourceforge.net/project/muhkuh/mbs'],
+		'repositories': ['http://downloads.sourceforge.net/project/muhkuh/mbs', 'https://dl.bintray.com/muhkuh/Muhkuh'],
 		'filter': dict({
 			'scons.bat': 'templates/scons.bat',
 			'scons.sh': 'templates/scons.sh',
