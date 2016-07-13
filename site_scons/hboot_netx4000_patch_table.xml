@@ -3794,6 +3794,18 @@
 		<Definition name="NAND_DEVICE_PARAMETERS_FLAG_AutodetectReadySignaling" value="1"/>
 		<Definition name="NAND_DEVICE_PARAMETERS_FLAG_HasReadStatusEnhanced" value="4"/>
 		<Definition name="NAND_DEVICE_PARAMETERS_FLAG_Use_ReadySignal0_Polling1" value="2"/>
+		<Definition name="REEMUX_0" value="0"/>
+		<Definition name="REEMUX_1" value="1"/>
+		<Definition name="REEMUX_2" value="2"/>
+		<Definition name="REEMUX_3" value="3"/>
+		<Definition name="REEMUX_DRV_04MA" value="0"/>
+		<Definition name="REEMUX_DRV_06MA" value="1"/>
+		<Definition name="REEMUX_DRV_08MA" value="2"/>
+		<Definition name="REEMUX_DRV_12MA" value="3"/>
+		<Definition name="REEMUX_UDC_NONE" value="0"/>
+		<Definition name="REEMUX_UDC_NONE2" value="2"/>
+		<Definition name="REEMUX_UDC_PULLDOWN50K" value="3"/>
+		<Definition name="REEMUX_UDC_PULLUP50K" value="1"/>
 		<Definition name="SMC_ADR" value="0xfc"/>
 		<Definition name="SMC_CHTR_FIFO" value="0xc9"/>
 		<Definition name="SMC_CHTR_No" value="0xc8"/>
