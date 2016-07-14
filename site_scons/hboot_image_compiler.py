@@ -167,6 +167,16 @@ class OptionCompiler:
         self.__strOptions = ''
         self.__cPatchDefinitions = tPatchDefinitions
 
+    def __parse_numeric_expression(self, strExpression):
+        tAstNode = ast.parse(strExpression, mode='eval')
+        tAstResolved = self.__cPatchDefinitions.resolve_constants(tAstNode)
+        ulResult = eval(compile(tAstResolved, 'lala', mode='eval'))
+        # TODO: is this really necessary? Maybe ast.literal_eval throws
+        # something already.
+        if ulResult is None:
+            raise Exception('Invalid number: "%s"' % strExpression)
+        return ulResult
+
     def __get_data(self, tDataNode, uiElementSizeInBytes):
         # Collect all text nodes and CDATA sections.
         atText = []
@@ -186,10 +196,7 @@ class OptionCompiler:
             strElement = string.strip(strElementRaw)
 
             # Parse the data.
-            tAstNode = ast.parse(strElement, mode='eval')
-            tAstResolved = self.__cPatchDefinitions.resolve_constants(tAstNode)
-            ast.dump(tAstResolved)
-            ulValue = eval(compile(tAstResolved, 'lala', mode='eval'))
+            ulValue = self.__parse_numeric_expression(strElement)
 
             # Generate the data entry.
             atBytes = [chr((ulValue >> (iCnt << 3)) & 0xff) for iCnt in range(0, uiElementSizeInBytes)]
@@ -483,53 +490,80 @@ class OptionCompiler:
                 if strOptionId == '':
                     raise Exception('Missing id attribute!')
 
-                atOptionDesc = self.__cPatchDefinitions.get_patch_definition(strOptionId)
-                ulOptionValue = atOptionDesc['value']
-                atElements = atOptionDesc['elements']
+                if strOptionId == 'RAW':
+                    # Get the offset attribute.
+                    strOffset = tOptionNode.getAttribute('offset')
+                    if strOffset == '':
+                        raise Exception('Missing offset attribute!')
+                    ulOffset = self.__parse_numeric_expression(strOffset)
 
-                # Get all data elements.
-                atData = self.__getOptionData(tOptionNode)
+                    # Get all data elements.
+                    atData = self.__getOptionData(tOptionNode)
 
-                # Compare the data elements with the element sizes.
-                sizElements = len(atElements)
-                if len(atData) != sizElements:
-                    raise Exception('The number of data elements for the option %s differs. The model requires %d, but %d were found.' % (strOptionId, sizElements, len(atData)))
+                    # To make things easier this routine expects only one element.
+                    if len(atData) != 1:
+                        raise Exception('A RAW element must have only one child element. This is just a limitation of the parser, so improve it if you really need it.')
 
-                atOptionData.append(chr(ulOptionValue))
+                    # The data size must fit into 1 byte.
+                    sizElement = len(atData[0])
+                    if sizElement>255:
+                        raise Exception('The RAW tag does not accept more than 255 bytes.')
 
-                # Compare the size of all elements.
-                for iCnt in range(0, sizElements):
-                    sizElement = len(atData[iCnt])
-                    (strElementId, ulSize, ulType) = atElements[iCnt]
-                    if ulType == 0:
-                        if sizElement != ulSize:
-                            raise Exception('The length of the data element %s for the option %s differs. The model requires %d bytes, but %d were found.' % (strElementId, strOptionId, ulSize, sizElement))
-                    elif ulType == 1:
-                        if sizElement >= ulSize:
-                            raise Exception('The length of the data element %s for the option %s exceeds the available space. The model reserves %d bytes, which must include a length information, but %d were found.' % (strElementId, strOptionId, ulSize, sizElement))
-                    elif ulType == 2:
-                        if sizElement >= ulSize:
-                            raise Exception('The length of the data element %s for the option %s exceeds the available space. The model reserves %d bytes, but %d were found.' % (strElementId, strOptionId, ulSize, sizElement))
-                    else:
-                        raise Exception('Unknown Type %d' % ulType)
+                    ucOptionValue = 0xfe
+                    atOptionData.append(chr(ucOptionValue))
+                    atOptionData.append(chr(sizElement))
+                    atOptionData.append(chr(ulOffset & 0xff))
+                    atOptionData.append(chr((ulOffset >> 8) & 0xff))
+                    atOptionData.extend(atData[0])
 
-                # Write all elements.
-                for iCnt in range(0, sizElements):
-                    sizElement = len(atData[iCnt])
-                    (strElementId, ulSize, ulType) = atElements[iCnt]
-                    if ulType == 0:
-                        atOptionData.extend(atData[iCnt])
-                    elif ulType == 1:
-                        # Add a size byte.
-                        atOptionData.append(chr(sizElement))
-                        atOptionData.extend(atData[iCnt])
-                    elif ulType == 2:
-                        # Add 16 bit size information.
-                        atOptionData.append(chr(sizElement & 0xff))
-                        atOptionData.append(chr((sizElement >> 8) & 0xff))
-                        atOptionData.extend(atData[iCnt])
-                    else:
-                        raise Exception('Unknown Type %d' % ulType)
+                else:
+                    atOptionDesc = self.__cPatchDefinitions.get_patch_definition(strOptionId)
+                    ulOptionValue = atOptionDesc['value']
+                    atElements = atOptionDesc['elements']
+
+                    # Get all data elements.
+                    atData = self.__getOptionData(tOptionNode)
+
+                    # Compare the data elements with the element sizes.
+                    sizElements = len(atElements)
+                    if len(atData) != sizElements:
+                        raise Exception('The number of data elements for the option %s differs. The model requires %d, but %d were found.' % (strOptionId, sizElements, len(atData)))
+
+                    atOptionData.append(chr(ulOptionValue))
+
+                    # Compare the size of all elements.
+                    for iCnt in range(0, sizElements):
+                        sizElement = len(atData[iCnt])
+                        (strElementId, ulSize, ulType) = atElements[iCnt]
+                        if ulType == 0:
+                            if sizElement != ulSize:
+                                raise Exception('The length of the data element %s for the option %s differs. The model requires %d bytes, but %d were found.' % (strElementId, strOptionId, ulSize, sizElement))
+                        elif ulType == 1:
+                            if sizElement >= ulSize:
+                                raise Exception('The length of the data element %s for the option %s exceeds the available space. The model reserves %d bytes, which must include a length information, but %d were found.' % (strElementId, strOptionId, ulSize, sizElement))
+                        elif ulType == 2:
+                            if sizElement >= ulSize:
+                                raise Exception('The length of the data element %s for the option %s exceeds the available space. The model reserves %d bytes, but %d were found.' % (strElementId, strOptionId, ulSize, sizElement))
+                        else:
+                            raise Exception('Unknown Type %d' % ulType)
+
+                    # Write all elements.
+                    for iCnt in range(0, sizElements):
+                        sizElement = len(atData[iCnt])
+                        (strElementId, ulSize, ulType) = atElements[iCnt]
+                        if ulType == 0:
+                            atOptionData.extend(atData[iCnt])
+                        elif ulType == 1:
+                            # Add a size byte.
+                            atOptionData.append(chr(sizElement))
+                            atOptionData.extend(atData[iCnt])
+                        elif ulType == 2:
+                            # Add 16 bit size information.
+                            atOptionData.append(chr(sizElement & 0xff))
+                            atOptionData.append(chr((sizElement >> 8) & 0xff))
+                            atOptionData.extend(atData[iCnt])
+                        else:
+                            raise Exception('Unknown Type %d' % ulType)
 
         return ''.join(atOptionData)
 
@@ -848,7 +882,7 @@ class HbootImage:
 
                 else:
                     raise Exception('The File node points to a file with an unknown extension: %s' % strExtension)
-            # Is this a node element with the name 'Options'?
+            # Is this a node element with the name 'Hex'?
             elif (tNode.nodeType == tNode.ELEMENT_NODE) and (tNode.localName == 'Hex'):
                 # Get the address.
                 strAddress = tNode.getAttribute('address')
