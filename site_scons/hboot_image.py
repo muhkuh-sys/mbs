@@ -18,24 +18,32 @@ def hboot_definition_scan(node, env, path):
 	if 'KNOWN_FILES' in env:
 		atKnownFiles = env['KNOWN_FILES']
 	
-	strPath = node.get_path()
-	tXml = xml.etree.ElementTree.parse(strPath)
-	tRootName = tXml.getroot().tag
-	if tRootName=='HBootImage':
-		# This is the definition of the boot image.
-		# Look for all "name" attributes of "File" nodes.
-		for tNode in tXml.findall('.//File[@name]'):
-			strFileName = tNode.get('name')
-			# Is this a reference?
-			if strFileName[0]=='@':
-				# Yes -> try to replace it with the known files.
-				# Cut off the '@'.
-				strFileId = strFileName[1:]
-				if not strFileId in atKnownFiles:
-					raise Exception('Unknown reference to file ID "%s".' % strFileName)
-				strFile = atKnownFiles[strFileId]
-			# Add the file to the dependencies.
-			atDependencies.append(strFile)
+	# Get the contents of the XML file.
+	strXml = node.get_contents()
+	# Ignore invalid XML files here.
+	tXml = None
+	try:
+		tXml = xml.etree.ElementTree.fromstring(strXml)
+	except xml.etree.ElementTree.ParseError:
+		pass
+
+	if not tXml is None:
+		tRootName = tXml.tag
+		if tRootName=='HBootImage':
+			# This is the definition of the boot image.
+			# Look for all "name" attributes of "File" nodes.
+			for tNode in tXml.findall('.//File[@name]'):
+				strFileName = tNode.get('name')
+				# Is this a reference?
+				if strFileName[0]=='@':
+					# Yes -> try to replace it with the known files.
+					# Cut off the '@'.
+					strFileId = strFileName[1:]
+					if not strFileId in atKnownFiles:
+						raise Exception('Unknown reference to file ID "%s".' % strFileName)
+					strFile = atKnownFiles[strFileId]
+				# Add the file to the dependencies.
+				atDependencies.append(strFile)
 
 	return atDependencies
 
@@ -105,10 +113,12 @@ def hboot_image_action(target, source, env):
 def hboot_image_emitter(target, source, env):
 	if 'KNOWN_FILES' in env:
 		for strId,strPath in env['KNOWN_FILES'].items():
+			# NOTE: Only add the reference here as a string.
+			# The source scanner will check if this reference is really used.
 			Depends(target, SCons.Node.Python.Value('%s:%s' % (strId,strPath)))
 	
 	if 'KEYROM_XML' in env:
-		Depends(target, SCons.Node.Python.Value(env['KEYROM_XML']))
+		Depends(target, env['KEYROM_XML'])
 	
 	return target, source
 
