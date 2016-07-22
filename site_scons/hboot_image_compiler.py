@@ -332,7 +332,7 @@ class OptionCompiler:
                         raise Exception('Invalid value for Delay: 0x%08x' % ulTicks)
 
                     # Append the new element.
-                    atDdrMacro.append(chr(self.__cPatchDefinitions.m_atConstants['DDR_SETUP_COMMAND_Delay']))
+                    atDdrMacro.append(chr(self.__cPatchDefinitions.m_atConstants['DDR_SETUP_COMMAND_DelayTicks']))
                     atDdrMacro.append(chr(ulTicks & 0xff))
                     atDdrMacro.append(chr((ulTicks >> 8) & 0xff))
                     atDdrMacro.append(chr((ulTicks >> 16) & 0xff))
