@@ -809,20 +809,25 @@ class HbootImage:
         strPadding = chr(0x00) * ((4 - (len(strData) % 4)) & 3)
         strChunk = strData + strPadding
 
-        aulData = array.array('I')
-        aulData.fromstring(strChunk)
+        # Return the plain option chunk for SECMEM images.
+        # Add a header otherwise.
+        if self.__tImageType == self.__IMAGE_TYPE_SECMEM:
+            aulChunk = aulData
+        else:
+            aulData = array.array('I')
+            aulData.fromstring(strChunk)
 
-        aulChunk = array.array('I')
-        aulChunk.append(self.__get_tag_id('O', 'P', 'T', 'S'))
-        aulChunk.append(len(aulData) + self.__sizHashDw)
-        aulChunk.extend(aulData)
+            aulChunk = array.array('I')
+            aulChunk.append(self.__get_tag_id('O', 'P', 'T', 'S'))
+            aulChunk.append(len(aulData) + self.__sizHashDw)
+            aulChunk.extend(aulData)
 
-        # Get the hash for the chunk.
-        tHash = hashlib.sha384()
-        tHash.update(aulChunk.tostring())
-        strHash = tHash.digest()
-        aulHash = array.array('I', strHash[:self.__sizHashDw * 4])
-        aulChunk.extend(aulHash)
+            # Get the hash for the chunk.
+            tHash = hashlib.sha384()
+            tHash.update(aulChunk.tostring())
+            strHash = tHash.digest()
+            aulHash = array.array('I', strHash[:self.__sizHashDw * 4])
+            aulChunk.extend(aulHash)
 
         return aulChunk
 
@@ -2095,6 +2100,8 @@ class HbootImage:
         for tImageNode in tXmlRootNode.childNodes:
             # Is this a node element with the name 'Options'?
             if (tImageNode.nodeType == tImageNode.ELEMENT_NODE) and (tImageNode.localName == 'Header'):
+                if self.__tImageType == self.__IMAGE_TYPE_SECMEM:
+                    raise Exception('Header overrides are not allowed in SECMEM images.')
                 self.__parse_header_options(tImageNode)
 
             elif (tImageNode.nodeType == tImageNode.ELEMENT_NODE) and (tImageNode.localName == 'Chunks'):
@@ -2172,19 +2179,23 @@ class HbootImage:
         self.__atKnownFiles.update(atFiles)
 
     def write(self, strTargetPath):
-        """ Write all compiled options to the file strTargetPath . """
+        """ Write all compiled chunks to the file strTargetPath . """
 
         # Get a copy of the chunk data.
         atChunks = array.array('I', self.__atChunks)
 
-        # Terminate the chunks with a DWORD of 0.
-        atChunks.append(0x00000000)
+        if self.__tImageType == self.__IMAGE_TYPE_SECMEM:
+            # Do not add headers in a SECMEM image.
+            atHeader = array.array('I')
+        else:
+            # Terminate the chunks with a DWORD of 0.
+            atChunks.append(0x00000000)
 
-        # Generate the standard header.
-        atHeaderStandard = self.__build_standard_header(atChunks)
+            # Generate the standard header.
+            atHeaderStandard = self.__build_standard_header(atChunks)
 
-        # Combine the standard header with the overrides.
-        atHeader = self.__combine_headers(atHeaderStandard)
+            # Combine the standard header with the overrides.
+            atHeader = self.__combine_headers(atHeaderStandard)
 
         # Write all components to the output file.
         tFile = open(strTargetPath, 'wb')
