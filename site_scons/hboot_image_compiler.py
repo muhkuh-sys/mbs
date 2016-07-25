@@ -618,12 +618,15 @@ class HbootImage:
     __XmlKeyromContents = None
     __cfg_openssl = 'openssl'
 
+    # This is the revision for the netX10, netX51 and netX52 Secmem zone.
+    __SECMEM_ZONE2_REV1_0 = 0x81
+
     def __init__(self, tEnv, strKeyromFile):
         # Do not override anything in the pre-calculated header yet.
         self.__atHeaderOverride = [None] * 16
 
         # No chunks yet.
-        self.__atChunks = array.array('I')
+        self.__atChunks = None
 
         # Set the environment.
         self.__tEnv = tEnv
@@ -805,31 +808,32 @@ class HbootImage:
         tOptionCompiler.process(tChunkNode)
         strData = tOptionCompiler.tostring()
 
-        # Pad the option chunk to 32 bit size.
-        strPadding = chr(0x00) * ((4 - (len(strData) % 4)) & 3)
-        strChunk = strData + strPadding
-
         # Return the plain option chunk for SECMEM images.
         # Add a header otherwise.
         if self.__tImageType == self.__IMAGE_TYPE_SECMEM:
-            aulChunk = aulData
+            atChunk = array.array('B')
+            atChunk.fromstring(strData)
         else:
+            # Pad the option chunk to 32 bit size.
+            strPadding = chr(0x00) * ((4 - (len(strData) % 4)) & 3)
+            strChunk = strData + strPadding
+
             aulData = array.array('I')
             aulData.fromstring(strChunk)
 
-            aulChunk = array.array('I')
-            aulChunk.append(self.__get_tag_id('O', 'P', 'T', 'S'))
-            aulChunk.append(len(aulData) + self.__sizHashDw)
-            aulChunk.extend(aulData)
+            atChunk = array.array('I')
+            atChunk.append(self.__get_tag_id('O', 'P', 'T', 'S'))
+            atChunk.append(len(aulData) + self.__sizHashDw)
+            atChunk.extend(aulData)
 
             # Get the hash for the chunk.
             tHash = hashlib.sha384()
-            tHash.update(aulChunk.tostring())
+            tHash.update(atChunk.tostring())
             strHash = tHash.digest()
             aulHash = array.array('I', strHash[:self.__sizHashDw * 4])
-            aulChunk.extend(aulHash)
+            atChunk.extend(aulHash)
 
-        return aulChunk
+        return atChunk
 
     def __get_data_contents(self, tDataNode, atData):
         strData = None
@@ -2085,6 +2089,13 @@ class HbootImage:
             # Set the default type.
             self.__tImageType = self.__IMAGE_TYPE_REGULAR
 
+        # INTRAM and REGULAR images are DWORD based, SECMEM images are byte
+        # based.
+        if self.__tImageType == self.__IMAGE_TYPE_SECMEM:
+            self.__atChunks = array.array('B')
+        else:
+            self.__atChunks = array.array('I')
+
         # Get the hash size. Default to 1 DWORD.
         strHashSize = tXmlRootNode.getAttribute('hashsize')
         if len(strHashSize) != 0:
@@ -2178,16 +2189,102 @@ class HbootImage:
     def set_known_files(self, atFiles):
         self.__atKnownFiles.update(atFiles)
 
+    def __crc7(self, strData):
+        ucCrc = 0
+        for uiByteCnt in range(0, len(strData)):
+            ucByte = ord(strData[uiByteCnt])
+            for uiBitCnt in range(0, 8):
+                ucBit = (ucCrc ^ ucByte) & 0x80
+                ucCrc <<= 1
+                ucByte <<= 1
+                if ucBit!=0:
+                    ucCrc ^= 0x07
+            ucCrc &= 0xff
+
+        return ucCrc
+
     def write(self, strTargetPath):
         """ Write all compiled chunks to the file strTargetPath . """
 
-        # Get a copy of the chunk data.
-        atChunks = array.array('I', self.__atChunks)
-
         if self.__tImageType == self.__IMAGE_TYPE_SECMEM:
+            # Collect data for zone 2 and 3.
+            aucZone2 = None
+            aucZone3 = None
+
+            # Get the size of the complete image.
+            uiImageSize = self.__atChunks.buffer_info()[1]
+
+            # Up to 29 bytes fit into zone 2.
+            if uiImageSize<=29:
+                aucZone2 = array.array('B')
+                aucZone3 = array.array('B')
+
+                # Set the length.
+                aucZone2.append(uiImageSize)
+
+                # Add the options.
+                aucZone2.extend(self.__atChunks)
+
+                # Fill up zone2 to 29 bytes.
+                if uiImageSize<29:
+                    aucZone2.extend([0x00]*(29-uiImageSize))
+
+                # Set the revision.
+                aucZone2.append(self.__SECMEM_ZONE2_REV1_0)
+
+                # Set the checksum.
+                ucCrc = self.__crc7(aucZone2.tostring())
+                aucZone2.append(ucCrc)
+
+                # Clear zone 3.
+                aucZone3.extend([0]*32)
+
+            # Zone 2 and 3 together can hold up to 61 bytes.
+            elif uiImageSize<=61:
+                aucTmp = array.array('B')
+
+                # Set the length.
+                aucTmp.append(uiImageSize)
+
+                # Add the options.
+                aucTmp.extend(self.__atChunks)
+
+                # Fill up the data to 61 bytes.
+                if uiImageSize<61:
+                    aucTmp.extend([0x00]*(61-uiImageSize))
+
+                # Set the revision.
+                aucTmp.append(self.__SECMEM_ZONE2_REV1_0)
+
+                # Get the checksum.
+                ucCrc = self.__crc7(aucTmp.tostring())
+
+                # Get the first 30 bytes as zone2.
+                aucZone2 = aucTmp[0:30]
+
+                # Add the revision.
+                aucZone2.append(self.__SECMEM_ZONE2_REV1_0)
+
+                # Add the checksum.
+                aucZone2.append(ucCrc)
+
+                # Place the rest of the data into zone3.
+                aucZone3 = aucTmp[30:62]
+
+            else:
+                raise Exception('The image is too big for a SECMEM. It must be 61 bytes or less, but it has %d bytes.' % uiImageSize)
+
+            # Get a copy of the chunk data.
+            atChunks = array.array('B')
+            atChunks.extend(aucZone2)
+            atChunks.extend(aucZone3)
+
             # Do not add headers in a SECMEM image.
-            atHeader = array.array('I')
+            atHeader = array.array('B')
         else:
+            # Get a copy of the chunk data.
+            atChunks = array.array('I', self.__atChunks)
+
             # Terminate the chunks with a DWORD of 0.
             atChunks.append(0x00000000)
 
