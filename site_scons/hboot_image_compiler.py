@@ -612,6 +612,7 @@ class HbootImage:
     __astrToImageType = None
     __IMAGE_TYPE_REGULAR = 0
     __IMAGE_TYPE_INTRAM = 1
+    __IMAGE_TYPE_SECMEM = 2
     __sizHashDw = None
 
     __XmlKeyromContents = None
@@ -634,7 +635,8 @@ class HbootImage:
 
         self.__astrToImageType = dict({
             'REGULAR': self.__IMAGE_TYPE_REGULAR,
-            'INTRAM': self.__IMAGE_TYPE_INTRAM
+            'INTRAM': self.__IMAGE_TYPE_INTRAM,
+            'SECMEM': self.__IMAGE_TYPE_SECMEM
         })
 
         # Initialize the include paths from the environment.
@@ -2068,7 +2070,7 @@ class HbootImage:
         else:
             raise Exception('Unknown input document:', tInput)
 
-        # Get the type of the image. Default to ...
+        # Get the type of the image. Default to "REGULAR".
         strType = tXmlRootNode.getAttribute('type')
         if len(strType) != 0:
             if strType not in self.__astrToImageType:
@@ -2105,42 +2107,62 @@ class HbootImage:
                             self.__atChunks.extend(atChunk)
                         elif tChunkNode.localName == 'Data':
                             # Found a data node.
+                            if self.__tImageType == self.__IMAGE_TYPE_SECMEM:
+                                raise Exception('Data chunks are not allowed in SECMEM images.')
                             atChunk = self.__build_chunk_data(tChunkNode)
                             self.__atChunks.extend(atChunk)
                         elif tChunkNode.localName == 'Execute':
                             # Found an execute node.
+                            if self.__tImageType == self.__IMAGE_TYPE_SECMEM:
+                                raise Exception('Execute chunks are not allowed in SECMEM images.')
                             atChunk = self.__build_chunk_execute(tChunkNode)
                             self.__atChunks.extend(atChunk)
                         elif tChunkNode.localName == 'ExecuteCA9':
                             # Found an execute node.
+                            if self.__tImageType == self.__IMAGE_TYPE_SECMEM:
+                                raise Exception('ExecuteCA9 chunks are not allowed in SECMEM images.')
                             atChunk = self.__build_chunk_execute_ca9(tChunkNode)
                             self.__atChunks.extend(atChunk)
                         elif tChunkNode.localName == 'SpiMacro':
                             # Found a SPI macro.
+                            if self.__tImageType == self.__IMAGE_TYPE_SECMEM:
+                                raise Exception('SpiMacro chunks are not allowed in SECMEM images.')
                             atChunk = self.__build_chunk_spi_macro(tChunkNode)
                             self.__atChunks.extend(atChunk)
                         elif tChunkNode.localName == 'Skip':
                             # Found a skip node.
+                            if self.__tImageType == self.__IMAGE_TYPE_SECMEM:
+                                raise Exception('Skip chunks are not allowed in SECMEM images.')
                             atChunk = self.__build_chunk_skip(tChunkNode)
                             self.__atChunks.extend(atChunk)
                         elif tChunkNode.localName == 'RootCert':
-                            # Found a skip node.
+                            # Found a root certificate node.
+                            if self.__tImageType == self.__IMAGE_TYPE_SECMEM:
+                                raise Exception('RootCert chunks are not allowed in SECMEM images.')
                             atChunk = self.__build_chunk_root_cert(tChunkNode)
                             self.__atChunks.extend(atChunk)
                         elif tChunkNode.localName == 'LicenseCert':
-                            # Found a skip node.
+                            # Found a license certificate node.
+                            if self.__tImageType == self.__IMAGE_TYPE_SECMEM:
+                                raise Exception('LicenseCert chunks are not allowed in SECMEM images.')
                             atChunk = self.__build_chunk_license_cert(tChunkNode)
                             self.__atChunks.extend(atChunk)
                         elif tChunkNode.localName == 'CR7Software':
-                            # Found a skip node.
+                            # Found a CR7 software node.
+                            if self.__tImageType == self.__IMAGE_TYPE_SECMEM:
+                                raise Exception('CR7Software chunks are not allowed in SECMEM images.')
                             atChunk = self.__build_chunk_cr7sw(tChunkNode)
                             self.__atChunks.extend(atChunk)
                         elif tChunkNode.localName == 'CA9Software':
-                            # Found a skip node.
+                            # Found a CA9 software node.
+                            if self.__tImageType == self.__IMAGE_TYPE_SECMEM:
+                                raise Exception('CA9Software chunks are not allowed in SECMEM images.')
                             atChunk = self.__build_chunk_ca9sw(tChunkNode)
                             self.__atChunks.extend(atChunk)
                         elif tChunkNode.localName == 'MemoryDeviceUp':
-                            # Found a skip node.
+                            # Found a memory device up node.
+                            if self.__tImageType == self.__IMAGE_TYPE_SECMEM:
+                                raise Exception('MemoryDeviceUp chunks are not allowed in SECMEM images.')
                             atChunk = self.__build_chunk_memory_device_up(tChunkNode)
                             self.__atChunks.extend(atChunk)
                         else:
