@@ -95,6 +95,8 @@ def hboot_image_action(target, source, env):
 		strPatchDefinition = None
 		if iChipTyp==4000:
 			strPatchDefinition = 'hboot_netx4000_patch_table.xml'
+		elif iChipTyp==56:
+			strPatchDefinition = 'hboot_netx56_patch_table.xml'
 		else:
 			raise Exception('Invalid chip type: "%s"'%iChipTyp)
 		
