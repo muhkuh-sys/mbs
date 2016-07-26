@@ -608,6 +608,7 @@ class HbootImage:
 
     __cPatchDefinitions = None
 
+    __uiNetxType = None
     __tImageType = None
     __astrToImageType = None
     __IMAGE_TYPE_REGULAR = 0
@@ -621,7 +622,12 @@ class HbootImage:
     # This is the revision for the netX10, netX51 and netX52 Secmem zone.
     __SECMEM_ZONE2_REV1_0 = 0x81
 
-    def __init__(self, tEnv, strKeyromFile):
+    # The magic cookies for the different chips.
+    __MAGIC_COOKIE_NETX56 = 0xf8beaf00
+    __MAGIC_COOKIE_NETX4000 = 0xf3beaf00
+
+
+    def __init__(self, tEnv, uiNetxType, strKeyromFile):
         # Do not override anything in the pre-calculated header yet.
         self.__atHeaderOverride = [None] * 16
 
@@ -635,6 +641,10 @@ class HbootImage:
         self.__atKnownFiles = dict({})
 
         self.__cPatchDefinitions = None
+
+        self.__uiNetxType = uiNetxType
+        self.__tImageType = None
+        self.__sizHashDw = None
 
         self.__astrToImageType = dict({
             'REGULAR': self.__IMAGE_TYPE_REGULAR,
@@ -672,6 +682,15 @@ class HbootImage:
         return ''.join(astrText)
 
     def __build_standard_header(self, atChunks):
+
+        ulMagicCookie = None
+        if self.__uiNetxType == 56:
+            ulMagicCookie = self.__MAGIC_COOKIE_NETX56
+        elif self.__uiNetxType == 4000:
+            ulMagicCookie = self.__MAGIC_COOKIE_NETX4000
+        else:
+            raise Exception('Missing platform configuration: no standard header configured, please update the HBOOT image compiler.')
+
         # Get the hash for the image.
         tHash = hashlib.sha224()
         tHash.update(atChunks.tostring())
@@ -684,7 +703,7 @@ class HbootImage:
 
         # Build the boot block.
         aBootBlock = array.array('I', [0] * 16)
-        aBootBlock[0x00] = 0xf3beaf00           # Magic cookie.
+        aBootBlock[0x00] = ulMagicCookie    # Magic cookie.
         aBootBlock[0x01] = 0                # reserved
         aBootBlock[0x02] = 0                # reserved
         aBootBlock[0x03] = 0                # reserved
@@ -802,7 +821,20 @@ class HbootImage:
         atData.append((ulValue >> 16) & 0xff)
         atData.append((ulValue >> 24) & 0xff)
 
+    def __crc16(self, strData):
+        usCrc = 0
+        for uiCnt in range(0, len(strData)):
+            ucByte = ord(strData[uiCnt])
+            usCrc  = (usCrc >> 8) | ((usCrc & 0xff) << 8)
+            usCrc ^= ucByte
+            usCrc ^= (usCrc & 0xff) >> 4
+            usCrc ^= (usCrc & 0x0f) << 12
+            usCrc ^= ((usCrc & 0xff) << 4) << 1
+        return usCrc
+
     def __build_chunk_options(self, tChunkNode):
+        atChunk = None
+
         # Compile the options definition to a string of bytes.
         tOptionCompiler = OptionCompiler(self.__cPatchDefinitions)
         tOptionCompiler.process(tChunkNode)
@@ -814,24 +846,43 @@ class HbootImage:
             atChunk = array.array('B')
             atChunk.fromstring(strData)
         else:
-            # Pad the option chunk to 32 bit size.
-            strPadding = chr(0x00) * ((4 - (len(strData) % 4)) & 3)
-            strChunk = strData + strPadding
+            if self.__uiNetxType == 56:
+                # Pad the option chunk plus a CRC16 to 32 bit size.
+                strPadding = chr(0x00) * ((4 - ((len(strData)+2) % 4)) & 3)
+                strChunk = strData + strPadding
 
-            aulData = array.array('I')
-            aulData.fromstring(strChunk)
+                # Get the CRC16 for the chunk.
+                usCrc = self.__crc16(strChunk)
+                strChunk += chr((usCrc >> 8) & 0xff)
+                strChunk += chr(usCrc & 0xff)
 
-            atChunk = array.array('I')
-            atChunk.append(self.__get_tag_id('O', 'P', 'T', 'S'))
-            atChunk.append(len(aulData) + self.__sizHashDw)
-            atChunk.extend(aulData)
+                aulData = array.array('I')
+                aulData.fromstring(strChunk)
 
-            # Get the hash for the chunk.
-            tHash = hashlib.sha384()
-            tHash.update(atChunk.tostring())
-            strHash = tHash.digest()
-            aulHash = array.array('I', strHash[:self.__sizHashDw * 4])
-            atChunk.extend(aulHash)
+                atChunk = array.array('I')
+                atChunk.append(self.__get_tag_id('O', 'P', 'T', 'S'))
+                atChunk.append(len(aulData))
+                atChunk.extend(aulData)
+
+            elif self.__uiNetxType == 4000:
+                # Pad the option chunk to 32 bit size.
+                strPadding = chr(0x00) * ((4 - (len(strData) % 4)) & 3)
+                strChunk = strData + strPadding
+
+                aulData = array.array('I')
+                aulData.fromstring(strChunk)
+
+                atChunk = array.array('I')
+                atChunk.append(self.__get_tag_id('O', 'P', 'T', 'S'))
+                atChunk.append(len(aulData) + self.__sizHashDw)
+                atChunk.extend(aulData)
+
+                # Get the hash for the chunk.
+                tHash = hashlib.sha384()
+                tHash.update(atChunk.tostring())
+                strHash = tHash.digest()
+                aulHash = array.array('I', strHash[:self.__sizHashDw * 4])
+                atChunk.extend(aulHash)
 
         return atChunk
 
@@ -2139,6 +2190,8 @@ class HbootImage:
                             # Found an execute node.
                             if self.__tImageType == self.__IMAGE_TYPE_SECMEM:
                                 raise Exception('ExecuteCA9 chunks are not allowed in SECMEM images.')
+                            if self.__uiNetxType == 56:
+                                raise Exception('ExecuteCA9 chunks are not allowed on netx56.')
                             atChunk = self.__build_chunk_execute_ca9(tChunkNode)
                             self.__atChunks.extend(atChunk)
                         elif tChunkNode.localName == 'SpiMacro':
@@ -2157,24 +2210,32 @@ class HbootImage:
                             # Found a root certificate node.
                             if self.__tImageType == self.__IMAGE_TYPE_SECMEM:
                                 raise Exception('RootCert chunks are not allowed in SECMEM images.')
+                            if self.__uiNetxType == 56:
+                                raise Exception('RootCert chunks are not allowed on netx56.')
                             atChunk = self.__build_chunk_root_cert(tChunkNode)
                             self.__atChunks.extend(atChunk)
                         elif tChunkNode.localName == 'LicenseCert':
                             # Found a license certificate node.
                             if self.__tImageType == self.__IMAGE_TYPE_SECMEM:
                                 raise Exception('LicenseCert chunks are not allowed in SECMEM images.')
+                            if self.__uiNetxType == 56:
+                                raise Exception('LicenseCert chunks are not allowed on netx56.')
                             atChunk = self.__build_chunk_license_cert(tChunkNode)
                             self.__atChunks.extend(atChunk)
                         elif tChunkNode.localName == 'CR7Software':
                             # Found a CR7 software node.
                             if self.__tImageType == self.__IMAGE_TYPE_SECMEM:
                                 raise Exception('CR7Software chunks are not allowed in SECMEM images.')
+                            if self.__uiNetxType == 56:
+                                raise Exception('CR7Software chunks are not allowed on netx56.')
                             atChunk = self.__build_chunk_cr7sw(tChunkNode)
                             self.__atChunks.extend(atChunk)
                         elif tChunkNode.localName == 'CA9Software':
                             # Found a CA9 software node.
                             if self.__tImageType == self.__IMAGE_TYPE_SECMEM:
                                 raise Exception('CA9Software chunks are not allowed in SECMEM images.')
+                            if self.__uiNetxType == 56:
+                                raise Exception('CA9Software chunks are not allowed on netx56.')
                             atChunk = self.__build_chunk_ca9sw(tChunkNode)
                             self.__atChunks.extend(atChunk)
                         elif tChunkNode.localName == 'MemoryDeviceUp':
@@ -2304,6 +2365,12 @@ class HbootImage:
 
 def main():
     tParser = argparse.ArgumentParser(usage='usage: hboot_image [options]')
+    tParser.add_argument('-n', '--netx-type',
+                         dest='uiNetxType',
+                         required=True,
+                         choices=[56,4000],
+                         metavar='NETX',
+                         help='Build the image for netx type NETX.')
     tParser.add_argument('-c', '--objcopy',
                          dest='strObjCopy',
                          required=False,
@@ -2361,9 +2428,12 @@ def main():
     tArgs = tParser.parse_args()
 
     # Set the default for the patch table here.
-    # This will depend on a chip type later.
+    atDefaultPatchTables = {
+        56: 'hboot_netx56_patch_table.xml',
+        4000: 'hboot_netx4000_patch_table.xml'
+    }
     if tArgs.strPatchTablePath is None:
-        tArgs.strPatchTablePath = 'hboot_netx4000_patch_table.xml'
+        tArgs.strPatchTablePath = atDefaultPatchTables[tArgs.uiNetxType]
 
     # Parse all alias definitions.
     atKnownFiles = {}
@@ -2390,6 +2460,8 @@ def main():
 
     # Show all parameters.
     if tArgs.fVerbose:
+        print 'netX type:   %d' % tArgs.uiNetxType
+        print ''
         print 'Input file:  %s' % tArgs.strInputFile
         print 'Output file: %s' % tArgs.strOutputFile
         print ''
@@ -2413,7 +2485,7 @@ def main():
             for strAlias, strFile in atKnownFiles.iteritems():
                 print '\t%s = %s' % (strAlias, strFile)
 
-    tCompiler = HbootImage(tEnv, tArgs.strKeyRomPath)
+    tCompiler = HbootImage(tEnv, tArgs.uiNetxType, tArgs.strKeyRomPath)
     tCompiler.set_patch_definitions(tArgs.strPatchTablePath)
     tCompiler.set_known_files(atKnownFiles)
     tCompiler.parse_image(tArgs.strInputFile)

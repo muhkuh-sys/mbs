@@ -102,7 +102,7 @@ def hboot_image_action(target, source, env):
 		
 		tPatchDefinition = os.path.join(os.path.dirname(os.path.abspath(__file__)), strPatchDefinition)
 
-	tCompiler = hboot_image_compiler.HbootImage(env, strKeyRom)
+	tCompiler = hboot_image_compiler.HbootImage(env, iChipTyp, strKeyRom)
 	tCompiler.set_patch_definitions(tPatchDefinition)
 	tCompiler.set_known_files(atKnownFiles)
 	tCompiler.parse_image(tSource.documentElement)
