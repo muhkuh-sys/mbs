@@ -70,7 +70,7 @@ class PatchDefinitions:
         elif isinstance(tInput, xml.dom.minidom.Document):
             tXml = tInput
         else:
-            raise Exception('Unknown input document:', tInput)
+            raise Exception('Unknown input document: %s' % repr(tInput))
 
         # Loop over all children.
         for tOptionsNode in tXml.documentElement.childNodes:
@@ -475,6 +475,8 @@ class OptionCompiler:
                 elif tDataNode.localName == 'DDR':
                     strData = self.__get_ddr_macro_data(tDataNode)
                     atData.append(strData)
+                else:
+                    raise Exception('Unexpected node: %s', tDataNode.localName)
 
         return atData
 
@@ -484,86 +486,89 @@ class OptionCompiler:
         # Loop over all children.
         for tOptionNode in tChunkNode.childNodes:
             # Is this a node element with the name 'Options'?
-            if (tOptionNode.nodeType == tOptionNode.ELEMENT_NODE) and (tOptionNode.localName == 'Option'):
-                # Get the ID.
-                strOptionId = tOptionNode.getAttribute('id')
-                if strOptionId == '':
-                    raise Exception('Missing id attribute!')
+            if tOptionNode.nodeType == tOptionNode.ELEMENT_NODE:
+                if tOptionNode.localName == 'Option':
+                    # Get the ID.
+                    strOptionId = tOptionNode.getAttribute('id')
+                    if strOptionId == '':
+                        raise Exception('Missing id attribute!')
 
-                if strOptionId == 'RAW':
-                    # Get the offset attribute.
-                    strOffset = tOptionNode.getAttribute('offset')
-                    if strOffset == '':
-                        raise Exception('Missing offset attribute!')
-                    ulOffset = self.__parse_numeric_expression(strOffset)
+                    if strOptionId == 'RAW':
+                        # Get the offset attribute.
+                        strOffset = tOptionNode.getAttribute('offset')
+                        if strOffset == '':
+                            raise Exception('Missing offset attribute!')
+                        ulOffset = self.__parse_numeric_expression(strOffset)
 
-                    # Get all data elements.
-                    atData = self.__getOptionData(tOptionNode)
+                        # Get all data elements.
+                        atData = self.__getOptionData(tOptionNode)
 
-                    # To make things easier this routine expects only one element.
-                    if len(atData) != 1:
-                        raise Exception('A RAW element must have only one child element. This is just a limitation of the parser, so improve it if you really need it.')
+                        # To make things easier this routine expects only one element.
+                        if len(atData) != 1:
+                            raise Exception('A RAW element must have only one child element. This is just a limitation of the parser, so improve it if you really need it.')
 
-                    # The data size must fit into 1 byte.
-                    sizElement = len(atData[0])
-                    if sizElement>255:
-                        raise Exception('The RAW tag does not accept more than 255 bytes.')
+                        # The data size must fit into 1 byte.
+                        sizElement = len(atData[0])
+                        if sizElement > 255:
+                            raise Exception('The RAW tag does not accept more than 255 bytes.')
 
-                    ucOptionValue = 0xfe
-                    atOptionData.append(chr(ucOptionValue))
-                    atOptionData.append(chr(sizElement))
-                    atOptionData.append(chr(ulOffset & 0xff))
-                    atOptionData.append(chr((ulOffset >> 8) & 0xff))
-                    atOptionData.extend(atData[0])
+                        ucOptionValue = 0xfe
+                        atOptionData.append(chr(ucOptionValue))
+                        atOptionData.append(chr(sizElement))
+                        atOptionData.append(chr(ulOffset & 0xff))
+                        atOptionData.append(chr((ulOffset >> 8) & 0xff))
+                        atOptionData.extend(atData[0])
 
+                    else:
+                        atOptionDesc = self.__cPatchDefinitions.get_patch_definition(strOptionId)
+                        ulOptionValue = atOptionDesc['value']
+                        atElements = atOptionDesc['elements']
+
+                        # Get all data elements.
+                        atData = self.__getOptionData(tOptionNode)
+
+                        # Compare the data elements with the element sizes.
+                        sizElements = len(atElements)
+                        if len(atData) != sizElements:
+                            raise Exception('The number of data elements for the option %s differs. The model requires %d, but %d were found.' % (strOptionId, sizElements, len(atData)))
+
+                        atOptionData.append(chr(ulOptionValue))
+
+                        # Compare the size of all elements.
+                        for iCnt in range(0, sizElements):
+                            sizElement = len(atData[iCnt])
+                            (strElementId, ulSize, ulType) = atElements[iCnt]
+                            if ulType == 0:
+                                if sizElement != ulSize:
+                                    raise Exception('The length of the data element %s for the option %s differs. The model requires %d bytes, but %d were found.' % (strElementId, strOptionId, ulSize, sizElement))
+                            elif ulType == 1:
+                                if sizElement >= ulSize:
+                                    raise Exception('The length of the data element %s for the option %s exceeds the available space. The model reserves %d bytes, which must include a length information, but %d were found.' % (strElementId, strOptionId, ulSize, sizElement))
+                            elif ulType == 2:
+                                if sizElement >= ulSize:
+                                    raise Exception('The length of the data element %s for the option %s exceeds the available space. The model reserves %d bytes, but %d were found.' % (strElementId, strOptionId, ulSize, sizElement))
+                            else:
+                                raise Exception('Unknown Type %d' % ulType)
+
+                        # Write all elements.
+                        for iCnt in range(0, sizElements):
+                            sizElement = len(atData[iCnt])
+                            (strElementId, ulSize, ulType) = atElements[iCnt]
+                            if ulType == 0:
+                                atOptionData.extend(atData[iCnt])
+                            elif ulType == 1:
+                                # Add a size byte.
+                                atOptionData.append(chr(sizElement))
+                                atOptionData.extend(atData[iCnt])
+                            elif ulType == 2:
+                                # Add 16 bit size information.
+                                atOptionData.append(chr(sizElement & 0xff))
+                                atOptionData.append(chr((sizElement >> 8) & 0xff))
+                                atOptionData.extend(atData[iCnt])
+                            else:
+                                raise Exception('Unknown Type %d' % ulType)
                 else:
-                    atOptionDesc = self.__cPatchDefinitions.get_patch_definition(strOptionId)
-                    ulOptionValue = atOptionDesc['value']
-                    atElements = atOptionDesc['elements']
-
-                    # Get all data elements.
-                    atData = self.__getOptionData(tOptionNode)
-
-                    # Compare the data elements with the element sizes.
-                    sizElements = len(atElements)
-                    if len(atData) != sizElements:
-                        raise Exception('The number of data elements for the option %s differs. The model requires %d, but %d were found.' % (strOptionId, sizElements, len(atData)))
-
-                    atOptionData.append(chr(ulOptionValue))
-
-                    # Compare the size of all elements.
-                    for iCnt in range(0, sizElements):
-                        sizElement = len(atData[iCnt])
-                        (strElementId, ulSize, ulType) = atElements[iCnt]
-                        if ulType == 0:
-                            if sizElement != ulSize:
-                                raise Exception('The length of the data element %s for the option %s differs. The model requires %d bytes, but %d were found.' % (strElementId, strOptionId, ulSize, sizElement))
-                        elif ulType == 1:
-                            if sizElement >= ulSize:
-                                raise Exception('The length of the data element %s for the option %s exceeds the available space. The model reserves %d bytes, which must include a length information, but %d were found.' % (strElementId, strOptionId, ulSize, sizElement))
-                        elif ulType == 2:
-                            if sizElement >= ulSize:
-                                raise Exception('The length of the data element %s for the option %s exceeds the available space. The model reserves %d bytes, but %d were found.' % (strElementId, strOptionId, ulSize, sizElement))
-                        else:
-                            raise Exception('Unknown Type %d' % ulType)
-
-                    # Write all elements.
-                    for iCnt in range(0, sizElements):
-                        sizElement = len(atData[iCnt])
-                        (strElementId, ulSize, ulType) = atElements[iCnt]
-                        if ulType == 0:
-                            atOptionData.extend(atData[iCnt])
-                        elif ulType == 1:
-                            # Add a size byte.
-                            atOptionData.append(chr(sizElement))
-                            atOptionData.extend(atData[iCnt])
-                        elif ulType == 2:
-                            # Add 16 bit size information.
-                            atOptionData.append(chr(sizElement & 0xff))
-                            atOptionData.append(chr((sizElement >> 8) & 0xff))
-                            atOptionData.extend(atData[iCnt])
-                        else:
-                            raise Exception('Unknown Type %d' % ulType)
+                    raise Exception('Unexpected node: %s', tOptionNode.localName)
 
         return ''.join(atOptionData)
 
@@ -625,7 +630,6 @@ class HbootImage:
     # The magic cookies for the different chips.
     __MAGIC_COOKIE_NETX56 = 0xf8beaf00
     __MAGIC_COOKIE_NETX4000 = 0xf3beaf00
-
 
     def __init__(self, tEnv, uiNetxType, strKeyromFile):
         # Do not override anything in the pre-calculated header yet.
@@ -786,34 +790,37 @@ class HbootImage:
     def __parse_header_options(self, tOptionsNode):
         # Loop over all child nodes.
         for tValueNode in tOptionsNode.childNodes:
-            if (tValueNode.nodeType == tValueNode.ELEMENT_NODE) and (tValueNode.localName == 'Value'):
-                # Found a value node. It must have an index attribute which
-                # evaluates to a number between 0 and 15.
-                strIndex = tValueNode.getAttribute('index')
-                if len(strIndex) == 0:
-                    raise Exception('The Value node has no index attribute!')
-                ulIndex = self.__parse_numeric_expression(strIndex)
+            if tValueNode.nodeType == tValueNode.ELEMENT_NODE:
+                if tValueNode.localName == 'Value':
+                    # Found a value node. It must have an index attribute which
+                    # evaluates to a number between 0 and 15.
+                    strIndex = tValueNode.getAttribute('index')
+                    if len(strIndex) == 0:
+                        raise Exception('The Value node has no index attribute!')
+                    ulIndex = self.__parse_numeric_expression(strIndex)
 
-                # The index must be >=0 and <16.
-                if (ulIndex < 0) or (ulIndex > 15):
-                    raise Exception('The index exceeds the valid range of [0..15]: %d' % ulIndex)
+                    # The index must be >=0 and <16.
+                    if (ulIndex < 0) or (ulIndex > 15):
+                        raise Exception('The index exceeds the valid range of [0..15]: %d' % ulIndex)
 
-                # Get the data.
-                strData = self.__xml_get_all_text(tValueNode)
-                if len(strData) == 0:
-                    raise Exception('The Value node has no content!')
+                    # Get the data.
+                    strData = self.__xml_get_all_text(tValueNode)
+                    if len(strData) == 0:
+                        raise Exception('The Value node has no content!')
 
-                ulData = self.__parse_numeric_expression(strData)
-                # The data must be an unsigned 32bit number.
-                if (ulData < 0) or (ulIndex > 0xffffffff):
-                    raise Exception('The data exceeds the valid range of an unsigned 32bit number: %d' % ulData)
+                    ulData = self.__parse_numeric_expression(strData)
+                    # The data must be an unsigned 32bit number.
+                    if (ulData < 0) or (ulIndex > 0xffffffff):
+                        raise Exception('The data exceeds the valid range of an unsigned 32bit number: %d' % ulData)
 
-                # Is the index already modified?
-                if not self.__atHeaderOverride[ulIndex] is None:
-                    raise Exception('The value at index %d is already set to 0x%08x!' % (ulIndex, ulData))
+                    # Is the index already modified?
+                    if not self.__atHeaderOverride[ulIndex] is None:
+                        raise Exception('The value at index %d is already set to 0x%08x!' % (ulIndex, ulData))
 
-                # Set the value.
-                self.__atHeaderOverride[ulIndex] = ulData
+                    # Set the value.
+                    self.__atHeaderOverride[ulIndex] = ulData
+                else:
+                    raise Exception('Unexpected node: %s', tValueNode.localName)
 
     def __append_32bit(self, atData, ulValue):
         atData.append(ulValue & 0xff)
@@ -825,7 +832,7 @@ class HbootImage:
         usCrc = 0
         for uiCnt in range(0, len(strData)):
             ucByte = ord(strData[uiCnt])
-            usCrc  = (usCrc >> 8) | ((usCrc & 0xff) << 8)
+            usCrc = (usCrc >> 8) | ((usCrc & 0xff) << 8)
             usCrc ^= ucByte
             usCrc ^= (usCrc & 0xff) >> 4
             usCrc ^= (usCrc & 0x0f) << 12
@@ -848,7 +855,7 @@ class HbootImage:
         else:
             if self.__uiNetxType == 56:
                 # Pad the option chunk plus a CRC16 to 32 bit size.
-                strPadding = chr(0x00) * ((4 - ((len(strData)+2) % 4)) & 3)
+                strPadding = chr(0x00) * ((4 - ((len(strData) + 2) % 4)) & 3)
                 strChunk = strData + strPadding
 
                 # Get the CRC16 for the chunk.
@@ -892,74 +899,78 @@ class HbootImage:
 
         # Look for a child node named "File".
         for tNode in tDataNode.childNodes:
-            # Is this a node element with the name 'Options'?
-            if (tNode.nodeType == tNode.ELEMENT_NODE) and (tNode.localName == 'File'):
-                # Get the file name.
-                strFileName = tNode.getAttribute('name')
-                if len(strFileName) == 0:
-                    raise Exception("The file node has no name attribute!")
+            # Is this a node element?
+            if tNode.nodeType == tNode.ELEMENT_NODE:
+                # Is this a "File" node?
+                if tNode.localName == 'File':
+                    # Get the file name.
+                    strFileName = tNode.getAttribute('name')
+                    if len(strFileName) == 0:
+                        raise Exception("The file node has no name attribute!")
 
-                # Search the file in the current working folder and all
-                # include paths.
-                strAbsFilePath = self.__find_file(strFileName)
-                if strAbsFilePath is None:
-                    raise Exception('File %s not found!' % strFileName)
+                    # Search the file in the current working folder and all
+                    # include paths.
+                    strAbsFilePath = self.__find_file(strFileName)
+                    if strAbsFilePath is None:
+                        raise Exception('File %s not found!' % strFileName)
 
-                # Is this an ELF file?
-                strRoot, strExtension = os.path.splitext(strAbsFilePath)
-                if strExtension == '.elf':
-                    # Extract the segments.
-                    atSegments = elf_support.get_segment_table(self.__tEnv, strAbsFilePath)
-                    # Get the estimated binary size from the segments.
-                    ulEstimatedBinSize = elf_support.get_estimated_bin_size(atSegments)
-                    # Do not create files larger than 512MB.
-                    if ulEstimatedBinSize >= 0x20000000:
-                        raise Exception("The resulting file seems to extend 512MBytes. Too scared to continue!")
+                    # Is this an ELF file?
+                    strRoot, strExtension = os.path.splitext(strAbsFilePath)
+                    if strExtension == '.elf':
+                        # Extract the segments.
+                        atSegments = elf_support.get_segment_table(self.__tEnv, strAbsFilePath)
+                        # Get the estimated binary size from the segments.
+                        ulEstimatedBinSize = elf_support.get_estimated_bin_size(atSegments)
+                        # Do not create files larger than 512MB.
+                        if ulEstimatedBinSize >= 0x20000000:
+                            raise Exception("The resulting file seems to extend 512MBytes. Too scared to continue!")
 
-                    pulLoadAddress = elf_support.get_load_address(atSegments)
+                        pulLoadAddress = elf_support.get_load_address(atSegments)
 
-                    # Extract the binary.
-                    tBinFile, strBinFileName = tempfile.mkstemp()
-                    os.close(tBinFile)
-                    subprocess.check_call([self.__tEnv['OBJCOPY'], '-O', 'binary', strAbsFilePath, strBinFileName])
+                        # Extract the binary.
+                        tBinFile, strBinFileName = tempfile.mkstemp()
+                        os.close(tBinFile)
+                        subprocess.check_call([self.__tEnv['OBJCOPY'], '-O', 'binary', strAbsFilePath, strBinFileName])
 
-                    # Get the application data.
-                    tBinFile = open(strBinFileName, 'rb')
-                    strData = tBinFile.read()
-                    tBinFile.close()
+                        # Get the application data.
+                        tBinFile = open(strBinFileName, 'rb')
+                        strData = tBinFile.read()
+                        tBinFile.close()
 
-                    # Remove the temp file.
-                    os.remove(strBinFileName)
+                        # Remove the temp file.
+                        os.remove(strBinFileName)
 
-                elif strExtension == '.bin':
-                    strLoadAddress = tNode.getAttribute('load_address')
-                    if len(strLoadAddress) == 0:
-                        raise Exception('The File node points to a binary file and has no load_address attribute!')
+                    elif strExtension == '.bin':
+                        strLoadAddress = tNode.getAttribute('load_address')
+                        if len(strLoadAddress) == 0:
+                            raise Exception('The File node points to a binary file and has no load_address attribute!')
 
-                    pulLoadAddress = self.__parse_numeric_expression(strLoadAddress)
+                        pulLoadAddress = self.__parse_numeric_expression(strLoadAddress)
 
-                    tBinFile = open(strAbsFilePath, 'rb')
-                    strData = tBinFile.read()
-                    tBinFile.close()
+                        tBinFile = open(strAbsFilePath, 'rb')
+                        strData = tBinFile.read()
+                        tBinFile.close()
 
+                    else:
+                        raise Exception('The File node points to a file with an unknown extension: %s' % strExtension)
+                # Is this a node element with the name 'Hex'?
+                elif tNode.localName == 'Hex':
+                    # Get the address.
+                    strAddress = tNode.getAttribute('address')
+                    if len(strAddress) == 0:
+                        raise Exception("The file node has no address attribute!")
+
+                    pulLoadAddress = self.__parse_numeric_expression(strAddress)
+
+                    # Get the text in this node and parse it as hex data.
+                    strDataHex = self.__xml_get_all_text(tNode)
+                    if strDataHex is None:
+                        raise Exception('No text in node "Hex" found!')
+
+                    strDataHex = self.__remove_all_whitespace(strDataHex)
+                    strData = binascii.unhexlify(strDataHex)
                 else:
-                    raise Exception('The File node points to a file with an unknown extension: %s' % strExtension)
-            # Is this a node element with the name 'Hex'?
-            elif (tNode.nodeType == tNode.ELEMENT_NODE) and (tNode.localName == 'Hex'):
-                # Get the address.
-                strAddress = tNode.getAttribute('address')
-                if len(strAddress) == 0:
-                    raise Exception("The file node has no address attribute!")
-
-                pulLoadAddress = self.__parse_numeric_expression(strAddress)
-
-                # Get the text in this node and parse it as hex data.
-                strDataHex = self.__xml_get_all_text(tNode)
-                if strDataHex is None:
-                    raise Exception('No text in node "Hex" found!')
-
-                strDataHex = self.__remove_all_whitespace(strDataHex)
-                strData = binascii.unhexlify(strDataHex)
+                    raise Exception('Unexpected node: %s', tNode.localName)
 
         # Check if all parameters are there.
         if strData is None:
@@ -1009,51 +1020,55 @@ class HbootImage:
 
         # Look for a child node named "File".
         for tNode in tExecuteNode.childNodes:
-            # Is this a node element with the name 'Options'?
-            if (tNode.nodeType == tNode.ELEMENT_NODE) and (tNode.localName == 'File'):
-                # Is there already an exec function?
-                if pfnExecFunction is not None:
-                    raise Exception('More than one execution address specified!')
+            # Is this a node element?
+            if tNode.nodeType == tNode.ELEMENT_NODE:
+                # Is this a "File" node?
+                if tNode.localName == 'File':
+                    # Is there already an exec function?
+                    if pfnExecFunction is not None:
+                        raise Exception('More than one execution address specified!')
 
-                # Get the file name.
-                strFileName = tNode.getAttribute('name')
-                if len(strFileName) == 0:
-                    raise Exception("The file node has no name attribute!")
+                    # Get the file name.
+                    strFileName = tNode.getAttribute('name')
+                    if len(strFileName) == 0:
+                        raise Exception("The file node has no name attribute!")
 
-                # Search the file in the current working folder and all
-                # include paths.
-                strAbsFilePath = self.__find_file(strFileName)
-                if strAbsFilePath is None:
-                    raise Exception('File %s not found!' % strFileName)
+                    # Search the file in the current working folder and all
+                    # include paths.
+                    strAbsFilePath = self.__find_file(strFileName)
+                    if strAbsFilePath is None:
+                        raise Exception('File %s not found!' % strFileName)
 
-                # Is this an ELF file?
-                strRoot, strExtension = os.path.splitext(strAbsFilePath)
-                if strExtension != '.elf':
-                    raise Exception('The execute chunk has a file child which points to a non-elf file. How to get the execute address from this?')
+                    # Is this an ELF file?
+                    strRoot, strExtension = os.path.splitext(strAbsFilePath)
+                    if strExtension != '.elf':
+                        raise Exception('The execute chunk has a file child which points to a non-elf file. How to get the execute address from this?')
 
-                strStartSymbol = tNode.getAttribute('start')
-                if len(strStartSymbol) == 0:
-                    strStartSymbol = 'start'
+                    strStartSymbol = tNode.getAttribute('start')
+                    if len(strStartSymbol) == 0:
+                        strStartSymbol = 'start'
 
-                # Get all symbols.
-                atSymbols = elf_support.get_symbol_table(self.__tEnv, strAbsFilePath)
-                if strStartSymbol not in atSymbols:
-                    raise Exception('The symbol for the start startaddress "%s" could not be found!' % strStartSymbol)
-                pfnExecFunction = long(atSymbols[strStartSymbol])
-            elif (tNode.nodeType == tNode.ELEMENT_NODE) and (tNode.localName == 'Address'):
-                # Is there already an exec function?
-                if pfnExecFunction is not None:
-                    raise Exception('More than one execution address specified!')
+                    # Get all symbols.
+                    atSymbols = elf_support.get_symbol_table(self.__tEnv, strAbsFilePath)
+                    if strStartSymbol not in atSymbols:
+                        raise Exception('The symbol for the start startaddress "%s" could not be found!' % strStartSymbol)
+                    pfnExecFunction = long(atSymbols[strStartSymbol])
+                elif tNode.localName == 'Address':
+                    # Is there already an exec function?
+                    if pfnExecFunction is not None:
+                        raise Exception('More than one execution address specified!')
 
-                pfnExecFunction = self.__parse_numeric_expression(self.__xml_get_all_text(tNode))
-            elif (tNode.nodeType == tNode.ELEMENT_NODE) and (tNode.localName == 'R0'):
-                ulR0 = self.__parse_numeric_expression(self.__xml_get_all_text(tNode))
-            elif (tNode.nodeType == tNode.ELEMENT_NODE) and (tNode.localName == 'R1'):
-                ulR1 = self.__parse_numeric_expression(self.__xml_get_all_text(tNode))
-            elif (tNode.nodeType == tNode.ELEMENT_NODE) and (tNode.localName == 'R2'):
-                ulR2 = self.__parse_numeric_expression(self.__xml_get_all_text(tNode))
-            elif (tNode.nodeType == tNode.ELEMENT_NODE) and (tNode.localName == 'R3'):
-                ulR3 = self.__parse_numeric_expression(self.__xml_get_all_text(tNode))
+                    pfnExecFunction = self.__parse_numeric_expression(self.__xml_get_all_text(tNode))
+                elif tNode.localName == 'R0':
+                    ulR0 = self.__parse_numeric_expression(self.__xml_get_all_text(tNode))
+                elif tNode.localName == 'R1':
+                    ulR1 = self.__parse_numeric_expression(self.__xml_get_all_text(tNode))
+                elif tNode.localName == 'R2':
+                    ulR2 = self.__parse_numeric_expression(self.__xml_get_all_text(tNode))
+                elif tNode.localName == 'R3':
+                    ulR3 = self.__parse_numeric_expression(self.__xml_get_all_text(tNode))
+                else:
+                    raise Exception('Unexpected node: %s', tNode.localName)
 
         if pfnExecFunction is None:
             raise Exception('No execution address specified!')
@@ -1121,13 +1136,18 @@ class HbootImage:
 
         # Look for a child node named "File".
         for tCoreNode in tChunkNode.childNodes:
-            # Is this a node element with the name 'File'?
-            if (tCoreNode.nodeType == tCoreNode.ELEMENT_NODE) and (tCoreNode.localName == 'Core0'):
-                self.__get_execute_data(tCoreNode, __atCore0)
+            # Is this a node element?
+            if tCoreNode.nodeType == tCoreNode.ELEMENT_NODE:
+                # Is this a 'Core0' node?
+                if tCoreNode.localName == 'Core0':
+                    self.__get_execute_data(tCoreNode, __atCore0)
 
-            # Is this a node element with the name 'File'?
-            elif (tCoreNode.nodeType == tCoreNode.ELEMENT_NODE) and (tCoreNode.localName == 'Core1'):
-                self.__get_execute_data(tCoreNode, __atCore1)
+                # Is this a 'Core1' node?
+                elif tCoreNode.localName == 'Core1':
+                    self.__get_execute_data(tCoreNode, __atCore1)
+
+                else:
+                    raise Exception('Unexpected node: %s', tCoreNode.localName)
 
         if (__atCore0['pfnExecFunction'] == 0) and (__atCore1['pfnExecFunction'] == 0):
             raise Exception('No core is started with the ExecuteCA9 chunk!')
@@ -1396,48 +1416,52 @@ class HbootImage:
 
         # Loop over all child nodes.
         for tNode in tNodeParent.childNodes:
-            if (tNode.nodeType == tNode.ELEMENT_NODE) and (tNode.localName == 'Value'):
-                # Get the bit offset and bit size.
-                strBitOffset = tNode.getAttribute('offset')
-                if len(strBitOffset) == 0:
-                    raise Exception('No "offset" attribute found!')
-                ulBitOffset = self.__parse_numeric_expression(strBitOffset)
-                if (ulBitOffset < 0) or (ulBitOffset > 511):
-                    raise Exception('The offset is out of range: %d' % ulBitOffset)
+            if tNode.nodeType == tNode.ELEMENT_NODE:
+                if tNode.localName == 'Value':
+                    # Get the bit offset and bit size.
+                    strBitOffset = tNode.getAttribute('offset')
+                    if len(strBitOffset) == 0:
+                        raise Exception('No "offset" attribute found!')
+                    ulBitOffset = self.__parse_numeric_expression(strBitOffset)
+                    if (ulBitOffset < 0) or (ulBitOffset > 511):
+                        raise Exception('The offset is out of range: %d' % ulBitOffset)
 
-                strBitSize = tNode.getAttribute('size')
-                if len(strBitSize) == 0:
-                    raise Exception('No "size" attribute found!')
-                ulBitSize = self.__parse_numeric_expression(strBitSize)
-                if (ulBitSize < 1) or (ulBitSize > 128):
-                    raise Exception('The size is out of range: %d' % ulBitSize)
-                if (ulBitOffset + ulBitSize) > 512:
-                    raise Exception('The area specified by offset %d and size %d exceeds the array.' % (ulBitOffset. ulBitSize))
+                    strBitSize = tNode.getAttribute('size')
+                    if len(strBitSize) == 0:
+                        raise Exception('No "size" attribute found!')
+                    ulBitSize = self.__parse_numeric_expression(strBitSize)
+                    if (ulBitSize < 1) or (ulBitSize > 128):
+                        raise Exception('The size is out of range: %d' % ulBitSize)
+                    if (ulBitOffset + ulBitSize) > 512:
+                        raise Exception('The area specified by offset %d and size %d exceeds the array.' % (ulBitOffset. ulBitSize))
 
-                # Get the text in this node and parse it as hex data.
-                strData = self.__xml_get_all_text(tNode)
-                if strData is None:
-                    raise Exception('No text in node "Value" found!')
+                    # Get the text in this node and parse it as hex data.
+                    strData = self.__xml_get_all_text(tNode)
+                    if strData is None:
+                        raise Exception('No text in node "Value" found!')
 
-                strData = self.__remove_all_whitespace(strData)
-                aucData = binascii.unhexlify(strData)
-                sizData = len(aucData)
+                    strData = self.__remove_all_whitespace(strData)
+                    aucData = binascii.unhexlify(strData)
+                    sizData = len(aucData)
 
-                # The bit size must fit into the data.
-                sizReqBytes = int(math.ceil(ulBitSize / 8.0))
-                if sizReqBytes != sizData:
-                    strErr = 'The size of the data does not match the requested size in bits.\n'
-                    strErr += 'Data size: %d bytes\n' % sizData
-                    strErr += 'Requested size: %d bits' % sizReqBytes
-                    raise Exception(strErr)
+                    # The bit size must fit into the data.
+                    sizReqBytes = int(math.ceil(ulBitSize / 8.0))
+                    if sizReqBytes != sizData:
+                        strErr = 'The size of the data does not match the requested size in bits.\n'
+                        strErr += 'Data size: %d bytes\n' % sizData
+                        strErr += 'Requested size: %d bits' % sizReqBytes
+                        raise Exception(strErr)
 
-                # Combine the offset and size.
-                ulBnv = ulBitOffset | ((ulBitSize - 1) * 512)
+                    # Combine the offset and size.
+                    ulBnv = ulBitOffset | ((ulBitSize - 1) * 512)
 
-                # Append all data to the array.
-                atValues.append(ulBnv & 0xff)
-                atValues.append((ulBnv >> 8) & 0xff)
-                atValues.extend(array.array('B', aucData))
+                    # Append all data to the array.
+                    atValues.append(ulBnv & 0xff)
+                    atValues.append((ulBnv >> 8) & 0xff)
+                    atValues.extend(array.array('B', aucData))
+
+                else:
+                    raise Exception('Unexpected node: %s', tNode.localName)
 
         if len(atValues) > 255:
             raise Exception('The new register values are too long!')
@@ -1473,6 +1497,8 @@ class HbootImage:
                     strData = self.__xml_get_all_text(tNode)
                     strData = binascii.unhexlify(self.__remove_all_whitespace(strData))
                     atValues.extend(array.array('B', strData))
+                else:
+                    raise Exception('Unexpected node: %s', tNode.localName)
 
         atData['data'] = atValues
 
@@ -1545,6 +1571,8 @@ class HbootImage:
                     self.__root_cert_parse_trusted_path(tNode, __atRootCert['TrustedPathCa9Sw'])
                 elif tNode.localName == 'UserContent':
                     self.__root_cert_parse_user_content(tNode, __atRootCert['UserContent'])
+                else:
+                    raise Exception('Unexpected node: %s', tNode.localName)
 
         # Check if all required data was set.
         astrErr = []
@@ -1708,6 +1736,8 @@ class HbootImage:
                     self.__root_cert_parse_new_register_values(tNode, __atCert['NewRegisterValues'])
                 elif tNode.localName == 'UserContent':
                     self.__root_cert_parse_user_content(tNode, __atCert['UserContent'])
+                else:
+                    raise Exception('Unexpected node: %s', tNode.localName)
 
         # Check if all required data was set.
         astrErr = []
@@ -1832,6 +1862,8 @@ class HbootImage:
                     self.__get_execute_data(tNode, __atCert['Execute'])
                 elif tNode.localName == 'UserContent':
                     self.__root_cert_parse_user_content(tNode, __atCert['UserContent'])
+                else:
+                    raise Exception('Unexpected node: %s', tNode.localName)
 
         # Check if all required data was set.
         astrErr = []
@@ -1984,6 +2016,8 @@ class HbootImage:
                                 self.__get_execute_data(tRegistersNode, __atCert['Execute_Core1'])
                 elif tNode.localName == 'UserContent':
                     self.__root_cert_parse_user_content(tNode, __atCert['UserContent'])
+                else:
+                    raise Exception('Unexpected node: %s', tNode.localName)
 
         # Check if all required data was set.
         astrErr = []
@@ -2160,92 +2194,94 @@ class HbootImage:
 
         # Loop over all children.
         for tImageNode in tXmlRootNode.childNodes:
-            # Is this a node element with the name 'Options'?
-            if (tImageNode.nodeType == tImageNode.ELEMENT_NODE) and (tImageNode.localName == 'Header'):
-                if self.__tImageType == self.__IMAGE_TYPE_SECMEM:
-                    raise Exception('Header overrides are not allowed in SECMEM images.')
-                self.__parse_header_options(tImageNode)
+            # Is this a node element?
+            if tImageNode.nodeType == tImageNode.ELEMENT_NODE:
+                # Is this a 'Header' node?
+                if tImageNode.localName == 'Header':
+                    if self.__tImageType == self.__IMAGE_TYPE_SECMEM:
+                        raise Exception('Header overrides are not allowed in SECMEM images.')
+                    self.__parse_header_options(tImageNode)
 
-            elif (tImageNode.nodeType == tImageNode.ELEMENT_NODE) and (tImageNode.localName == 'Chunks'):
-                # Loop over all nodes, these are the chunks.
-                for tChunkNode in tImageNode.childNodes:
-                    if tChunkNode.nodeType == tImageNode.ELEMENT_NODE:
-                        if tChunkNode.localName == 'Options':
-                            # Found an option node.
-                            atChunk = self.__build_chunk_options(tChunkNode)
-                            self.__atChunks.extend(atChunk)
-                        elif tChunkNode.localName == 'Data':
-                            # Found a data node.
-                            if self.__tImageType == self.__IMAGE_TYPE_SECMEM:
-                                raise Exception('Data chunks are not allowed in SECMEM images.')
-                            atChunk = self.__build_chunk_data(tChunkNode)
-                            self.__atChunks.extend(atChunk)
-                        elif tChunkNode.localName == 'Execute':
-                            # Found an execute node.
-                            if self.__tImageType == self.__IMAGE_TYPE_SECMEM:
-                                raise Exception('Execute chunks are not allowed in SECMEM images.')
-                            atChunk = self.__build_chunk_execute(tChunkNode)
-                            self.__atChunks.extend(atChunk)
-                        elif tChunkNode.localName == 'ExecuteCA9':
-                            # Found an execute node.
-                            if self.__tImageType == self.__IMAGE_TYPE_SECMEM:
-                                raise Exception('ExecuteCA9 chunks are not allowed in SECMEM images.')
-                            if self.__uiNetxType == 56:
-                                raise Exception('ExecuteCA9 chunks are not allowed on netx56.')
-                            atChunk = self.__build_chunk_execute_ca9(tChunkNode)
-                            self.__atChunks.extend(atChunk)
-                        elif tChunkNode.localName == 'SpiMacro':
-                            # Found a SPI macro.
-                            if self.__tImageType == self.__IMAGE_TYPE_SECMEM:
-                                raise Exception('SpiMacro chunks are not allowed in SECMEM images.')
-                            atChunk = self.__build_chunk_spi_macro(tChunkNode)
-                            self.__atChunks.extend(atChunk)
-                        elif tChunkNode.localName == 'Skip':
-                            # Found a skip node.
-                            if self.__tImageType == self.__IMAGE_TYPE_SECMEM:
-                                raise Exception('Skip chunks are not allowed in SECMEM images.')
-                            atChunk = self.__build_chunk_skip(tChunkNode)
-                            self.__atChunks.extend(atChunk)
-                        elif tChunkNode.localName == 'RootCert':
-                            # Found a root certificate node.
-                            if self.__tImageType == self.__IMAGE_TYPE_SECMEM:
-                                raise Exception('RootCert chunks are not allowed in SECMEM images.')
-                            if self.__uiNetxType == 56:
-                                raise Exception('RootCert chunks are not allowed on netx56.')
-                            atChunk = self.__build_chunk_root_cert(tChunkNode)
-                            self.__atChunks.extend(atChunk)
-                        elif tChunkNode.localName == 'LicenseCert':
-                            # Found a license certificate node.
-                            if self.__tImageType == self.__IMAGE_TYPE_SECMEM:
-                                raise Exception('LicenseCert chunks are not allowed in SECMEM images.')
-                            if self.__uiNetxType == 56:
-                                raise Exception('LicenseCert chunks are not allowed on netx56.')
-                            atChunk = self.__build_chunk_license_cert(tChunkNode)
-                            self.__atChunks.extend(atChunk)
-                        elif tChunkNode.localName == 'CR7Software':
-                            # Found a CR7 software node.
-                            if self.__tImageType == self.__IMAGE_TYPE_SECMEM:
-                                raise Exception('CR7Software chunks are not allowed in SECMEM images.')
-                            if self.__uiNetxType == 56:
-                                raise Exception('CR7Software chunks are not allowed on netx56.')
-                            atChunk = self.__build_chunk_cr7sw(tChunkNode)
-                            self.__atChunks.extend(atChunk)
-                        elif tChunkNode.localName == 'CA9Software':
-                            # Found a CA9 software node.
-                            if self.__tImageType == self.__IMAGE_TYPE_SECMEM:
-                                raise Exception('CA9Software chunks are not allowed in SECMEM images.')
-                            if self.__uiNetxType == 56:
-                                raise Exception('CA9Software chunks are not allowed on netx56.')
-                            atChunk = self.__build_chunk_ca9sw(tChunkNode)
-                            self.__atChunks.extend(atChunk)
-                        elif tChunkNode.localName == 'MemoryDeviceUp':
-                            # Found a memory device up node.
-                            if self.__tImageType == self.__IMAGE_TYPE_SECMEM:
-                                raise Exception('MemoryDeviceUp chunks are not allowed in SECMEM images.')
-                            atChunk = self.__build_chunk_memory_device_up(tChunkNode)
-                            self.__atChunks.extend(atChunk)
-                        else:
-                            raise Exception('Unknown chunk ID: %s', tChunkNode.localName)
+                elif tImageNode.localName == 'Chunks':
+                    # Loop over all nodes, these are the chunks.
+                    for tChunkNode in tImageNode.childNodes:
+                        if tChunkNode.nodeType == tImageNode.ELEMENT_NODE:
+                            if tChunkNode.localName == 'Options':
+                                # Found an option node.
+                                atChunk = self.__build_chunk_options(tChunkNode)
+                                self.__atChunks.extend(atChunk)
+                            elif tChunkNode.localName == 'Data':
+                                # Found a data node.
+                                if self.__tImageType == self.__IMAGE_TYPE_SECMEM:
+                                    raise Exception('Data chunks are not allowed in SECMEM images.')
+                                atChunk = self.__build_chunk_data(tChunkNode)
+                                self.__atChunks.extend(atChunk)
+                            elif tChunkNode.localName == 'Execute':
+                                # Found an execute node.
+                                if self.__tImageType == self.__IMAGE_TYPE_SECMEM:
+                                    raise Exception('Execute chunks are not allowed in SECMEM images.')
+                                atChunk = self.__build_chunk_execute(tChunkNode)
+                                self.__atChunks.extend(atChunk)
+                            elif tChunkNode.localName == 'ExecuteCA9':
+                                # Found an execute node.
+                                if self.__tImageType == self.__IMAGE_TYPE_SECMEM:
+                                    raise Exception('ExecuteCA9 chunks are not allowed in SECMEM images.')
+                                if self.__uiNetxType == 56:
+                                    raise Exception('ExecuteCA9 chunks are not allowed on netx56.')
+                                atChunk = self.__build_chunk_execute_ca9(tChunkNode)
+                                self.__atChunks.extend(atChunk)
+                            elif tChunkNode.localName == 'SpiMacro':
+                                # Found a SPI macro.
+                                if self.__tImageType == self.__IMAGE_TYPE_SECMEM:
+                                    raise Exception('SpiMacro chunks are not allowed in SECMEM images.')
+                                atChunk = self.__build_chunk_spi_macro(tChunkNode)
+                                self.__atChunks.extend(atChunk)
+                            elif tChunkNode.localName == 'Skip':
+                                # Found a skip node.
+                                if self.__tImageType == self.__IMAGE_TYPE_SECMEM:
+                                    raise Exception('Skip chunks are not allowed in SECMEM images.')
+                                atChunk = self.__build_chunk_skip(tChunkNode)
+                                self.__atChunks.extend(atChunk)
+                            elif tChunkNode.localName == 'RootCert':
+                                # Found a root certificate node.
+                                if self.__tImageType == self.__IMAGE_TYPE_SECMEM:
+                                    raise Exception('RootCert chunks are not allowed in SECMEM images.')
+                                if self.__uiNetxType == 56:
+                                    raise Exception('RootCert chunks are not allowed on netx56.')
+                                atChunk = self.__build_chunk_root_cert(tChunkNode)
+                                self.__atChunks.extend(atChunk)
+                            elif tChunkNode.localName == 'LicenseCert':
+                                # Found a license certificate node.
+                                if self.__tImageType == self.__IMAGE_TYPE_SECMEM:
+                                    raise Exception('LicenseCert chunks are not allowed in SECMEM images.')
+                                if self.__uiNetxType == 56:
+                                    raise Exception('LicenseCert chunks are not allowed on netx56.')
+                                atChunk = self.__build_chunk_license_cert(tChunkNode)
+                                self.__atChunks.extend(atChunk)
+                            elif tChunkNode.localName == 'CR7Software':
+                                # Found a CR7 software node.
+                                if self.__tImageType == self.__IMAGE_TYPE_SECMEM:
+                                    raise Exception('CR7Software chunks are not allowed in SECMEM images.')
+                                if self.__uiNetxType == 56:
+                                    raise Exception('CR7Software chunks are not allowed on netx56.')
+                                atChunk = self.__build_chunk_cr7sw(tChunkNode)
+                                self.__atChunks.extend(atChunk)
+                            elif tChunkNode.localName == 'CA9Software':
+                                # Found a CA9 software node.
+                                if self.__tImageType == self.__IMAGE_TYPE_SECMEM:
+                                    raise Exception('CA9Software chunks are not allowed in SECMEM images.')
+                                if self.__uiNetxType == 56:
+                                    raise Exception('CA9Software chunks are not allowed on netx56.')
+                                atChunk = self.__build_chunk_ca9sw(tChunkNode)
+                                self.__atChunks.extend(atChunk)
+                            elif tChunkNode.localName == 'MemoryDeviceUp':
+                                # Found a memory device up node.
+                                if self.__tImageType == self.__IMAGE_TYPE_SECMEM:
+                                    raise Exception('MemoryDeviceUp chunks are not allowed in SECMEM images.')
+                                atChunk = self.__build_chunk_memory_device_up(tChunkNode)
+                                self.__atChunks.extend(atChunk)
+                            else:
+                                raise Exception('Unknown chunk ID: %s', tChunkNode.localName)
 
     def set_known_files(self, atFiles):
         self.__atKnownFiles.update(atFiles)
@@ -2258,7 +2294,7 @@ class HbootImage:
                 ucBit = (ucCrc ^ ucByte) & 0x80
                 ucCrc <<= 1
                 ucByte <<= 1
-                if ucBit!=0:
+                if ucBit != 0:
                     ucCrc ^= 0x07
             ucCrc &= 0xff
 
@@ -2276,7 +2312,7 @@ class HbootImage:
             uiImageSize = self.__atChunks.buffer_info()[1]
 
             # Up to 29 bytes fit into zone 2.
-            if uiImageSize<=29:
+            if uiImageSize <= 29:
                 aucZone2 = array.array('B')
                 aucZone3 = array.array('B')
 
@@ -2287,8 +2323,8 @@ class HbootImage:
                 aucZone2.extend(self.__atChunks)
 
                 # Fill up zone2 to 29 bytes.
-                if uiImageSize<29:
-                    aucZone2.extend([0x00]*(29-uiImageSize))
+                if uiImageSize < 29:
+                    aucZone2.extend([0x00] * (29 - uiImageSize))
 
                 # Set the revision.
                 aucZone2.append(self.__SECMEM_ZONE2_REV1_0)
@@ -2298,10 +2334,10 @@ class HbootImage:
                 aucZone2.append(ucCrc)
 
                 # Clear zone 3.
-                aucZone3.extend([0]*32)
+                aucZone3.extend([0] * 32)
 
             # Zone 2 and 3 together can hold up to 61 bytes.
-            elif uiImageSize<=61:
+            elif uiImageSize <= 61:
                 aucTmp = array.array('B')
 
                 # Set the length.
@@ -2311,8 +2347,8 @@ class HbootImage:
                 aucTmp.extend(self.__atChunks)
 
                 # Fill up the data to 61 bytes.
-                if uiImageSize<61:
-                    aucTmp.extend([0x00]*(61-uiImageSize))
+                if uiImageSize < 61:
+                    aucTmp.extend([0x00] * (61 - uiImageSize))
 
                 # Set the revision.
                 aucTmp.append(self.__SECMEM_ZONE2_REV1_0)
@@ -2368,7 +2404,7 @@ def main():
     tParser.add_argument('-n', '--netx-type',
                          dest='uiNetxType',
                          required=True,
-                         choices=[56,4000],
+                         choices=[56, 4000],
                          metavar='NETX',
                          help='Build the image for netx type NETX.')
     tParser.add_argument('-c', '--objcopy',
