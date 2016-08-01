@@ -88,7 +88,7 @@ class SnippetLibrary:
 
         if tXml is not None:
             # Search for the "Info" node.
-            tInfoNode = self.__xml_get_node(self, tXml.documentElement, 'Info')
+            tInfoNode = self.__xml_get_node(tXml.documentElement, 'Info')
             if tInfoNode is None:
                 # No Info node -> ignore the file.
                 strArtifact = 'It has no "Info" node.'
