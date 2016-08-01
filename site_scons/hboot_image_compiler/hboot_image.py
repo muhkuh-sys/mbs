@@ -4,7 +4,6 @@ import array
 import ast
 import base64
 import binascii
-import elf_support
 import hashlib
 import math
 import os
@@ -15,6 +14,10 @@ import string
 import subprocess
 import tempfile
 import xml.dom.minidom
+
+import elf_support
+import patch_definitions
+
 
 class HbootImage:
     # This is the list of override items for the header.
@@ -116,11 +119,11 @@ class HbootImage:
             tHash.update(strData)
             if len(strData)<2048:
                 fEof = True
-        tDigest = tHash.digest()
+        strDigest = tHash.hexdigest()
         tFile.close()
 
         # Return the hash.
-        return tDigest
+        return strDigest
 
     def __sniplib_db_open(self):
         tDb = sqlite3.connect('.sniplib.dblite')
@@ -138,10 +141,9 @@ class HbootImage:
 
         # Parse the snippet.
         try:
-            tXml = xml.dom.minidom.parse(strAbsPath)
+            tXml = xml.dom.minidom.parse(strPath)
         except xml.dom.DOMException as tException:
             # Invalid XML, ignore.
-            print 'Warning: Ignoring file "%s". No valid XML: %s' % (strAbsPath, repr(tException))
             tXml = None
 
         if tXml!=None:
@@ -162,10 +164,13 @@ class HbootImage:
                 strVersion = tInfoNode.getAttribute('version')
                 if len(strGroup)==0:
                     print 'Warning: Ignoring file "%s". The "group" attribute of an "Info" node must not be empty.' % strAbsPath
+                    strGroup = None
                 elif len(strArtifact)==0:
                     print 'Warning: Ignoring file "%s". The "artifact" attribute of an "Info" node must not be empty.' % strAbsPath
+                    strGroup = None
                 elif len(strVersion)==0:
                     print 'Warning: Ignoring file "%s". The "version" attribute of an "Info" node must not be empty.' % strAbsPath
+                    strGroup = None
 
         # Return the group, artifact and version.
         return strGroup, strArtifact, strVersion
@@ -187,7 +192,7 @@ class HbootImage:
                     strAbsPath = os.path.join(strRoot, strFile)
 
                     # Get the stamp of the snip.
-                    tDigest = self.__get_snip_hash(strAbsPath)
+                    strDigest = self.__get_snip_hash(strAbsPath)
 
                     # Search the snippet in the database.
                     tCursor.execute('SELECT id,hash FROM snippets WHERE path=?', (strAbsPath, ))
@@ -195,10 +200,12 @@ class HbootImage:
                     if atResults is None:
                         # The snippet is not present in the database yet.
                         strGroup, strArtifact, strVersion = self.__sniplib_get_gav(strAbsPath)
+                        if strGroup is None:
+                            print 'Warning: Ignoring file "%s". No valid XML: %s' % (strAbsPath, repr(tException))
 
                         # Make a new entry.
                         tCursor = tDb.cursor()
-                        tCursor.execute('INSERT INTO snippets (path, hash, groupid, artifact, version) VALUES (?, ?, ?, ?, ?)', strAbsPath, tDigest, strGroup, strArtifact, strVersion)
+                        tCursor.execute('INSERT INTO snippets (path, hash, groupid, artifact, version) VALUES (?, ?, ?, ?, ?)', (strAbsPath, strDigest, strGroup, strArtifact, strVersion))
                     else:
                         # Compare the hash of the file.
                         print repr(atResults)
@@ -1725,7 +1732,7 @@ class HbootImage:
         return aulChunk
 
     def set_patch_definitions(self, tInput):
-        self.__cPatchDefinitions = PatchDefinitions()
+        self.__cPatchDefinitions = patch_definitions.PatchDefinitions()
         self.__cPatchDefinitions.read_patch_definition(tInput)
 
     def parse_image(self, tInput):
