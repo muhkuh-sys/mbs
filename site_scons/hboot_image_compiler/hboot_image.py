@@ -9,7 +9,6 @@ import math
 import os
 import os.path
 import re
-import sqlite3
 import string
 import subprocess
 import tempfile
@@ -117,10 +116,10 @@ class HbootImage:
     def __preprocess_snip(self, tSnipNode):
         # Get the group, artifact and optional revision.
         strGroup = tSnipNode.getAttribute('group')
-        if len(strGroup)==0:
+        if len(strGroup) == 0:
             raise Exception('The "group" attribute of a "Snip" node must not be empty.')
         strArtifact = tSnipNode.getAttribute('artifact')
-        if len(strArtifact)==0:
+        if len(strArtifact) == 0:
             raise Exception('The "artifact" attribute of a "Snip" node must not be empty.')
         strVersion = tSnipNode.getAttribute('version')
 
@@ -645,7 +644,7 @@ class HbootImage:
         # Parse the data.
         ulDevice = self.__parse_numeric_expression(strDeviceName)
 
-        tOptionCompiler = OptionCompiler(self.__cPatchDefinitions)
+        tOptionCompiler = option_compiler.OptionCompiler(self.__cPatchDefinitions)
         strMacroData = tOptionCompiler.get_spi_macro_data(tChunkNode)
 
         # Prepend the device and the size.
@@ -1624,7 +1623,7 @@ class HbootImage:
             tXmlRootNode = tInput
             # Find the document node.
             tXml = tXmlRootNode
-            while tXml.parentNode!=None:
+            while tXml.parentNode is not None:
                 tXml = tXml.parentNode
         else:
             raise Exception('Unknown input document:', tInput)
