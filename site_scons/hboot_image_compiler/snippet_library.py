@@ -51,10 +51,10 @@ class SnippetLibrary:
         tFile = open(strAbsPath, 'rb')
         tHash = hashlib.sha384()
         fEof = False
-        while fEof==False:
+        while fEof is False:
             strData = tFile.read(2048)
             tHash.update(strData)
-            if len(strData)<2048:
+            if len(strData) < 2048:
                 fEof = True
         strDigest = tHash.hexdigest()
         tFile.close()
@@ -86,7 +86,7 @@ class SnippetLibrary:
             strArtifact = 'No valid XML: %s' % repr(tException)
             tXml = None
 
-        if tXml!=None:
+        if tXml is not None:
             # Search for the "Info" node.
             tInfoNode = self.__xml_get_node(self, tXml.documentElement, 'Info')
             if tInfoNode is None:
@@ -97,13 +97,13 @@ class SnippetLibrary:
                 strGroup = tInfoNode.getAttribute('group')
                 strArtifact = tInfoNode.getAttribute('artifact')
                 strVersion = tInfoNode.getAttribute('version')
-                if len(strGroup)==0:
+                if len(strGroup) == 0:
                     strGroup = None
                     strArtifact = 'The "group" attribute of an "Info" node must not be empty.'
-                elif len(strArtifact)==0:
+                elif len(strArtifact) == 0:
                     strGroup = None
                     strArtifact = 'The "artifact" attribute of an "Info" node must not be empty.'
-                elif len(strVersion)==0:
+                elif len(strVersion) == 0:
                     strGroup = None
                     strArtifact = 'The "version" attribute of an "Info" node must not be empty.'
 
@@ -122,7 +122,7 @@ class SnippetLibrary:
             for strFile in astrFiles:
                 # Get the extension of the file.
                 strDummy, strExt = os.path.splitext(strFile)
-                if strExt=='.xml':
+                if strExt == '.xml':
                     # Get the absolute path for the file.
                     strAbsPath = os.path.join(strRoot, strFile)
 
@@ -156,14 +156,14 @@ class SnippetLibrary:
         self.__db_open()
 
         # Scan the SnipLib.
-        if self.__fSnipLibIsAlreadyScanned!=True:
+        if self.__fSnipLibIsAlreadyScanned is not True:
             for strSnipLibPath in self.__astrSnippetFolders:
                 self.__sniplib_scan(strSnipLibPath)
 
         # Search for a direct match. This is possible when a version was specified.
         tCursor = self.__tDb.cursor()
         atResult = None
-        if len(strVersion)!=0:
+        if len(strVersion) != 0:
             tCursor.execute('SELECT path FROM snippets WHERE groupid=? AND artifact=? AND version=?', (strGroup, strArtifact, strVersion))
             atResult = tCursor.fetchone()
 
