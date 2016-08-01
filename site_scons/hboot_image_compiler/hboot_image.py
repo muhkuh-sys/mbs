@@ -16,7 +16,9 @@ import tempfile
 import xml.dom.minidom
 
 import elf_support
+import option_compiler
 import patch_definitions
+import snippet_library
 
 
 class HbootImage:
@@ -36,6 +38,8 @@ class HbootImage:
     __astrKnownFiles = None
 
     __cPatchDefinitions = None
+
+    __cSnippetLibrary = None
 
     __uiNetxType = None
     __tImageType = None
@@ -69,6 +73,7 @@ class HbootImage:
         self.__atKnownFiles = dict({})
 
         self.__cPatchDefinitions = None
+        self.__cSnippetLibrary = snippet_library.SnippetLibrary('.sniplib.dblite')
 
         self.__uiNetxType = uiNetxType
         self.__tImageType = None
@@ -109,156 +114,31 @@ class HbootImage:
                 astrText.append(str(tChild.data))
         return ''.join(astrText)
 
-    def __get_snip_hash(self, strAbsPath):
-        # Get the SHA384 hash.
-        tFile = open(strAbsPath, 'rb')
-        tHash = hashlib.sha384()
-        fEof = False
-        while fEof==False:
-            strData = tFile.read(2048)
-            tHash.update(strData)
-            if len(strData)<2048:
-                fEof = True
-        strDigest = tHash.hexdigest()
-        tFile.close()
-
-        # Return the hash.
-        return strDigest
-
-    def __sniplib_db_open(self):
-        tDb = sqlite3.connect('.sniplib.dblite')
-        # Create the table if the do not exist yet.
-        tCursor = tDb.cursor()
-        tCursor.execute('CREATE TABLE IF NOT EXISTS snippets (id INTEGER PRIMARY KEY, path TEXT NOT NULL, hash TEXT NOT NULL, groupid TEXT NOT NULL, artifact TEXT NOT NULL, version TEXT NOT NULL, clean INTEGER DEFAULT 0)')
-        tDb.commit()
-
-        return tDb
-
-    def __sniplib_get_gav(self, strPath):
-        strGroup = None
-        strArtifact = None
-        strVersion = None
-
-        # Parse the snippet.
-        try:
-            tXml = xml.dom.minidom.parse(strPath)
-        except xml.dom.DOMException as tException:
-            # Invalid XML, ignore.
-            tXml = None
-
-        if tXml!=None:
-            # Loop over all children of the root node and find the first "Info" tag.
-            tInfoNode = None
-            for tChildNode in tXml.documentElement.childNodes:
-                if tChildNode.nodeType == tChildNode.ELEMENT_NODE:
-                    if tChildNode.localName == 'Info':
-                        tInfoNode = tChildNode
-                        break
-            if tInfoNode is None:
-                # No Info node -> ignore the file.
-                print 'Warning: Ignoring file "%s". It has no "Info" node.' % strAbsPath
-            else:
-                # Get the "group", "artifact" and "version" attributes.
-                strGroup = tInfoNode.getAttribute('group')
-                strArtifact = tInfoNode.getAttribute('artifact')
-                strVersion = tInfoNode.getAttribute('version')
-                if len(strGroup)==0:
-                    print 'Warning: Ignoring file "%s". The "group" attribute of an "Info" node must not be empty.' % strAbsPath
-                    strGroup = None
-                elif len(strArtifact)==0:
-                    print 'Warning: Ignoring file "%s". The "artifact" attribute of an "Info" node must not be empty.' % strAbsPath
-                    strGroup = None
-                elif len(strVersion)==0:
-                    print 'Warning: Ignoring file "%s". The "version" attribute of an "Info" node must not be empty.' % strAbsPath
-                    strGroup = None
-
-        # Return the group, artifact and version.
-        return strGroup, strArtifact, strVersion
-
-    def __sniplib_scan(self, tDb, strSnipLibFolder):
-        # Mark all files to be deleted. This flag will be cleared for all files which are present.
-        tCursor = tDb.cursor()
-        tCursor.execute('UPDATE snippets SET clean=1')
-        tDb.commit()
-
-        # Search all files recursively.
-        for strRoot, astrDirs, astrFiles in os.walk(strSnipLibFolder, followlinks=True):
-            # Process all files in this folder.
-            for strFile in astrFiles:
-                # Get the extension of the file.
-                strDummy, strExt = os.path.splitext(strFile)
-                if strExt=='.xml':
-                    # Get the absolute path for the file.
-                    strAbsPath = os.path.join(strRoot, strFile)
-
-                    # Get the stamp of the snip.
-                    strDigest = self.__get_snip_hash(strAbsPath)
-
-                    # Search the snippet in the database.
-                    tCursor.execute('SELECT id,hash FROM snippets WHERE path=?', (strAbsPath, ))
-                    atResults = tCursor.fetchone()
-                    if atResults is None:
-                        # The snippet is not present in the database yet.
-                        strGroup, strArtifact, strVersion = self.__sniplib_get_gav(strAbsPath)
-                        if strGroup is None:
-                            print 'Warning: Ignoring file "%s". No valid XML: %s' % (strAbsPath, repr(tException))
-
-                        # Make a new entry.
-                        tCursor = tDb.cursor()
-                        tCursor.execute('INSERT INTO snippets (path, hash, groupid, artifact, version) VALUES (?, ?, ?, ?, ?)', (strAbsPath, strDigest, strGroup, strArtifact, strVersion))
-                    else:
-                        # Compare the hash of the file.
-                        print repr(atResults)
-                        if atResults.hash == tDigest:
-                            # Found the file. Do not delete it from the database.
-                            tCursor.execute('UPDATE snippets SET clean=0 WHERE id=?', (atResults.id, ))
-
-        # Remove all entries which are marked for clean.
-        tCursor.execute('DELETE FROM snippets WHERE clean!=0')
-        tDb.commit()
-
-    def __preprocess_snip(self, tNode):
+    def __preprocess_snip(self, tSnipNode):
         # Get the group, artifact and optional revision.
-        print 'Found Snip'
-        strGroup = tNode.getAttribute('group')
+        strGroup = tSnipNode.getAttribute('group')
         if len(strGroup)==0:
             raise Exception('The "group" attribute of a "Snip" node must not be empty.')
-        strArtifact = tNode.getAttribute('artifact')
+        strArtifact = tSnipNode.getAttribute('artifact')
         if len(strArtifact)==0:
             raise Exception('The "artifact" attribute of a "Snip" node must not be empty.')
-        strVersion = tNode.getAttribute('version')
+        strVersion = tSnipNode.getAttribute('version')
 
-        print 'Looking for snippet %s - %s - %s' % (strGroup, strArtifact, strVersion)
+        # Search the results in a database.
+        tSnippetNode = self.__cSnippetLibrary.find(strGroup, strArtifact, strVersion)
+        if tSnippetNode is None:
+            raise Exception('Snippet not found!')
 
-        # Store the results in a database.
-        # FIXME: check if the database is already open.
-        tDb = self.__sniplib_db_open()
+        # Get the parent node of the "Snip" node.
+        tParentNode = tSnipNode.parentNode
 
-        # Scan the SnipLib.
-        # FIXME: only scan once and not for every "Snip" node.
-        self.__sniplib_scan(tDb, 'targets/snippets')
+        # Replace the "Snip" node with the snippet contents.
+        for tNode in tSnippetNode.childNodes:
+            tClonedNode = tNode.cloneNode(True)
+            tParentNode.insertBefore(tClonedNode, tSnipNode)
 
-        # Search for a direct match. This is possible when a version was specified.
-        tCursor = tDb.cursor()
-        atResult = None
-        if len(strVersion)!=0:
-            tCursor.execute('SELECT path FROM snippets WHERE groupid=? AND artifact=? AND version=?', (strGroup, strArtifact, strVersion))
-            atResult = tCursor.fetchone()
-
-        if atResult is None:
-            # Search for all snippets with this group and artifact.
-            tCursor.execute('SELECT path FROM snippets WHERE groupid=? AND artifact=?', (strGroup, strArtifact))
-            atResults = tCursor.fetchall()
-            print 'find best match'
-            print repr(atResults)
-            raise Exception('Not yet.')
-
-        if atResult is None:
-            # No matching snippet found.
-            raise Exception('No matching snippet found for G="%s", A="%s", V="%s".' % (strGroup, strArtifact, strVersion))
-
-        # Open and parse the snippet file.
-        raise Exception('Continue here!')
+        # Remove the old "Snip" node.
+        tParentNode.removeChild(tSnipNode)
 
     def __preprocess(self, tXmlDocument):
         # Look for all 'Snip' nodes.
@@ -424,7 +304,7 @@ class HbootImage:
         atChunk = None
 
         # Compile the options definition to a string of bytes.
-        tOptionCompiler = OptionCompiler(self.__cPatchDefinitions)
+        tOptionCompiler = option_compiler.OptionCompiler(self.__cPatchDefinitions)
         tOptionCompiler.process(tChunkNode)
         strData = tOptionCompiler.tostring()
 
