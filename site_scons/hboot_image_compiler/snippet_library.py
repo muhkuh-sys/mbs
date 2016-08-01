@@ -134,7 +134,7 @@ class SnippetLibrary:
                     atResults = tCursor.fetchone()
                     if atResults is None:
                         # The snippet is not present in the database yet.
-                        strGroup, strArtifact, strVersion = self.__sniplib_get_gav(strAbsPath)
+                        strGroup, strArtifact, strVersion = self.__snippet_get_gav(strAbsPath)
                         if strGroup is None:
                             print 'Warning: Ignoring file "%s". %s' % (strAbsPath, strArtifact)
 
