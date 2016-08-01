@@ -2161,8 +2161,15 @@ class HbootImage:
             tXmlRootNode = tXml.documentElement
         elif isinstance(tInput, xml.dom.minidom.Node):
             tXmlRootNode = tInput
+            # Find the document node.
+            tXml = tXmlRootNode
+            while tXml.parentNode!=None:
+                tXml = tXml.parentNode
         else:
             raise Exception('Unknown input document:', tInput)
+
+        # Preprocess the image.
+        self.__preprocess(tXml)
 
         # Get the type of the image. Default to "REGULAR".
         strType = tXmlRootNode.getAttribute('type')
