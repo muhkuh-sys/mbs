@@ -4,7 +4,6 @@ import argparse
 import re
 
 import hboot_image
-import elf_support
 
 
 tParser = argparse.ArgumentParser(usage='usage: hboot_image [options]')
@@ -128,7 +127,7 @@ if tArgs.fVerbose:
         for strAlias, strFile in atKnownFiles.iteritems():
             print '\t%s = %s' % (strAlias, strFile)
 
-tCompiler = HbootImage(tEnv, tArgs.uiNetxType, tArgs.strKeyRomPath)
+tCompiler = hboot_image.HbootImage(tEnv, tArgs.uiNetxType, tArgs.strKeyRomPath)
 tCompiler.set_patch_definitions(tArgs.strPatchTablePath)
 tCompiler.set_known_files(atKnownFiles)
 tCompiler.parse_image(tArgs.strInputFile)
