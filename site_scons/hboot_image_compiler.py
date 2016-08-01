@@ -2212,7 +2212,7 @@ class HbootImage:
                 elif tImageNode.localName == 'Chunks':
                     # Loop over all nodes, these are the chunks.
                     for tChunkNode in tImageNode.childNodes:
-                        if tChunkNode.nodeType == tImageNode.ELEMENT_NODE:
+                        if tChunkNode.nodeType == tChunkNode.ELEMENT_NODE:
                             if tChunkNode.localName == 'Options':
                                 # Found an option node.
                                 atChunk = self.__build_chunk_options(tChunkNode)
