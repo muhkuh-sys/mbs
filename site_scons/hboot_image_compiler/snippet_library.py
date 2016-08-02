@@ -193,4 +193,12 @@ class SnippetLibrary:
         if tSnippetNode is None:
             raise Exception('The snippet definition "%s" has no "Snippet" node.' % strAbsPath)
 
-        return tSnippetNode
+        # Get the text contents.
+        strSnippet = self.__xml_get_all_text(tSnippetNode)
+
+        # TODO: replace all parameter in the snippet.
+
+        # Parse the text as XML.
+        tSnippetXml = xml.dom.minidom.parseString('<?xml version="1.0" encoding="utf-8"?><Snippet>%s</Snippet>' % strSnippet)
+
+        return tSnippetXml.documentElement
