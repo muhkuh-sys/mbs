@@ -42,8 +42,10 @@ import gcc_symbol_template
 import gen_random_seq
 import hash
 import hboot_image
+import hboot_snippet
 import hexdump
 import objimport
+import pom_template
 import svnversion
 import uuencode
 import version
@@ -149,8 +151,10 @@ def CreateEnvironment(env=None, astrToolPatterns=None):
 	gen_random_seq.ApplyToEnv(env)
 	hash.ApplyToEnv(env)
 	hboot_image.ApplyToEnv(env)
+	hboot_snippet.ApplyToEnv(env)
 	hexdump.ApplyToEnv(env)
 	objimport.ApplyToEnv(env)
+	pom_template.ApplyToEnv(env)
 	ApplyToEnv(env)
 	svnversion.ApplyToEnv(env)
 	uuencode.ApplyToEnv(env)
