@@ -142,10 +142,21 @@ class HbootImage:
         tParentNode.removeChild(tSnipNode)
 
     def __preprocess(self, tXmlDocument):
-        # Look for all 'Snip' nodes.
-        atSnipNodes = tXmlDocument.getElementsByTagName('Snip')
-        for tNode in atSnipNodes:
-            self.__preprocess_snip(tNode)
+        # Look for all 'Snip' nodes repeatedly until the maximum count is
+        # reached or no more 'Snip' nodes are found.
+        uiMaximumDepth = 100
+        uiDepth = 0
+        fFoundSnip = True
+        while fFoundSnip == True:
+            atSnipNodes = tXmlDocument.getElementsByTagName('Snip')
+            if len(atSnipNodes)==0:
+                fFoundSnip = False
+            elif uiDepth >= uiMaximumDepth:
+                raise Exception('Too many nested snippets found! The maximum nesting depth is %d.' % uiMaximumDepth)
+            else:
+                uiDepth += 1
+                for tNode in atSnipNodes:
+                    self.__preprocess_snip(tNode)
 
     def __build_standard_header(self, atChunks):
 
