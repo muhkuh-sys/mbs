@@ -15,7 +15,7 @@ class SnippetLibrary:
     __tDb = None
 
     # The list of folders to scan recursively for snippets.
-    __astrSnippetFolders = ['mbs/sniplib', 'site_scons/sniplib', 'targets/snippets']
+    __astrSnippetFolders = ['mbs/sniplib', 'src/sniplib', 'targets/snippets']
 
     # The snippet library was already scanned if this flag is set.
     __fSnipLibIsAlreadyScanned = None
