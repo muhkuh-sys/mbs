@@ -15,7 +15,7 @@ class SnippetLibrary:
     __tDb = None
 
     # The list of folders to scan recursively for snippets.
-    __astrSnippetFolders = ['targets/snippets']
+    __astrSnippetFolders = ['mbs/sniplib', 'site_scons/sniplib', 'targets/snippets']
 
     # The snippet library was already scanned if this flag is set.
     __fSnipLibIsAlreadyScanned = None
@@ -110,12 +110,14 @@ class SnippetLibrary:
         # Return the group, artifact and version.
         return strGroup, strArtifact, strVersion
 
-    def __sniplib_scan(self, strSnipLibFolder):
+    def __sniplib_invalidate(self):
         # Mark all files to be deleted. This flag will be cleared for all files which are present.
         tCursor = self.__tDb.cursor()
         tCursor.execute('UPDATE snippets SET clean=1')
         self.__tDb.commit()
 
+    def __sniplib_scan(self, strSnipLibFolder):
+        tCursor = self.__tDb.cursor()
         # Search all files recursively.
         for strRoot, astrDirs, astrFiles in os.walk(strSnipLibFolder, followlinks=True):
             # Process all files in this folder.
@@ -147,7 +149,9 @@ class SnippetLibrary:
                             # Found the file. Do not delete it from the database.
                             tCursor.execute('UPDATE snippets SET clean=0 WHERE id=?', (atResults[0], ))
 
+    def __sniplib_forget_invalid_entries(self):
         # Remove all entries which are marked for clean.
+        tCursor = self.__tDb.cursor()
         tCursor.execute('DELETE FROM snippets WHERE clean!=0')
         self.__tDb.commit()
 
@@ -157,24 +161,16 @@ class SnippetLibrary:
 
         # Scan the SnipLib.
         if self.__fSnipLibIsAlreadyScanned is not True:
+            self.__sniplib_invalidate()
             for strSnipLibPath in self.__astrSnippetFolders:
                 self.__sniplib_scan(strSnipLibPath)
+            self.__sniplib_forget_invalid_entries()
+            self.__fSnipLibIsAlreadyScanned = True
 
         # Search for a direct match. This is possible when a version was specified.
         tCursor = self.__tDb.cursor()
-        atResult = None
-        if len(strVersion) != 0:
-            tCursor.execute('SELECT path FROM snippets WHERE groupid=? AND artifact=? AND version=?', (strGroup, strArtifact, strVersion))
-            atResult = tCursor.fetchone()
-
-        if atResult is None:
-            # Search for all snippets with this group and artifact.
-            tCursor.execute('SELECT path FROM snippets WHERE groupid=? AND artifact=?', (strGroup, strArtifact))
-            atResults = tCursor.fetchall()
-            print 'find best match'
-            print repr(atResults)
-            raise Exception('Not yet.')
-
+        tCursor.execute('SELECT path FROM snippets WHERE groupid=? AND artifact=? AND version=?', (strGroup, strArtifact, strVersion))
+        atResult = tCursor.fetchone()
         if atResult is None:
             # No matching snippet found.
             raise Exception('No matching snippet found for G="%s", A="%s", V="%s".' % (strGroup, strArtifact, strVersion))
