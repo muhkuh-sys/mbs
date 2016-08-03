@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-
+import codecs
 import os.path
 import string
 import xml.dom.minidom
@@ -10,6 +10,19 @@ from SCons.Script import *
 
 def hboot_snippet_action(target, source, env):
     atParameter = env['PARAMETER']
+
+    # Get the description.
+    tDescription = atParameter['description']
+    strDescription = ''
+    # Is the description a SCons file node?
+    if isinstance(tDescription, SCons.Node.FS.File):
+        # It is a SCons file node.
+        tFile = codecs.open(tDescription.get_path(), 'r')
+        strDescription = tFile.read()
+        tFile.close()
+    else:
+        # Assume the description is a plain string.
+        strDescription = str(tDescription)
 
     # Create a new XML document.
     tXml = xml.dom.minidom.getDOMImplementation().createDocument(None, 'HBootSnippet', None)
@@ -37,7 +50,7 @@ def hboot_snippet_action(target, source, env):
 
     # Create the "Description" node.
     tNodeDescription = tXml.createElement('Description')
-    tNodeDescription.appendChild(tXml.createTextNode(str(atParameter['description'])))
+    tNodeDescription.appendChild(tXml.createTextNode(strDescription))
     tNodeInfo.appendChild(tNodeDescription)
 
     # Append all categories.
@@ -64,8 +77,11 @@ def hboot_snippet_action(target, source, env):
 
 def hboot_snippet_emitter(target, source, env):
     # Depend on all values for the template.
-    for strKey, strValue in env['PARAMETER'].iteritems():
-        env.Depends(target, SCons.Node.Python.Value('%s:%s' % (strKey, strValue)))
+    for strKey, tValue in env['PARAMETER'].iteritems():
+        if isinstance(tValue, SCons.Node.FS.File):
+            env.Depends(target, tValue)
+        else:
+            env.Depends(target, SCons.Node.Python.Value('%s:%s' % (strKey, str(tValue))))
 
     return target, source
 
