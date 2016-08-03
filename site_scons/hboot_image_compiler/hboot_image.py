@@ -122,6 +122,8 @@ class HbootImage:
         if len(strArtifact) == 0:
             raise Exception('The "artifact" attribute of a "Snip" node must not be empty.')
         strVersion = tSnipNode.getAttribute('version')
+        if len(strVersion) == 0:
+            raise Exception('The "version" attribute of a "Snip" node must not be empty.')
 
         # Search the results in a database.
         tSnippetNode = self.__cSnippetLibrary.find(strGroup, strArtifact, strVersion)
