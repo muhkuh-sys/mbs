@@ -21,6 +21,8 @@ import snippet_library
 
 
 class HbootImage:
+    __fVerbose = False
+
     # This is the list of override items for the header.
     __atHeaderOverride = None
 
@@ -34,7 +36,7 @@ class HbootImage:
     __astrIncludePaths = None
 
     # This is a dictionary of all resolved files.
-    __astrKnownFiles = None
+    __atKnownFiles = None
 
     __cPatchDefinitions = None
 
@@ -58,7 +60,46 @@ class HbootImage:
     __MAGIC_COOKIE_NETX56 = 0xf8beaf00
     __MAGIC_COOKIE_NETX4000 = 0xf3beaf00
 
-    def __init__(self, tEnv, uiNetxType, strKeyromFile):
+    def __init__(self, tEnv, uiNetxType, tPatchDefinitions, **kwargs):
+        strKeyromFile = None
+        astrIncludePaths = []
+        astrSnippetSearchPaths = None
+        atKnownFiles = {}
+        fVerbose = False
+
+        # Parse the kwargs.
+        for strKey,tValue in kwargs.iteritems():
+            if strKey == 'keyrom':
+                strKeyromFile = tValue
+
+            elif strKey == 'sniplibs':
+                astrSnippetSearchPaths = []
+                if tValue is None:
+                    pass
+                elif isinstance(tValue, basestring):
+                    astrSnippetSearchPaths.append(tValue)
+                else:
+                    astrSnippetSearchPaths.extend(tValue)
+
+            elif strKey == 'includes':
+                if tValue is None:
+                    pass
+                elif isinstance(tValue, basestring):
+                    astrIncludePaths.append(tValue)
+                else:
+                    astrIncludePaths.extend(tValue)
+
+            elif strKey == 'known_files':
+                if tValue is None:
+                    pass
+                else:
+                    atKnownFiles.update(tValue)
+
+            elif strKey == 'verbose':
+                fVerbose = bool(tValue)
+
+        self.__fVerbose = fVerbose
+
         # Do not override anything in the pre-calculated header yet.
         self.__atHeaderOverride = [None] * 16
 
@@ -68,11 +109,25 @@ class HbootImage:
         # Set the environment.
         self.__tEnv = tEnv
 
-        # No files yet.
-        self.__atKnownFiles = dict({})
+        # Set the known files.
+        self.__atKnownFiles = atKnownFiles
 
-        self.__cPatchDefinitions = None
-        self.__cSnippetLibrary = snippet_library.SnippetLibrary('.sniplib.dblite')
+        if self.__fVerbose:
+            print '[HBootImage] Configuration: netX type = %s' % str(uiNetxType)
+            print '[HBootImage] Configuration: patch definitions = "%s"' % str(tPatchDefinitions)
+            print '[HBootImage] Configuration: Keyrom = "%s"' % str(strKeyromFile)
+            for strPath in astrSnippetSearchPaths:
+                print '[HBootImage] Configuration: Sniplib at "%s"' % strPath
+            for strPath in astrSnippetSearchPaths:
+                print '[HBootImage] Configuration: Include path "%s"' % strPath
+            for strKey, strPath in atKnownFiles:
+                print '[HBootImage] Configuration: Known file "%s" at "%s".' % (strKey, strPath)
+
+        self.__cPatchDefinitions = patch_definitions.PatchDefinitions()
+        self.__cPatchDefinitions.read_patch_definition(tPatchDefinitions)
+
+
+        self.__cSnippetLibrary = snippet_library.SnippetLibrary('.sniplib.dblite', astrSnippetSearchPaths, debug=self.__fVerbose)
 
         self.__uiNetxType = uiNetxType
         self.__tImageType = None
@@ -85,17 +140,14 @@ class HbootImage:
         })
 
         # Initialize the include paths from the environment.
-        self.__astrIncludePaths = []
-        if 'HBOOT_INCLUDE' in tEnv:
-            tIncl = tEnv['HBOOT_INCLUDE']
-            if isinstance(tIncl, basestring):
-                self.__astrIncludePaths.append(tIncl)
-            else:
-                self.__astrIncludePaths.extend(tIncl)
+        self.__astrIncludePaths = astrIncludePaths
 
         # Read the keyrom file if specified.
         if strKeyromFile is not None:
+            if self.__fVerbose:
+                print '[HBootImage] Init: Reading key ROM file "%s".' % strKeyromFile
             # Parse the XML file.
+            print repr(strKeyromFile)
             tFile = open(strKeyromFile, 'rt')
             strXml = tFile.read()
             tFile.close()
@@ -1623,10 +1675,6 @@ class HbootImage:
 
         return aulChunk
 
-    def set_patch_definitions(self, tInput):
-        self.__cPatchDefinitions = patch_definitions.PatchDefinitions()
-        self.__cPatchDefinitions.read_patch_definition(tInput)
-
     def parse_image(self, tInput):
         # A string must be the filename of the XML.
         if isinstance(tInput, basestring):
@@ -1762,9 +1810,6 @@ class HbootImage:
                                 self.__atChunks.extend(atChunk)
                             else:
                                 raise Exception('Unknown chunk ID: %s', tChunkNode.localName)
-
-    def set_known_files(self, atFiles):
-        self.__atKnownFiles.update(atFiles)
 
     def __crc7(self, strData):
         ucCrc = 0
