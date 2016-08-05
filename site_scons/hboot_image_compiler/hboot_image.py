@@ -177,8 +177,31 @@ class HbootImage:
         if len(strVersion) == 0:
             raise Exception('The "version" attribute of a "Snip" node must not be empty.')
 
-        # Search the results in a database.
-        tSnippetNode = self.__cSnippetLibrary.find(strGroup, strArtifact, strVersion)
+        # Get the name of the snippets for messages.
+        strSnipName = 'G="%s",A="%s",V="%s"' % (strGroup, strArtifact, strVersion)
+
+        # Get the parameter.
+        atParameter = {}
+        for tChildNode in tSnipNode.childNodes:
+            if tChildNode.nodeType == tChildNode.ELEMENT_NODE:
+                strTag = tChildNode.localName
+                if strTag == 'Parameter':
+                    # Get the "name" attribute.
+                    strName = tChildNode.getAttribute('name')
+                    if len(strName) == 0:
+                        raise Exception('Snippet %s instanciation failed: a parameter node is missing the "name" attribute!' % strSnipName)
+                    # Get the value.
+                    strValue = self.__xml_get_all_text(tChildNode)
+                    # Was the parameter already defined?
+                    if strName in atParameter:
+                        raise Exception('Snippet %s instanciation failed: parameter "%s" is defined more than once!' % (strSnipName, strName))
+                    else:
+                        atParameter[strName] = strValue
+                else:
+                    raise Exception('Snippet %s instanciation failed: unknown tag "%s" found!' % (strSnipName, strTag))
+
+        # Search the snippet.
+        tSnippetNode = self.__cSnippetLibrary.find(strGroup, strArtifact, strVersion, atParameter)
         if tSnippetNode is None:
             raise Exception('Snippet not found!')
 

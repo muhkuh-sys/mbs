@@ -4,6 +4,7 @@ import hashlib
 import os
 import os.path
 import sqlite3
+import string
 import xml.dom.minidom
 
 
@@ -254,7 +255,7 @@ class SnippetLibrary:
         tCursor.execute('DELETE FROM snippets WHERE clean!=0 AND search_path=?', (strSearchPath, ))
         self.__tDb.commit()
 
-    def find(self, strGroup, strArtifact, strVersion):
+    def find(self, strGroup, strArtifact, strVersion, atParameter):
         # Open the connection to the database.
         self.__db_open()
 
@@ -276,23 +277,77 @@ class SnippetLibrary:
                 atMatch = atResult
                 break
 
+        # Get the snippet name for messages.
+        strSnippetName = 'G="%s", A="%s", V="%s"' % (strGroup, strArtifact, strVersion)
+
         if atMatch is None:
             # No matching snippet found.
-            raise Exception('No matching snippet found for G="%s", A="%s", V="%s".' % (strGroup, strArtifact, strVersion))
+            raise Exception('No matching snippet found for %s.' % strSnippetName)
 
         strAbsPath = atMatch[0]
         if self.__fDebug:
-            print '[SnipLib] Resolve: Found G="%s", A="%s", V="%s" at "%s".' % (strGroup, strArtifact, strVersion, strAbsPath)
+            print '[SnipLib] Resolve: Found %s at "%s".' % (strSnippetName, strAbsPath)
 
         # Try to parse the snippet file.
         try:
             tXml = xml.dom.minidom.parse(strAbsPath)
         except xml.dom.DOMException as tException:
             # Invalid XML, ignore.
-            raise Exception('Failed to parse the snippet: %s' % repr(tException))
+            raise Exception('Failed to parse the snippet %s: %s' % (strSnippetName, repr(tException)))
+
+        tRootNode = tXml.documentElement
+
+        # Find all parameters.
+        # The "ParameterList" node is optional.
+        atParameterList = {}
+        tParameterListNode = self.__xml_get_node(tRootNode, 'ParameterList')
+        if tParameterListNode is not None:
+            # Loop over all child nodes.
+            for tChildNode in tParameterListNode.childNodes:
+                if tChildNode.nodeType == tChildNode.ELEMENT_NODE:
+                    if tChildNode.localName == 'Parameter':
+                        # Get the "name" atribute.
+                        strName = tChildNode.getAttribute('name')
+                        if len(strName)==0:
+                            raise Exception('Failed to parse the snippet %s: a parameter node is missing the "name" attribute!' % strSnippetName)
+                        # Get the "default" attribute. It is optional.
+                        tDefault = None
+                        if tChildNode.hasAttribute('default'):
+                            tDefault = tChildNode.getAttribute('default')
+                        # Is the parameter already present?
+                        if strName in atParameterList:
+                            raise Exception('Failed to parse the snippet %s: the parameter is requested more than once in the snippet definition!' % strSnippetName)
+                        else:
+                            atParameterList[strName] = tDefault
+                    else:
+                        raise Exception('Failed to parse the snippet %s: unexpected tag "%s".' % (strSnippetName, tChildNode.localName))
+
+        # Combine the parameters.
+        atReplace = {}
+        astrMissing = []
+        # Add all default values and find missing values.
+        for strName, tDefault in atParameterList.iteritems():
+            if tDefault is not None:
+                atReplace[strName] = tDefault
+            if strName not in atParameter:
+                astrMissing.append(strName)
+        if len(astrMissing)!=0:
+            raise Exception('Failed to instanciate snippet %s: missing parameter %s' % (strSnippetName, ', '.join(astrMissing)))
+
+        # Add all required parameters which have assigned values.
+        # Find unused parameter.
+        astrUnused = []
+        for strName, strValue in atParameter.iteritems():
+            if strName in atParameterList:
+                atReplace[strName] = strValue
+            else:
+                astrUnused.append(strName)
+
+        if len(astrUnused)!=0:
+            if self.__fDebug:
+                print '[SnipLib] Resolve: the snippet %s does not use the following parameters: %s' % (strSnippetName, ', '.join(astrUnused))
 
         # Find the "Snippet" node.
-        tRootNode = tXml.documentElement
         tSnippetNode = self.__xml_get_node(tRootNode, 'Snippet')
         if tSnippetNode is None:
             raise Exception('The snippet definition "%s" has no "Snippet" node.' % strAbsPath)
@@ -300,7 +355,9 @@ class SnippetLibrary:
         # Get the text contents.
         strSnippet = self.__xml_get_all_text(tSnippetNode)
 
-        # TODO: replace all parameter in the snippet.
+        # Replace all parameter in the snippet.
+        for strName, strValue in atReplace.iteritems():
+            strSnippet = string.replace(strSnippet, '%%%%%s%%%%' % strName, strValue)
 
         # Parse the text as XML.
         tSnippetXml = xml.dom.minidom.parseString('<?xml version="1.0" encoding="utf-8"?><Snippet>%s</Snippet>' % strSnippet)
