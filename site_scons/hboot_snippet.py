@@ -59,6 +59,21 @@ def hboot_snippet_action(target, source, env):
         tNodeCategory.appendChild(tXml.createTextNode(str(strCategory)))
         tNodeInfo.appendChild(tNodeCategory)
 
+    # Does the snippet have parameters?
+    if 'parameter' in atParameter:
+        # Yes -> append a "ParameterList" node.
+        tNodeParameterList = tXml.createElement('ParameterList')
+        for strName, atAttributes in atParameter['parameter'].iteritems():
+            tNodeParameterEntry = tXml.createElement('Parameter')
+            tNodeParameterEntry.setAttribute('name', str(strName))
+            if 'default' in atAttributes:
+                tDefault = atAttributes['default']
+                if tDefault is not None:
+                    tNodeParameterEntry.setAttribute('default', str(tDefault))
+            tNodeParameterEntry.appendChild(tXml.createTextNode(str(atAttributes['help'])))
+            tNodeParameterList.appendChild(tNodeParameterEntry)
+        tNodeRoot.appendChild(tNodeParameterList)
+
     # Load the contents of the source file.
     strInput = source[0].get_contents()
 
