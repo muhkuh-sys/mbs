@@ -60,7 +60,8 @@ class HbootImage:
     __MAGIC_COOKIE_NETX56 = 0xf8beaf00
     __MAGIC_COOKIE_NETX4000 = 0xf3beaf00
 
-    def __init__(self, tEnv, uiNetxType, tPatchDefinitions, **kwargs):
+    def __init__(self, tEnv, uiNetxType, **kwargs):
+        strPatchDefinition = None
         strKeyromFile = None
         astrIncludePaths = []
         astrSnippetSearchPaths = None
@@ -69,7 +70,10 @@ class HbootImage:
 
         # Parse the kwargs.
         for strKey,tValue in kwargs.iteritems():
-            if strKey == 'keyrom':
+            if strKey == 'patch_definition':
+                strPatchDefinition = tValue
+
+            elif strKey == 'keyrom':
                 strKeyromFile = tValue
 
             elif strKey == 'sniplibs':
@@ -123,9 +127,9 @@ class HbootImage:
             for strKey, strPath in atKnownFiles:
                 print '[HBootImage] Configuration: Known file "%s" at "%s".' % (strKey, strPath)
 
-        self.__cPatchDefinitions = patch_definitions.PatchDefinitions()
-        self.__cPatchDefinitions.read_patch_definition(tPatchDefinitions)
-
+        if strPatchDefinition is not None:
+            self.__cPatchDefinitions = patch_definitions.PatchDefinitions()
+            self.__cPatchDefinitions.read_patch_definition(strPatchDefinition)
 
         self.__cSnippetLibrary = snippet_library.SnippetLibrary('.sniplib.dblite', astrSnippetSearchPaths, debug=self.__fVerbose)
 
@@ -1699,6 +1703,10 @@ class HbootImage:
         return aulChunk
 
     def parse_image(self, tInput):
+        # Parsing an image requires the patch definition.
+        if self.__cPatchDefinitions is None:
+            raise Exception('A patch definition is required for the "parse_image" function, but none was specified!')
+
         # A string must be the filename of the XML.
         if isinstance(tInput, basestring):
             tXml = xml.dom.minidom.parse(tInput)

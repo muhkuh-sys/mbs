@@ -77,7 +77,7 @@ def hboot_image_action(target, source, env):
 	strPatchDefinition = env['HBOOTIMAGE_PATCH_DEFINITION']
 
 	iChipTyp = env['BOOTBLOCK_CHIPTYPE']
-	tCompiler = hboot_image_compiler.hboot_image.HbootImage(env, iChipTyp, strPatchDefinition, includes=astrIncludePaths, sniplibs=astrSnippetSearchPaths, known_files=atKnownFiles, keyrom=strKeyRom, verbose=fVerbose)
+	tCompiler = hboot_image_compiler.hboot_image.HbootImage(env, iChipTyp, patch_definition=strPatchDefinition, includes=astrIncludePaths, sniplibs=astrSnippetSearchPaths, known_files=atKnownFiles, keyrom=strKeyRom, verbose=fVerbose)
 	tCompiler.parse_image(source[0].get_path())
 	tCompiler.write(target[0].get_path())
 
