@@ -74,53 +74,11 @@ def hboot_image_action(target, source, env):
 	if 'HBOOTIMAGE_VERBOSE' in env:
 		fVerbose = bool(env['HBOOTIMAGE_VERBOSE'])
 
-	tSource = None
-	tPatchDefinition = None
+	strPatchDefinition = env['HBOOTIMAGE_PATCH_DEFINITION']
 
-	for tSrc in source:
-		strSrcPath = tSrc.get_path()
-
-		strPathRoot,strPathExt = os.path.splitext(strSrcPath)
-		if strPathExt=='.xml':
-			tXml = xml.dom.minidom.parse(strSrcPath)
-			strRootTag = tXml.documentElement.localName
-
-			# All sources have the root node 'Options'.
-			if strRootTag=='HBootImage':
-				#print 'This is an options file.'
-				tSource = tXml
-			# The patch definition has the root node 'PatchDefinitions'.
-			elif strRootTag=='PatchDefinitions':
-				#print 'This is a patch definition.'
-				if not tPatchDefinition is None:
-					raise Exception('More than one patch definition specified!')
-				tPatchDefinition = tXml
-			else:
-				raise Exception('Unknown root tag "%s" in file "%s".' % (strRootTag,strSrcPath))
-		else:
-			# This is not an XML file.
-			raise Exception('Unknown input file "%s".' % strSrcPath)
-
-	if tSource is None:
-		raise Exception('No source specified!')
-
-	if tPatchDefinition is None:
-		# No patch definition defined yet. Use the default definition.
-
-		# Get the chip type.
-		iChipTyp = env['BOOTBLOCK_CHIPTYPE']
-		strPatchDefinition = None
-		if iChipTyp == 4000:
-			strPatchDefinition = 'hboot_netx4000_patch_table.xml'
-		elif iChipTyp == 56:
-			strPatchDefinition = 'hboot_netx56_patch_table.xml'
-		else:
-			raise Exception('Invalid chip type: "%s"'%iChipTyp)
-
-		tPatchDefinition = os.path.join(os.path.dirname(os.path.abspath(__file__)), strPatchDefinition)
-
-	tCompiler = hboot_image_compiler.hboot_image.HbootImage(env, iChipTyp, tPatchDefinition, includes=astrIncludePaths, sniplibs=astrSnippetSearchPaths, known_files=atKnownFiles, keyrom=strKeyRom, verbose=fVerbose)
-	tCompiler.parse_image(tSource.documentElement)
+	iChipTyp = env['BOOTBLOCK_CHIPTYPE']
+	tCompiler = hboot_image_compiler.hboot_image.HbootImage(env, iChipTyp, strPatchDefinition, includes=astrIncludePaths, sniplibs=astrSnippetSearchPaths, known_files=atKnownFiles, keyrom=strKeyRom, verbose=fVerbose)
+	tCompiler.parse_image(source[0].get_path())
 	tCompiler.write(target[0].get_path())
 
 	return 0
@@ -151,6 +109,24 @@ def hboot_image_emitter(target, source, env):
 		if astrSnipLibs is not None and len(astrSnipLibs)!=0:
 			env.Depends(target, SCons.Node.Python.Value(':'.join(astrSnipLibs)))
 
+	strPatchDefinition = None
+	if 'HBOOTIMAGE_PATCH_DEFINITION' in env:
+		strPatchDefinition = env['HBOOTIMAGE_PATCH_DEFINITION']
+	else:
+		# Get the chip type.
+		strRelPatchDefinition = None
+		iChipTyp = env['BOOTBLOCK_CHIPTYPE']
+		if iChipTyp == 4000:
+			strRelPatchDefinition = 'hboot_netx4000_patch_table.xml'
+		elif iChipTyp == 56:
+			strRelPatchDefinition = 'hboot_netx56_patch_table.xml'
+		else:
+			raise Exception('Invalid chip type: "%s"'%iChipTyp)
+
+		strPatchDefinition = os.path.join(os.path.dirname(os.path.abspath(__file__)), strRelPatchDefinition)
+		env['HBOOTIMAGE_PATCH_DEFINITION'] = strPatchDefinition
+	env.Depends(target, strPatchDefinition)
+
 	fVerbose = False
 	if 'HBOOTIMAGE_VERBOSE' in env:
 		fVerbose = bool(env['HBOOTIMAGE_VERBOSE'])
@@ -178,6 +154,6 @@ def ApplyToEnv(env):
 
 	hboot_image_act = SCons.Action.Action(hboot_image_action, hboot_image_string)
 	hboot_image_scanner = SCons.Scanner.Scanner(function=hboot_definition_scan)
-	hboot_image_bld = Builder(action=hboot_image_act, emitter=hboot_image_emitter, suffix='.xml', source_scanner=hboot_image_scanner)
+	hboot_image_bld = Builder(action=hboot_image_act, emitter=hboot_image_emitter, suffix='.xml', single_source=1, source_scanner=hboot_image_scanner)
 	env['BUILDERS']['HBootImage'] = hboot_image_bld
 
