@@ -100,7 +100,6 @@ class SnippetLibrary:
 
         # Compare the current "CREATE" statement with the statement of the
         # existing table.
-        fTableIsOk = True
         tCursor.execute('SELECT sql FROM sqlite_master WHERE name="snippets"')
         tRes = tCursor.fetchone()
         if tRes is None:
@@ -168,7 +167,7 @@ class SnippetLibrary:
             print '[SnipLib] Scan: Invalidating all cached entries for the search path "%s".' % strSearchPath
             tCursor.execute('SELECT path,groupid,artifact,version FROM snippets WHERE search_path=?', (strSearchPath, ))
             atRes = tCursor.fetchall()
-            if atRes is None or len(atRes)==0:
+            if atRes is None or len(atRes) == 0:
                 print '[SnipLib] Scan:  -> No cached entries found for the search path "%s".' % strSearchPath
             else:
                 for tRes in atRes:
@@ -236,7 +235,6 @@ class SnippetLibrary:
                             else:
                                 tCursor.execute('UPDATE snippets SET hash=?, groupid=?, artifact=?, version=?, clean=0 WHERE id=?', (strDigest, strGroup, strArtifact, strVersion, atResults[0]))
 
-
     def __sniplib_forget_invalid_entries(self, strSearchPath):
         # Remove all entries from the cache which are marked for clean.
         tCursor = self.__tDb.cursor()
@@ -246,7 +244,7 @@ class SnippetLibrary:
             print '[SnipLib] Scan: Remove all invalidated entries from the cache for the search path "%s".' % strSearchPath
             tCursor.execute('SELECT path,groupid,artifact,version FROM snippets WHERE clean!=0 AND search_path=?', (strSearchPath, ))
             atRes = tCursor.fetchall()
-            if atRes is None or len(atRes)==0:
+            if atRes is None or len(atRes) == 0:
                 print '[SnipLib] Scan:  -> No cache entries are removed.'
             else:
                 for tRes in atRes:
@@ -308,7 +306,7 @@ class SnippetLibrary:
                     if tChildNode.localName == 'Parameter':
                         # Get the "name" atribute.
                         strName = tChildNode.getAttribute('name')
-                        if len(strName)==0:
+                        if len(strName) == 0:
                             raise Exception('Failed to parse the snippet %s: a parameter node is missing the "name" attribute!' % strSnippetName)
                         # Get the "default" attribute. It is optional.
                         tDefault = None
@@ -331,7 +329,7 @@ class SnippetLibrary:
                 atReplace[strName] = tDefault
             if strName not in atParameter:
                 astrMissing.append(strName)
-        if len(astrMissing)!=0:
+        if len(astrMissing) != 0:
             raise Exception('Failed to instanciate snippet %s: missing parameter %s' % (strSnippetName, ', '.join(astrMissing)))
 
         # Add all required parameters which have assigned values.
@@ -343,7 +341,7 @@ class SnippetLibrary:
             else:
                 astrUnused.append(strName)
 
-        if len(astrUnused)!=0:
+        if len(astrUnused) != 0:
             if self.__fDebug:
                 print '[SnipLib] Resolve: the snippet %s does not use the following parameters: %s' % (strSnippetName, ', '.join(astrUnused))
 
@@ -362,4 +360,4 @@ class SnippetLibrary:
         # Parse the text as XML.
         tSnippetXml = xml.dom.minidom.parseString('<?xml version="1.0" encoding="utf-8"?><Snippet>%s</Snippet>' % strSnippet)
 
-        return tSnippetXml.documentElement
+        return (tSnippetXml.documentElement, strAbsPath)
