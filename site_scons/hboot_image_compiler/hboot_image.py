@@ -42,6 +42,8 @@ class HbootImage:
 
     __cSnippetLibrary = None
 
+    __astrDependencies = None
+
     __uiNetxType = None
     __tImageType = None
     __astrToImageType = None
@@ -69,7 +71,7 @@ class HbootImage:
         fVerbose = False
 
         # Parse the kwargs.
-        for strKey,tValue in kwargs.iteritems():
+        for strKey, tValue in kwargs.iteritems():
             if strKey == 'patch_definition':
                 strPatchDefinition = tValue
 
@@ -118,7 +120,7 @@ class HbootImage:
 
         if self.__fVerbose:
             print '[HBootImage] Configuration: netX type = %s' % str(uiNetxType)
-            print '[HBootImage] Configuration: patch definitions = "%s"' % str(tPatchDefinitions)
+            print '[HBootImage] Configuration: patch definitions = "%s"' % strPatchDefinition
             print '[HBootImage] Configuration: Keyrom = "%s"' % str(strKeyromFile)
             for strPath in astrSnippetSearchPaths:
                 print '[HBootImage] Configuration: Sniplib at "%s"' % strPath
@@ -205,9 +207,15 @@ class HbootImage:
                     raise Exception('Snippet %s instanciation failed: unknown tag "%s" found!' % (strSnipName, strTag))
 
         # Search the snippet.
-        tSnippetNode = self.__cSnippetLibrary.find(strGroup, strArtifact, strVersion, atParameter)
+        tSnippet = self.__cSnippetLibrary.find(strGroup, strArtifact, strVersion, atParameter)
+        tSnippetNode = tSnippet[0]
         if tSnippetNode is None:
             raise Exception('Snippet not found!')
+
+        # Add the snippet file to the dependencies.
+        strSnippetAbsFile = tSnippet[1]
+        if strSnippetAbsFile not in self.__astrDependencies:
+            self.__astrDependencies.append(strSnippetAbsFile)
 
         # Get the parent node of the "Snip" node.
         tParentNode = tSnipNode.parentNode
@@ -226,9 +234,9 @@ class HbootImage:
         uiMaximumDepth = 100
         uiDepth = 0
         fFoundSnip = True
-        while fFoundSnip == True:
+        while fFoundSnip is True:
             atSnipNodes = tXmlDocument.getElementsByTagName('Snip')
-            if len(atSnipNodes)==0:
+            if len(atSnipNodes) == 0:
                 fFoundSnip = False
             elif uiDepth >= uiMaximumDepth:
                 raise Exception('Too many nested snippets found! The maximum nesting depth is %d.' % uiMaximumDepth)
@@ -1720,6 +1728,9 @@ class HbootImage:
         else:
             raise Exception('Unknown input document:', tInput)
 
+        # Initialize the list of dependencies.
+        self.__astrDependencies = []
+
         # Preprocess the image.
         self.__preprocess(tXml)
 
@@ -1953,3 +1964,26 @@ class HbootImage:
         atHeader.tofile(tFile)
         atChunks.tofile(tFile)
         tFile.close()
+
+    def dependency_scan(self, strInput):
+        tXml = xml.dom.minidom.parse(strInput)
+
+        # Initialize the list of dependencies.
+        self.__astrDependencies = []
+
+        # Preprocess the image.
+        self.__preprocess(tXml)
+
+        # Scan the complete definition for "File" nodes.
+        atFileNodes = tXml.getElementsByTagName('File')
+        for tNode in atFileNodes:
+            strFileName = tNode.getAttribute('name')
+            if strFileName is not None:
+                if strFileName[0] == '@':
+                    strFileId = strFileName[1:]
+                    if strFileId not in self.__atKnownFiles:
+                        raise Exception('Unknown reference to file ID "%s".' % strFileName)
+                    strFileName = self.__atKnownFiles[strFileId]
+                self.__astrDependencies.append(strFileName)
+
+        return self.__astrDependencies
