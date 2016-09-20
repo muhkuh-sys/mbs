@@ -228,22 +228,85 @@ class HbootImage:
         # Remove the old "Snip" node.
         tParentNode.removeChild(tSnipNode)
 
+    def __preprocess_include(self, tIncludeNode):
+        # Get the name.
+        strIncludeName = tIncludeNode.getAttribute('name')
+        if strIncludeName is None:
+            raise Exception('The "Include" node has no "name" attribute.')
+        if len(strIncludeName) == 0:
+            raise Exception('The "name" attribute of an "Include" node must not be empty.')
+
+        # Get the parameter.
+        atParameter = {}
+        for tChildNode in tIncludeNode.childNodes:
+            if tChildNode.nodeType == tChildNode.ELEMENT_NODE:
+                strTag = tChildNode.localName
+                if strTag == 'Parameter':
+                    # Get the "name" attribute.
+                    strName = tChildNode.getAttribute('name')
+                    if len(strName) == 0:
+                        raise Exception('Include failed: a parameter node is missing the "name" attribute!')
+                    # Get the value.
+                    strValue = self.__xml_get_all_text(tChildNode)
+                    # Was the parameter already defined?
+                    if strName in atParameter:
+                        raise Exception('Include failed: parameter "%s" is defined more than once!' % strIncludeName)
+                    else:
+                        atParameter[strName] = strValue
+                else:
+                    raise Exception('Include failed: unknown tag "%s" found!' % strTag)
+
+        # Search the file in the current path and all include paths.
+        strAbsIncludeName = self.__find_file(strIncludeName)
+        if strAbsIncludeName is None:
+            raise Exception('Failed to include file "%s": file not found.' % strIncludeName)
+
+        # Read the complete file as text.
+        tFile = open(strAbsIncludeName, 'rt')
+        strFileContents = tFile.read()
+        tFile.close()
+
+        # Replace all parameters in the file.
+        for strName, strValue in atParameter.iteritems():
+            strFileContents = string.replace(strFileContents, '%%%%%s%%%%' % strName, strValue)
+
+        # Parse the file as XML.
+        tIncludeXml = xml.dom.minidom.parseString('<?xml version="1.0" encoding="utf-8"?><Include>%s</Include>' % strFileContents)
+
+        # Add the include file to the dependencies.
+        if strAbsIncludeName not in self.__astrDependencies:
+            self.__astrDependencies.append(strAbsIncludeName)
+
+        # Get the parent node of the "Include" node.
+        tParentNode = tIncludeNode.parentNode
+
+        # Replace the "Include" node with the include file contents.
+        for tNode in tIncludeXml.documentElement.childNodes:
+            tClonedNode = tNode.cloneNode(True)
+            tParentNode.insertBefore(tClonedNode, tIncludeNode)
+
+        # Remove the old "Include" node.
+        tParentNode.removeChild(tIncludeNode)
+
     def __preprocess(self, tXmlDocument):
         # Look for all 'Snip' nodes repeatedly until the maximum count is
         # reached or no more 'Snip' nodes are found.
         uiMaximumDepth = 100
         uiDepth = 0
-        fFoundSnip = True
-        while fFoundSnip is True:
+        fFoundPreproc = True
+        while fFoundPreproc is True:
             atSnipNodes = tXmlDocument.getElementsByTagName('Snip')
-            if len(atSnipNodes) == 0:
-                fFoundSnip = False
+            atIncludeNodes = tXmlDocument.getElementsByTagName('Include')
+            if (len(atSnipNodes) == 0) and (len(atIncludeNodes) == 0):
+                fFoundPreproc = False
             elif uiDepth >= uiMaximumDepth:
-                raise Exception('Too many nested snippets found! The maximum nesting depth is %d.' % uiMaximumDepth)
+                raise Exception('Too many nested preprocessor directives found! The maximum nesting depth is %d.' % uiMaximumDepth)
             else:
                 uiDepth += 1
                 for tNode in atSnipNodes:
                     self.__preprocess_snip(tNode)
+                for tNode in atIncludeNodes:
+                    self.__preprocess_include(tNode)
 
     def __build_standard_header(self, atChunks):
 
