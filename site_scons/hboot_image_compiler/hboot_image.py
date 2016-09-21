@@ -43,7 +43,7 @@ class ResolveDefines(ast.NodeTransformer):
                 raise Exception('Not implemented type for "%s": %s' % (strName, str(type(tValue))))
             tNode = ast.copy_location(tValueNode, node)
         else:
-            raise Exception('Unknown constant %s.' % node.id)
+            raise Exception('Unknown constant "%s".' % node.id)
         return tNode
 
 
@@ -212,9 +212,10 @@ class HbootImage:
                 astrText.append(str(tChild.data))
         return ''.join(astrText)
 
-    def __parse_re_match(self, strExpression):
+    def __parse_re_match(self, tMatch):
+        strExpression = tMatch.group(1)
         tAstNode = ast.parse(strExpression, mode='eval')
-        tAstResolved = self.__resolver(tAstNode)
+        tAstResolved = self.__resolver.visit(tAstNode)
         tResult = eval(compile(tAstResolved, 'lala', mode='eval'))
         if tResult is None:
             raise Exception('Invalid expression: "%s"' % strExpression)
@@ -225,7 +226,7 @@ class HbootImage:
         self.__resolver.setDefines(atReplace)
 
         # Replace all parameter in the snippet.
-        strText = re.sub('%%([^%]+)%%', self.__parse_re_match, strPlaintext)
+        strText = re.sub('%%(.+?)%%', self.__parse_re_match, strPlaintext)
 
         # Parse the text as XML.
         tResult = None
