@@ -4,7 +4,6 @@ import hashlib
 import os
 import os.path
 import sqlite3
-import string
 import xml.dom.minidom
 
 
@@ -353,11 +352,4 @@ class SnippetLibrary:
         # Get the text contents.
         strSnippet = self.__xml_get_all_text(tSnippetNode)
 
-        # Replace all parameter in the snippet.
-        for strName, strValue in atReplace.iteritems():
-            strSnippet = string.replace(strSnippet, '%%%%%s%%%%' % strName, strValue)
-
-        # Parse the text as XML.
-        tSnippetXml = xml.dom.minidom.parseString('<?xml version="1.0" encoding="utf-8"?><Snippet>%s</Snippet>' % strSnippet)
-
-        return (tSnippetXml.documentElement, strAbsPath)
+        return (strSnippet, atReplace, strAbsPath)

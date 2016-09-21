@@ -20,6 +20,33 @@ import patch_definitions
 import snippet_library
 
 
+class ResolveDefines(ast.NodeTransformer):
+    __atDefines = None
+
+    def setDefines(self, atDefines):
+        self.__atDefines = atDefines
+
+    def visit_Name(self, node):
+        tNode = None
+        strName = node.id
+        if strName in self.__atDefines:
+            tValue = self.__atDefines[strName]
+            # Check for a set of base types.
+            tValueNode = None
+            if type(tValue) is int:
+                tValueNode = ast.Num(n=tValue)
+            elif type(tValue) is long:
+                tValueNode = ast.Num(n=tValue)
+            elif type(tValue) is str:
+                tValueNode = ast.Str(s=tValue)
+            else:
+                raise Exception('Not implemented type for "%s": %s' % (strName, str(type(tValue))))
+            tNode = ast.copy_location(tValueNode, node)
+        else:
+            raise Exception('Unknown constant %s.' % node.id)
+        return tNode
+
+
 class HbootImage:
     __fVerbose = False
 
@@ -37,6 +64,9 @@ class HbootImage:
 
     # This is a dictionary of all resolved files.
     __atKnownFiles = None
+
+    # This is a dictionary of key/value pairs to do replacements with.
+    __atGlobalDefines = None
 
     __cPatchDefinitions = None
 
@@ -62,12 +92,15 @@ class HbootImage:
     __MAGIC_COOKIE_NETX56 = 0xf8beaf00
     __MAGIC_COOKIE_NETX4000 = 0xf3beaf00
 
+    __resolver = None
+
     def __init__(self, tEnv, uiNetxType, **kwargs):
         strPatchDefinition = None
         strKeyromFile = None
         astrIncludePaths = []
         astrSnippetSearchPaths = None
         atKnownFiles = {}
+        atGlobalDefines = {}
         fVerbose = False
 
         # Parse the kwargs.
@@ -104,6 +137,9 @@ class HbootImage:
             elif strKey == 'verbose':
                 fVerbose = bool(tValue)
 
+            elif strKey == 'defines':
+                atGlobalDefines = dict(tValue)
+
         self.__fVerbose = fVerbose
 
         # Do not override anything in the pre-calculated header yet.
@@ -117,6 +153,9 @@ class HbootImage:
 
         # Set the known files.
         self.__atKnownFiles = atKnownFiles
+
+        # Set the defines.
+        self.__atGlobalDefines = atGlobalDefines
 
         if self.__fVerbose:
             print '[HBootImage] Configuration: netX type = %s' % str(uiNetxType)
@@ -159,6 +198,8 @@ class HbootImage:
             tFile.close()
             self.__XmlKeyromContents = xml.etree.ElementTree.fromstring(strXml)
 
+        self.__resolver = ResolveDefines()
+
     def __get_tag_id(self, cId0, cId1, cId2, cId3):
         # Combine the 4 ID characters to a 32 bit value.
         ulId = ord(cId0) | (ord(cId1) << 8) | (ord(cId2) << 16) | (ord(cId3) << 24)
@@ -170,6 +211,31 @@ class HbootImage:
             if (tChild.nodeType == tChild.TEXT_NODE) or (tChild.nodeType == tChild.CDATA_SECTION_NODE):
                 astrText.append(str(tChild.data))
         return ''.join(astrText)
+
+    def __parse_re_match(self, strExpression):
+        tAstNode = ast.parse(strExpression, mode='eval')
+        tAstResolved = self.__resolver(tAstNode)
+        tResult = eval(compile(tAstResolved, 'lala', mode='eval'))
+        if tResult is None:
+            raise Exception('Invalid expression: "%s"' % strExpression)
+        return tResult
+
+    def __plaintext_to_xml_with_replace(self, strPlaintext, atReplace, fIsStandalone):
+        # Set all key/value pairs in the local resolver.
+        self.__resolver.setDefines(atReplace)
+
+        # Replace all parameter in the snippet.
+        strText = re.sub('%%([^%]+)%%', self.__parse_re_match, strPlaintext)
+
+        # Parse the text as XML.
+        tResult = None
+        if fIsStandalone is True:
+            tXml = xml.dom.minidom.parseString(strText)
+            tResult = tXml
+        else:
+            tXml = xml.dom.minidom.parseString('<?xml version="1.0" encoding="utf-8"?><Root>%s</Root>' % strText)
+            tResult = tXml.documentElement
+        return tResult
 
     def __preprocess_snip(self, tSnipNode):
         # Get the group, artifact and optional revision.
@@ -207,13 +273,21 @@ class HbootImage:
                     raise Exception('Snippet %s instanciation failed: unknown tag "%s" found!' % (strSnipName, strTag))
 
         # Search the snippet.
-        tSnippet = self.__cSnippetLibrary.find(strGroup, strArtifact, strVersion, atParameter)
-        tSnippetNode = tSnippet[0]
-        if tSnippetNode is None:
+        tSnippetAttr = self.__cSnippetLibrary.find(strGroup, strArtifact, strVersion, atParameter)
+        strSnippetText = tSnippetAttr[0]
+        if strSnippetText is None:
             raise Exception('Snippet not found!')
 
+        # Get the list of key/value pairs for the replacement.
+        atReplace = {}
+        atReplace.update(self.__atGlobalDefines)
+        atReplace.update(tSnippetAttr[1])
+
+        # Replace and convert to XML.
+        tSnippetNode = self.__plaintext_to_xml_with_replace(strSnippetText, atReplace, False)
+
         # Add the snippet file to the dependencies.
-        strSnippetAbsFile = tSnippet[1]
+        strSnippetAbsFile = tSnippetAttr[2]
         if strSnippetAbsFile not in self.__astrDependencies:
             self.__astrDependencies.append(strSnippetAbsFile)
 
@@ -266,12 +340,11 @@ class HbootImage:
         strFileContents = tFile.read()
         tFile.close()
 
-        # Replace all parameters in the file.
-        for strName, strValue in atParameter.iteritems():
-            strFileContents = string.replace(strFileContents, '%%%%%s%%%%' % strName, strValue)
-
-        # Parse the file as XML.
-        tIncludeXml = xml.dom.minidom.parseString('<?xml version="1.0" encoding="utf-8"?><Include>%s</Include>' % strFileContents)
+        # Replace and convert to XML.
+        atReplace = {}
+        atReplace.update(self.__atGlobalDefines)
+        atReplace.update(atParameter)
+        tNewNode = self.__plaintext_to_xml_with_replace(strFileContents, atReplace, False)
 
         # Add the include file to the dependencies.
         if strAbsIncludeName not in self.__astrDependencies:
@@ -281,7 +354,7 @@ class HbootImage:
         tParentNode = tIncludeNode.parentNode
 
         # Replace the "Include" node with the include file contents.
-        for tNode in tIncludeXml.documentElement.childNodes:
+        for tNode in tNewNode.childNodes:
             tClonedNode = tNode.cloneNode(True)
             tParentNode.insertBefore(tClonedNode, tIncludeNode)
 
@@ -1778,21 +1851,17 @@ class HbootImage:
         if self.__cPatchDefinitions is None:
             raise Exception('A patch definition is required for the "parse_image" function, but none was specified!')
 
-        # A string must be the filename of the XML.
-        if isinstance(tInput, basestring):
-            tXml = xml.dom.minidom.parse(tInput)
-            tXmlRootNode = tXml.documentElement
-        elif isinstance(tInput, xml.dom.minidom.Node):
-            tXmlRootNode = tInput
-            # Find the document node.
-            tXml = tXmlRootNode
-            while tXml.parentNode is not None:
-                tXml = tXml.parentNode
-        else:
-            raise Exception('Unknown input document:', tInput)
-
         # Initialize the list of dependencies.
         self.__astrDependencies = []
+
+        # Read the complete input file as plain text.
+        tFile = open(tInput, 'rt')
+        strFileContents = tFile.read()
+        tFile.close()
+
+        # Replace and convert to XML.
+        tXml = self.__plaintext_to_xml_with_replace(strFileContents, self.__atGlobalDefines, True)
+        tXmlRootNode = tXml.documentElement
 
         # Preprocess the image.
         self.__preprocess(tXml)
