@@ -19,7 +19,7 @@ def __hboot_definition_scan(node, env, path):
     astrIncludePaths = None
     if 'HBOOTIMAGE_INCLUDE_PATHS' in env:
         atValues = env['HBOOTIMAGE_INCLUDE_PATHS']
-        if atValues is not None and len(atValues) != 0:
+        if (atValues is not None) and (len(atValues) != 0):
             astrIncludePaths = []
             astrIncludePaths.extend(atValues)
 
@@ -27,6 +27,11 @@ def __hboot_definition_scan(node, env, path):
     if len(env['HBOOTIMAGE_SNIPLIB_SEARCHPATHS']) != 0:
         astrSnippetSearchPaths = []
         astrSnippetSearchPaths.extend(env['HBOOTIMAGE_SNIPLIB_SEARCHPATHS'])
+
+    atDefines = []
+    if 'HBOOTIMAGE_DEFINES' in env:
+        if (atDefines is not None) and (len(atDefines) != 0):
+            atDefines = dict(env['HBOOTIMAGE_DEFINES'])
 
     fVerbose = False
     if 'HBOOTIMAGE_VERBOSE' in env:
@@ -40,13 +45,10 @@ def __hboot_definition_scan(node, env, path):
         includes=astrIncludePaths,
         sniplibs=astrSnippetSearchPaths,
         known_files=atKnownFiles,
+        defines=atDefines,
         verbose=fVerbose
     )
     atDependencies = tCompiler.dependency_scan(strSrcFile)
-
-#    print '%s ->' % strSrcFile
-#    for strDep in atDependencies:
-#        print '    %s' % strDep
 
     return atDependencies
 
@@ -54,7 +56,7 @@ def __hboot_definition_scan(node, env, path):
 def __hboot_image_action(target, source, env):
     atKnownFiles = dict({})
     if 'HBOOTIMAGE_KNOWN_FILES' in env:
-        atKnownFiles = env['HBOOTIMAGE_KNOWN_FILES']
+        atKnownFiles = dict(env['HBOOTIMAGE_KNOWN_FILES'])
 
     strKeyRom = None
     if 'HBOOTIMAGE_KEYROM_XML' in env:
@@ -63,14 +65,20 @@ def __hboot_image_action(target, source, env):
     astrIncludePaths = None
     if 'HBOOTIMAGE_INCLUDE_PATHS' in env:
         atValues = env['HBOOTIMAGE_INCLUDE_PATHS']
-        if atValues is not None and len(atValues) != 0:
+        if (atValues is not None) and (len(atValues) != 0):
             astrIncludePaths = []
             astrIncludePaths.extend(atValues)
+
 
     astrSnippetSearchPaths = None
     if len(env['HBOOTIMAGE_SNIPLIB_SEARCHPATHS']) != 0:
         astrSnippetSearchPaths = []
         astrSnippetSearchPaths.extend(env['HBOOTIMAGE_SNIPLIB_SEARCHPATHS'])
+
+    atDefines = []
+    if 'HBOOTIMAGE_DEFINES' in env:
+        if (atDefines is not None) and (len(atDefines) != 0):
+            atDefines = dict(env['HBOOTIMAGE_DEFINES'])
 
     fVerbose = False
     if 'HBOOTIMAGE_VERBOSE' in env:
@@ -86,6 +94,7 @@ def __hboot_image_action(target, source, env):
         includes=astrIncludePaths,
         sniplibs=astrSnippetSearchPaths,
         known_files=atKnownFiles,
+        defines=atDefines,
         keyrom=strKeyRom,
         verbose=fVerbose
     )
@@ -102,7 +111,7 @@ def __hboot_image_emitter(target, source, env):
             for strId, strPath in atKnownFiles.items():
                 # NOTE: Only add the reference here as a string.
                 # The source scanner will check if this reference is really used.
-                env.Depends(target, SCons.Node.Python.Value('%s:%s' % (strId, strPath)))
+                env.Depends(target, SCons.Node.Python.Value('KNOWN_FILE:%s:%s' % (strId, strPath)))
 
     if 'HBOOTIMAGE_KEYROM_XML' in env:
         tKeyrom = env['HBOOTIMAGE_KEYROM_XML']
@@ -112,12 +121,18 @@ def __hboot_image_emitter(target, source, env):
     if 'HBOOTIMAGE_INCLUDE_PATHS' in env:
         astrIncludePaths = env['HBOOTIMAGE_INCLUDE_PATHS']
         if astrIncludePaths is not None and len(astrIncludePaths) != 0:
-            env.Depends(target, SCons.Node.Python.Value(':'.join(astrIncludePaths)))
+            env.Depends(target, SCons.Node.Python.Value('INCLUDE_PATH:' + ':'.join(astrIncludePaths)))
 
     if 'HBOOTIMAGE_SNIPLIB_SEARCHPATHS' in env:
         astrSnipLibs = env['HBOOTIMAGE_SNIPLIB_SEARCHPATHS']
         if astrSnipLibs is not None and len(astrSnipLibs) != 0:
-            env.Depends(target, SCons.Node.Python.Value(':'.join(astrSnipLibs)))
+            env.Depends(target, SCons.Node.Python.Value('SNIPLIB_SEARCHPATH:' + ':'.join(astrSnipLibs)))
+
+    if 'HBOOTIMAGE_DEFINES' in env:
+        atDefines = env['HBOOTIMAGE_DEFINES']
+        if atDefines is not None:
+            for strKey, tValue in atDefines.items():
+                env.Depends(target, SCons.Node.Python.Value('DEFINE:%s:%s' % (strKey, str(tValue))))
 
     strPatchDefinition = None
     if ('HBOOTIMAGE_PATCH_DEFINITION' in env) and (env['HBOOTIMAGE_PATCH_DEFINITION'] is not None):
@@ -159,6 +174,7 @@ def ApplyToEnv(env):
     env['HBOOTIMAGE_KEYROM_XML'] = None
     env['HBOOTIMAGE_INCLUDE_PATHS'] = None
     env['HBOOTIMAGE_SNIPLIB_SEARCHPATHS'] = ['mbs/sniplib', 'src/sniplib', 'targets/snippets']
+    env['HBOOTIMAGE_DEFINES'] = None
     env['HBOOTIMAGE_VERBOSE'] = False
 
     hboot_image_act = SCons.Action.Action(__hboot_image_action, __hboot_image_string)
