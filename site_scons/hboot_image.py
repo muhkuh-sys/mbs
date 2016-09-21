@@ -28,10 +28,11 @@ def __hboot_definition_scan(node, env, path):
         astrSnippetSearchPaths = []
         astrSnippetSearchPaths.extend(env['HBOOTIMAGE_SNIPLIB_SEARCHPATHS'])
 
-    atDefines = []
+    atDefines = {}
     if 'HBOOTIMAGE_DEFINES' in env:
-        if (atDefines is not None) and (len(atDefines) != 0):
-            atDefines = dict(env['HBOOTIMAGE_DEFINES'])
+        atValues = env['HBOOTIMAGE_DEFINES']
+        if atValues is not None:
+            atDefines = dict(atValues)
 
     fVerbose = False
     if 'HBOOTIMAGE_VERBOSE' in env:
@@ -75,10 +76,11 @@ def __hboot_image_action(target, source, env):
         astrSnippetSearchPaths = []
         astrSnippetSearchPaths.extend(env['HBOOTIMAGE_SNIPLIB_SEARCHPATHS'])
 
-    atDefines = []
+    atDefines = {}
     if 'HBOOTIMAGE_DEFINES' in env:
-        if (atDefines is not None) and (len(atDefines) != 0):
-            atDefines = dict(env['HBOOTIMAGE_DEFINES'])
+        atValues = env['HBOOTIMAGE_DEFINES']
+        if atValues is not None:
+            atDefines = dict(atValues)
 
     fVerbose = False
     if 'HBOOTIMAGE_VERBOSE' in env:
