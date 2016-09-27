@@ -9,6 +9,7 @@ import hboot_image
 tParser = argparse.ArgumentParser(usage='usage: hboot_image [options]')
 tParser.add_argument('-n', '--netx-type',
                      dest='uiNetxType',
+                     type=int,
                      required=True,
                      choices=[56, 4000],
                      metavar='NETX',
@@ -127,8 +128,6 @@ if tArgs.fVerbose:
         for strAlias, strFile in atKnownFiles.iteritems():
             print '\t%s = %s' % (strAlias, strFile)
 
-tCompiler = hboot_image.HbootImage(tEnv, tArgs.uiNetxType, tArgs.strKeyRomPath)
-tCompiler.set_patch_definitions(tArgs.strPatchTablePath)
-tCompiler.set_known_files(atKnownFiles)
+tCompiler = hboot_image.HbootImage(tEnv, tArgs.uiNetxType, patch_definition=tArgs.strPatchTablePath, known_files=atKnownFiles)
 tCompiler.parse_image(tArgs.strInputFile)
 tCompiler.write(tArgs.strOutputFile)
