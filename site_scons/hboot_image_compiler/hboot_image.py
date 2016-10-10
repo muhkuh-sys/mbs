@@ -165,12 +165,24 @@ class HbootImage:
             print '[HBootImage] Configuration: netX type = %s' % str(uiNetxType)
             print '[HBootImage] Configuration: patch definitions = "%s"' % strPatchDefinition
             print '[HBootImage] Configuration: Keyrom = "%s"' % str(strKeyromFile)
-            for strPath in astrSnippetSearchPaths:
-                print '[HBootImage] Configuration: Sniplib at "%s"' % strPath
-            for strPath in astrSnippetSearchPaths:
-                print '[HBootImage] Configuration: Include path "%s"' % strPath
-            for strKey, strPath in atKnownFiles:
-                print '[HBootImage] Configuration: Known file "%s" at "%s".' % (strKey, strPath)
+
+            if len(astrSnippetSearchPaths) == 0:
+                print '[HBootImage] Configuration: No Sniplibs.'
+            else:
+                for strPath in astrSnippetSearchPaths:
+                    print '[HBootImage] Configuration: Sniplib at "%s"' % strPath
+
+            if len(astrIncludePaths) == 0:
+                print '[HBootImage] Configuration: No include paths.'
+            else:
+                for strPath in astrIncludePaths:
+                    print '[HBootImage] Configuration: Include path "%s"' % strPath
+
+            if len(atKnownFiles) == 0:
+                print '[HBootImage] Configuration: No known files.'
+            else:
+                for strKey, strPath in atKnownFiles.iteritems():
+                    print '[HBootImage] Configuration: Known file "%s" at "%s".' % (strKey, strPath)
 
         if strPatchDefinition is not None:
             self.__cPatchDefinitions = patch_definitions.PatchDefinitions()

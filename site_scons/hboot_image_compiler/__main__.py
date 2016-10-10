@@ -101,33 +101,6 @@ tEnv = {'OBJCOPY': tArgs.strObjCopy,
         'READELF': tArgs.strReadElf,
         'HBOOT_INCLUDE': tArgs.astrIncludePaths}
 
-# Show all parameters.
-if tArgs.fVerbose:
-    print 'netX type:   %d' % tArgs.uiNetxType
-    print ''
-    print 'Input file:  %s' % tArgs.strInputFile
-    print 'Output file: %s' % tArgs.strOutputFile
-    print ''
-    print 'Patch table: %s' % tArgs.strPatchTablePath
-    print ''
-    print 'OBJCOPY: %s' % tArgs.strObjCopy
-    print 'OBJDUMP: %s' % tArgs.strObjDump
-    print 'READELF: %s' % tArgs.strReadElf
-
-    if len(tArgs.astrIncludePaths) == 0:
-        print 'No include paths.'
-    else:
-        print 'Include paths:'
-        for strPath in tArgs.astrIncludePaths:
-            print '\t%s' % strPath
-
-    if len(atKnownFiles) == 0:
-        print 'No alias definitions.'
-    else:
-        print 'Alias definitions:'
-        for strAlias, strFile in atKnownFiles.iteritems():
-            print '\t%s = %s' % (strAlias, strFile)
-
-tCompiler = hboot_image.HbootImage(tEnv, tArgs.uiNetxType, patch_definition=tArgs.strPatchTablePath, known_files=atKnownFiles)
+tCompiler = hboot_image.HbootImage(tEnv, tArgs.uiNetxType, patch_definition=tArgs.strPatchTablePath, known_files=atKnownFiles, verbose=tArgs.fVerbose)
 tCompiler.parse_image(tArgs.strInputFile)
 tCompiler.write(tArgs.strOutputFile)
