@@ -34,10 +34,6 @@ class SnippetLibrary:
         # The connection to the database is not open yet.
         self.__tDb = None
 
-        # Set the default search path if nothing was specified.
-        if astrSnippetSearchPaths is None:
-            astrSnippetSearchPaths = ['sniplib']
-
         # Convert all search paths to absolute paths.
         self.__astrSnippetSearchPaths = []
         for strPath in astrSnippetSearchPaths:

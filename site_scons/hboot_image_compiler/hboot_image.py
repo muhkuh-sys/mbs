@@ -140,6 +140,10 @@ class HbootImage:
             elif strKey == 'defines':
                 atGlobalDefines = dict(tValue)
 
+        # Set the default search path if nothing was specified.
+        if astrSnippetSearchPaths is None:
+            astrSnippetSearchPaths = ['sniplib']
+
         self.__fVerbose = fVerbose
 
         # Do not override anything in the pre-calculated header yet.
