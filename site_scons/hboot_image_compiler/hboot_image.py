@@ -533,7 +533,7 @@ class HbootImage:
                     # Set the value.
                     self.__atHeaderOverride[ulIndex] = ulData
                 else:
-                    raise Exception('Unexpected node: %s', tValueNode.localName)
+                    raise Exception('Unexpected node: %s' % tValueNode.localName)
 
     def __append_32bit(self, atData, ulValue):
         atData.append(ulValue & 0xff)
@@ -683,7 +683,7 @@ class HbootImage:
                     strDataHex = self.__remove_all_whitespace(strDataHex)
                     strData = binascii.unhexlify(strDataHex)
                 else:
-                    raise Exception('Unexpected node: %s', tNode.localName)
+                    raise Exception('Unexpected node: %s' % tNode.localName)
 
         # Check if all parameters are there.
         if strData is None:
@@ -781,7 +781,7 @@ class HbootImage:
                 elif tNode.localName == 'R3':
                     ulR3 = self.__parse_numeric_expression(self.__xml_get_all_text(tNode))
                 else:
-                    raise Exception('Unexpected node: %s', tNode.localName)
+                    raise Exception('Unexpected node: %s' % tNode.localName)
 
         if pfnExecFunction is None:
             raise Exception('No execution address specified!')
@@ -860,7 +860,7 @@ class HbootImage:
                     self.__get_execute_data(tCoreNode, __atCore1)
 
                 else:
-                    raise Exception('Unexpected node: %s', tCoreNode.localName)
+                    raise Exception('Unexpected node: %s' % tCoreNode.localName)
 
         if (__atCore0['pfnExecFunction'] == 0) and (__atCore1['pfnExecFunction'] == 0):
             raise Exception('No core is started with the ExecuteCA9 chunk!')
@@ -1174,7 +1174,7 @@ class HbootImage:
                     atValues.extend(array.array('B', aucData))
 
                 else:
-                    raise Exception('Unexpected node: %s', tNode.localName)
+                    raise Exception('Unexpected node: %s' % tNode.localName)
 
         if len(atValues) > 255:
             raise Exception('The new register values are too long!')
@@ -1211,7 +1211,7 @@ class HbootImage:
                     strData = binascii.unhexlify(self.__remove_all_whitespace(strData))
                     atValues.extend(array.array('B', strData))
                 else:
-                    raise Exception('Unexpected node: %s', tNode.localName)
+                    raise Exception('Unexpected node: %s' % tNode.localName)
 
         atData['data'] = atValues
 
@@ -1285,7 +1285,7 @@ class HbootImage:
                 elif tNode.localName == 'UserContent':
                     self.__root_cert_parse_user_content(tNode, __atRootCert['UserContent'])
                 else:
-                    raise Exception('Unexpected node: %s', tNode.localName)
+                    raise Exception('Unexpected node: %s' % tNode.localName)
 
         # Check if all required data was set.
         astrErr = []
@@ -1450,7 +1450,7 @@ class HbootImage:
                 elif tNode.localName == 'UserContent':
                     self.__root_cert_parse_user_content(tNode, __atCert['UserContent'])
                 else:
-                    raise Exception('Unexpected node: %s', tNode.localName)
+                    raise Exception('Unexpected node: %s' % tNode.localName)
 
         # Check if all required data was set.
         astrErr = []
@@ -1576,7 +1576,7 @@ class HbootImage:
                 elif tNode.localName == 'UserContent':
                     self.__root_cert_parse_user_content(tNode, __atCert['UserContent'])
                 else:
-                    raise Exception('Unexpected node: %s', tNode.localName)
+                    raise Exception('Unexpected node: %s' % tNode.localName)
 
         # Check if all required data was set.
         astrErr = []
@@ -1730,7 +1730,7 @@ class HbootImage:
                 elif tNode.localName == 'UserContent':
                     self.__root_cert_parse_user_content(tNode, __atCert['UserContent'])
                 else:
-                    raise Exception('Unexpected node: %s', tNode.localName)
+                    raise Exception('Unexpected node: %s' % tNode.localName)
 
         # Check if all required data was set.
         astrErr = []
@@ -2000,7 +2000,9 @@ class HbootImage:
                                 atChunk = self.__build_chunk_memory_device_up(tChunkNode)
                                 self.__atChunks.extend(atChunk)
                             else:
-                                raise Exception('Unknown chunk ID: %s', tChunkNode.localName)
+                                raise Exception('Unknown chunk ID: %s' % tChunkNode.localName)
+                else:
+                    raise Exception('Unknown element: %s' % tImageNode.localName)
 
     def __crc7(self, strData):
         ucCrc = 0
