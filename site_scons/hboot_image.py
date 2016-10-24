@@ -14,7 +14,9 @@ def __hboot_definition_scan(node, env, path):
 
     atKnownFiles = {}
     if 'HBOOTIMAGE_KNOWN_FILES' in env:
-        atKnownFiles = env['HBOOTIMAGE_KNOWN_FILES']
+        atK = env['HBOOTIMAGE_KNOWN_FILES']
+        if atK is not None:
+            atKnownFiles = dict(atK)
 
     astrIncludePaths = None
     if 'HBOOTIMAGE_INCLUDE_PATHS' in env:
@@ -55,9 +57,11 @@ def __hboot_definition_scan(node, env, path):
 
 
 def __hboot_image_action(target, source, env):
-    atKnownFiles = dict({})
+    atKnownFiles = {}
     if 'HBOOTIMAGE_KNOWN_FILES' in env:
-        atKnownFiles = dict(env['HBOOTIMAGE_KNOWN_FILES'])
+        atK = env['HBOOTIMAGE_KNOWN_FILES']
+        if atK is not None:
+            atKnownFiles = dict(atK)
 
     strKeyRom = None
     if 'HBOOTIMAGE_KEYROM_XML' in env:
