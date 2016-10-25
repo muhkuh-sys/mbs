@@ -34,7 +34,6 @@ def hboot_snippet_action(target, source, env):
     tNodeInfo.setAttribute('group', str(atParameter['group']))
     tNodeInfo.setAttribute('artifact', str(atParameter['artifact']))
     tNodeInfo.setAttribute('version', str(atParameter['version']))
-    tNodeInfo.setAttribute('vcs-id', str(atParameter['vcs-id']))
     tNodeRoot.appendChild(tNodeInfo)
 
     # Create the "License" node.
@@ -47,6 +46,12 @@ def hboot_snippet_action(target, source, env):
     tNodeAuthor.setAttribute('name', str(atParameter['author_name']))
     tNodeAuthor.setAttribute('url', str(atParameter['author_url']))
     tNodeInfo.appendChild(tNodeAuthor)
+
+    # Create the "VCS" node.
+    tNodeScmUrl = tXml.createElement('VCS')
+    tNodeScmUrl.setAttribute('url', str(atParameter['vcs_url']))
+    tNodeScmUrl.setAttribute('id', str(atParameter['vcs_id']))
+    tNodeInfo.appendChild(tNodeScmUrl)
 
     # Create the "Description" node.
     tNodeDescription = tXml.createElement('Description')
