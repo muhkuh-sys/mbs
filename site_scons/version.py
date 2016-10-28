@@ -197,10 +197,8 @@ def get_project_version_vcs_url(env):
 
 
 def version_action(target, source, env):
-    global PROJECT_VERSION
-
     # Split up the project version.
-    version_info = PROJECT_VERSION.split('.')
+    version_info = SCons.Script.PROJECT_VERSION.split('.')
 
     # Apply the project version to the environment.
     aSubst = dict({
@@ -208,7 +206,7 @@ def version_action(target, source, env):
         'PROJECT_VERSION_MINOR': version_info[1],
         'PROJECT_VERSION_MICRO': version_info[2],
         'PROJECT_VERSION_VCS': env['PROJECT_VERSION_VCS'],
-        'PROJECT_VERSION': PROJECT_VERSION,
+        'PROJECT_VERSION': SCons.Script.PROJECT_VERSION,
         'PROJECT_VERSION_VCS_SYSTEM': env['PROJECT_VERSION_VCS_SYSTEM'],
         'PROJECT_VERSION_VCS_VERSION': env['PROJECT_VERSION_VCS_VERSION'],
     })
@@ -232,12 +230,10 @@ def version_action(target, source, env):
 
 
 def version_emitter(target, source, env):
-    global PROJECT_VERSION
-
     build_version_strings(env)
 
     # Make the target depend on the project version and the VCS ID.
-    env.Depends(target, SCons.Node.Python.Value(PROJECT_VERSION))
+    env.Depends(target, SCons.Node.Python.Value(SCons.Script.PROJECT_VERSION))
     env.Depends(target, SCons.Node.Python.Value(env['PROJECT_VERSION_VCS']))
     env.Depends(target, SCons.Node.Python.Value(env['PROJECT_VERSION_VCS_LONG']))
     env.Depends(target, SCons.Node.Python.Value(env['PROJECT_VERSION_LAST_COMMIT']))
