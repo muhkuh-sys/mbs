@@ -2,10 +2,11 @@
 
 
 import codecs
-import os
 import string
 
-from SCons.Script import *
+import SCons.Action
+import SCons.Script
+import SCons.Node.Python
 
 
 def pom_template_action(target, source, env):
@@ -34,11 +35,11 @@ def pom_template_action(target, source, env):
 
 def pom_template_emitter(target, source, env):
     # Make the target depend on the POM fields.
-    Depends(target, SCons.Node.Python.Value(PROJECT_VERSION))
-    Depends(target, SCons.Node.Python.Value(env['POM_TEMPLATE_GROUP']))
-    Depends(target, SCons.Node.Python.Value(env['POM_TEMPLATE_ARTIFACT']))
-    Depends(target, SCons.Node.Python.Value(env['POM_TEMPLATE_VERSION']))
-    Depends(target, SCons.Node.Python.Value(env['POM_TEMPLATE_PACKAGING']))
+    env.Depends(target, SCons.Node.Python.Value(SCons.Script.PROJECT_VERSION))
+    env.Depends(target, SCons.Node.Python.Value(env['POM_TEMPLATE_GROUP']))
+    env.Depends(target, SCons.Node.Python.Value(env['POM_TEMPLATE_ARTIFACT']))
+    env.Depends(target, SCons.Node.Python.Value(env['POM_TEMPLATE_VERSION']))
+    env.Depends(target, SCons.Node.Python.Value(env['POM_TEMPLATE_PACKAGING']))
 
     return target, source
 
@@ -57,5 +58,5 @@ def ApplyToEnv(env):
     env['POM_TEMPLATE_VERSION'] = ''
     env['POM_TEMPLATE_PACKAGING'] = ''
     pom_template_act = SCons.Action.Action(pom_template_action, pom_template_string)
-    pom_template_bld = Builder(action=pom_template_act, emitter=pom_template_emitter, single_source=1)
+    pom_template_bld = SCons.Script.Builder(action=pom_template_act, emitter=pom_template_emitter, single_source=1)
     env['BUILDERS']['POMTemplate'] = pom_template_bld
