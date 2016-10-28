@@ -12,46 +12,47 @@ def __hboot_definition_scan(node, env, path):
     # This is the list of dependencies.
     atDependencies = []
 
-    atKnownFiles = {}
-    if 'HBOOTIMAGE_KNOWN_FILES' in env:
-        atK = env['HBOOTIMAGE_KNOWN_FILES']
-        if atK is not None:
-            atKnownFiles = dict(atK)
+    if node.exists()==True:
+        atKnownFiles = {}
+        if 'HBOOTIMAGE_KNOWN_FILES' in env:
+            atK = env['HBOOTIMAGE_KNOWN_FILES']
+            if atK is not None:
+                atKnownFiles = dict(atK)
 
-    astrIncludePaths = None
-    if 'HBOOTIMAGE_INCLUDE_PATHS' in env:
-        atValues = env['HBOOTIMAGE_INCLUDE_PATHS']
-        if (atValues is not None) and (len(atValues) != 0):
-            astrIncludePaths = []
-            astrIncludePaths.extend(atValues)
+        astrIncludePaths = None
+        if 'HBOOTIMAGE_INCLUDE_PATHS' in env:
+            atValues = env['HBOOTIMAGE_INCLUDE_PATHS']
+            if (atValues is not None) and (len(atValues) != 0):
+                astrIncludePaths = []
+                astrIncludePaths.extend(atValues)
 
-    astrSnippetSearchPaths = None
-    if len(env['HBOOTIMAGE_SNIPLIB_SEARCHPATHS']) != 0:
-        astrSnippetSearchPaths = []
-        astrSnippetSearchPaths.extend(env['HBOOTIMAGE_SNIPLIB_SEARCHPATHS'])
+        astrSnippetSearchPaths = None
+        if len(env['HBOOTIMAGE_SNIPLIB_SEARCHPATHS']) != 0:
+            astrSnippetSearchPaths = []
+            astrSnippetSearchPaths.extend(env['HBOOTIMAGE_SNIPLIB_SEARCHPATHS'])
 
-    atDefines = {}
-    if 'HBOOTIMAGE_DEFINES' in env:
-        atValues = env['HBOOTIMAGE_DEFINES']
-        if atValues is not None:
-            atDefines = dict(atValues)
+        atDefines = {}
+        if 'HBOOTIMAGE_DEFINES' in env:
+            atValues = env['HBOOTIMAGE_DEFINES']
+            if atValues is not None:
+                atDefines = dict(atValues)
 
-    fVerbose = False
-    if 'HBOOTIMAGE_VERBOSE' in env:
-        fVerbose = bool(env['HBOOTIMAGE_VERBOSE'])
+        fVerbose = False
+        if 'HBOOTIMAGE_VERBOSE' in env:
+            fVerbose = bool(env['HBOOTIMAGE_VERBOSE'])
 
-    iChipTyp = env['BOOTBLOCK_CHIPTYPE']
-    strSrcFile = node.get_path()
-    tCompiler = hboot_image_compiler.hboot_image.HbootImage(
-        env,
-        iChipTyp,
-        includes=astrIncludePaths,
-        sniplibs=astrSnippetSearchPaths,
-        known_files=atKnownFiles,
-        defines=atDefines,
-        verbose=fVerbose
-    )
-    atDependencies = tCompiler.dependency_scan(strSrcFile)
+        iChipTyp = env['BOOTBLOCK_CHIPTYPE']
+        strSrcFile = node.get_path()
+        tCompiler = hboot_image_compiler.hboot_image.HbootImage(
+            env,
+            iChipTyp,
+            includes=astrIncludePaths,
+            sniplibs=astrSnippetSearchPaths,
+            known_files=atKnownFiles,
+            defines=atDefines,
+            verbose=fVerbose
+        )
+        atDependencies = tCompiler.dependency_scan(strSrcFile)
 
     return atDependencies
 
