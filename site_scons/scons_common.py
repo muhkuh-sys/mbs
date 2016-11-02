@@ -127,41 +127,45 @@ def get_tool(env, strToolName):
 
 
 
-def CreateEnvironment(env=None, astrToolPatterns=None):
+def CreateEnvironment(env, astrToolPatterns=None):
 	# Create the new environment.
-	env = Environment()
-	env.Decider('MD5')
+	tEnvNew = Environment()
+	tEnvNew.Decider('MD5')
 
 	if not astrToolPatterns is None:
 		for strToolPattern in astrToolPatterns:
 			strId = find_first_tool(strToolPattern)
 			if strId is None:
 				raise Exception('Nothing found searching for a tool matching the pattern "%s".' % strToolPattern)
-			add_tool_to_environment(env, strId)
+			add_tool_to_environment(tEnvNew, strId)
 
-	archive.ApplyToEnv(env)
-	artifact.ApplyToEnv(env)
-	artifact_version.ApplyToEnv(env)
-	bootblock.ApplyToEnv(env)
-	build_properties.ApplyToEnv(env)
-	data_array.ApplyToEnv(env)
-	diff.ApplyToEnv(env)
-	flex_zip.ApplyToEnv(env)
-	gcc_symbol_template.ApplyToEnv(env)
-	gen_random_seq.ApplyToEnv(env)
-	hash.ApplyToEnv(env)
-	hboot_image.ApplyToEnv(env)
-	hboot_snippet.ApplyToEnv(env)
-	hexdump.ApplyToEnv(env)
-	objimport.ApplyToEnv(env)
-	pom_template.ApplyToEnv(env)
-	ApplyToEnv(env)
-	svnversion.ApplyToEnv(env)
-	uuencode.ApplyToEnv(env)
-	version.ApplyToEnv(env)
-	xsl_transform.ApplyToEnv(env)
+	archive.ApplyToEnv(tEnvNew)
+	artifact.ApplyToEnv(tEnvNew)
+	artifact_version.ApplyToEnv(tEnvNew)
+	bootblock.ApplyToEnv(tEnvNew)
+	build_properties.ApplyToEnv(tEnvNew)
+	data_array.ApplyToEnv(tEnvNew)
+	diff.ApplyToEnv(tEnvNew)
+	flex_zip.ApplyToEnv(tEnvNew)
+	gcc_symbol_template.ApplyToEnv(tEnvNew)
+	gen_random_seq.ApplyToEnv(tEnvNew)
+	hash.ApplyToEnv(tEnvNew)
+	hboot_image.ApplyToEnv(tEnvNew)
+	hboot_snippet.ApplyToEnv(tEnvNew)
+	hexdump.ApplyToEnv(tEnvNew)
+	objimport.ApplyToEnv(tEnvNew)
+	pom_template.ApplyToEnv(tEnvNew)
+	ApplyToEnv(tEnvNew)
+	svnversion.ApplyToEnv(tEnvNew)
+	uuencode.ApplyToEnv(tEnvNew)
+	version.ApplyToEnv(tEnvNew)
+	xsl_transform.ApplyToEnv(tEnvNew)
 
-	return env
+	# Add the reference to the list of environments.
+	if env is not None:
+		tEnvNew.Replace(MBS_ENVIRONMENT_LIST = env['MBS_ENVIRONMENT_LIST'])
+
+	return tEnvNew
 
 
 
@@ -218,6 +222,9 @@ def create_compiler_environment(env, strAsicTyp, aAttributesCommon, aAttributesL
 	env_new.Replace(LIBPATH = [strGccLibPath, strNewlibPath])
 	env_new.Append(CPPDEFINES = [['ASIC_TYP', 'ASIC_TYP_%s' % strAsicTyp]])
 	env_new.Replace(ASIC_TYP = '%s' % strAsicTyp)
+
+	# Add the new environment to the list.
+	setattr(env['MBS_ENVIRONMENT_LIST'], strAsicTyp, env_new)
 
 	return env_new
 

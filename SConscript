@@ -108,9 +108,19 @@ if not strAsciidocVersion is None:
 
 #----------------------------------------------------------------------------
 #
-# Create the default environment.
+# Create the list of environments.
+#
+class EnvironmentList:
+	pass
+
+atEnv = EnvironmentList()
+Export('atEnv')
+
+
+#----------------------------------------------------------------------------
+#
+# Create the default environment and append it to the list.
 #
 env_default = scons_common.CreateEnvironment(env=None, astrToolPatterns=astrTools)
-
-Export('env_default')
-
+env_default.Replace(MBS_ENVIRONMENT_LIST = atEnv)
+setattr(atEnv, 'DEFAULT', env_default)
