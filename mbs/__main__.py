@@ -32,6 +32,7 @@ if sys.hexversion<iMinimumInterpreterVersion_hex:
 import os
 import subprocess
 
+import clean_orphaned_pyc
 import configuration
 import filter
 import install
@@ -67,6 +68,10 @@ for aTool in aCfg['tools']:
 
 # Filter the files.
 filter.apply(aCfg)
+
+
+# Clean all orphaned ".pyc" files in the project. Be verbose and really delete the files.
+clean_orphaned_pyc.cleanup(os.getcwd(), True, False)
 
 
 # Run Scons (use aCfg['scons'] to get the path. All archives *must* create a folder with the name
