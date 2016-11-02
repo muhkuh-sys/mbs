@@ -41,11 +41,11 @@ def __hboot_definition_scan(node, env, path):
         if 'HBOOTIMAGE_VERBOSE' in env:
             fVerbose = bool(env['HBOOTIMAGE_VERBOSE'])
 
-        strChipTyp = env['BOOTBLOCK_CHIPTYPE']
+        strAsicTyp = env['ASIC_TYP']
         strSrcFile = node.get_path()
         tCompiler = hboot_image_compiler.hboot_image.HbootImage(
             env,
-            strChipTyp,
+            strAsicTyp,
             includes=astrIncludePaths,
             sniplibs=astrSnippetSearchPaths,
             known_files=atKnownFiles,
@@ -93,10 +93,10 @@ def __hboot_image_action(target, source, env):
 
     strPatchDefinition = env['HBOOTIMAGE_PATCH_DEFINITION']
 
-    strChipTyp = env['BOOTBLOCK_CHIPTYPE']
+    strAsicTyp = env['ASIC_TYP']
     tCompiler = hboot_image_compiler.hboot_image.HbootImage(
         env,
-        strChipTyp,
+        strAsicTyp,
         patch_definition=strPatchDefinition,
         includes=astrIncludePaths,
         sniplibs=astrSnippetSearchPaths,
@@ -147,15 +147,15 @@ def __hboot_image_emitter(target, source, env):
     else:
         # Get the chip type.
         strRelPatchDefinition = None
-        strChipTyp = env['BOOTBLOCK_CHIPTYPE']
-        if strChipTyp == '4000_RELAXED':
+        strAsicTyp = env['ASIC_TYP']
+        if strAsicTyp == 'NETX4000_RELAXED':
             strRelPatchDefinition = 'hboot_netx4000_relaxed_patch_table.xml'
-        elif strChipTyp == '90_MPW':
+        elif strAsicTyp == 'NETX90_MPW':
             strRelPatchDefinition = 'hboot_netx90_mpw_patch_table.xml'
-        elif strChipTyp == '56':
+        elif strAsicTyp == 'NETX56':
             strRelPatchDefinition = 'hboot_netx56_patch_table.xml'
         else:
-            raise Exception('Invalid chip type: "%s"' % iChipTyp)
+            raise Exception('Invalid ASIC typ: "%s"' % strAsicTyp)
 
         strPatchDefinition = os.path.join(os.path.dirname(os.path.abspath(__file__)), strRelPatchDefinition)
         env['HBOOTIMAGE_PATCH_DEFINITION'] = strPatchDefinition

@@ -122,17 +122,19 @@ def bootblock_action(target, source, env):
 	strSourceFileName = source[0].get_path()
 	
 	# Get the chiptyp info.
-	iChipTyp = env['BOOTBLOCK_CHIPTYPE']
-	if iChipTyp==500:
+	strAsicTyp = env['ASIC_TYP']
+	if strAsicTyp == 'NETX500':
 		strChipTyp = 'netx 500'
-	elif iChipTyp==56:
+	elif strAsicTyp == 'NETX56':
 		strChipTyp = 'netx 56'
-	elif iChipTyp==50:
+	elif strAsicTyp == 'NETX50':
 		strChipTyp = 'netx 50'
-	elif iChipTyp==10:
+	elif strAsicTyp == 'NETX10':
 		strChipTyp = 'netx 10'
+	elif strAsicTyp == 'NETX4000_RELAXED' or strAsicTyp == 'NETX90_MPW':
+		raise Exception('The ASIC typ "%s" does not support ABOOT images.' % strAsicTyp)
 	else:
-		raise Exception('Invalid chip type: "%s"'%iChipTyp)
+		raise Exception('Invalid ASIC typ: "%s"' % strAsicTyp)
 	
 	# If this is an ELF file it should end with ".elf".
 	strDummy,strExt = os.path.splitext(strSourceFileName)
@@ -279,7 +281,7 @@ def bootblock_action(target, source, env):
 def bootblock_emitter(target, source, env):
 	# Make the target depend on the xml file and the parameter.
 	Depends(target, env['BOOTBLOCK_XML'])
-	Depends(target, SCons.Node.Python.Value(env['BOOTBLOCK_CHIPTYPE']))
+	Depends(target, SCons.Node.Python.Value(env['ASIC_TYP']))
 	Depends(target, SCons.Node.Python.Value(env['BOOTBLOCK_SRC']))
 	Depends(target, SCons.Node.Python.Value(env['BOOTBLOCK_DST']))
 	Depends(target, SCons.Node.Python.Value(env['BOOTBLOCK_USERDATA']))
@@ -301,7 +303,6 @@ def ApplyToEnv(env):
 	# Add bootblock builder.
 	#
 	env['BOOTBLOCK_XML'] = os.path.join( os.path.dirname(os.path.realpath(__file__)), 'netx.xml')
-	env['BOOTBLOCK_CHIPTYPE'] = 'not selected'
 	env['BOOTBLOCK_SRC'] = ''
 	env['BOOTBLOCK_DST'] = ''
 	env['BOOTBLOCK_USERDATA'] = 0

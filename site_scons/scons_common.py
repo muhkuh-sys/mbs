@@ -216,7 +216,8 @@ def create_compiler_environment(env, strAsicTyp, aAttributesCommon, aAttributesL
 	env_new = env.Clone()
 	env_new.Append(CCFLAGS = aOptAttributesLinker)
 	env_new.Replace(LIBPATH = [strGccLibPath, strNewlibPath])
-	env_new.Append(CPPDEFINES = [['ASIC_TYP', '%s'%strAsicTyp]])
+	env_new.Append(CPPDEFINES = [['ASIC_TYP', 'ASIC_TYP_%s' % strAsicTyp]])
+	env_new.Replace(ASIC_TYP = '%s' % strAsicTyp)
 
 	return env_new
 
