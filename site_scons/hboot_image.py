@@ -41,11 +41,11 @@ def __hboot_definition_scan(node, env, path):
         if 'HBOOTIMAGE_VERBOSE' in env:
             fVerbose = bool(env['HBOOTIMAGE_VERBOSE'])
 
-        iChipTyp = env['BOOTBLOCK_CHIPTYPE']
+        strChipTyp = env['BOOTBLOCK_CHIPTYPE']
         strSrcFile = node.get_path()
         tCompiler = hboot_image_compiler.hboot_image.HbootImage(
             env,
-            iChipTyp,
+            strChipTyp,
             includes=astrIncludePaths,
             sniplibs=astrSnippetSearchPaths,
             known_files=atKnownFiles,
@@ -93,10 +93,10 @@ def __hboot_image_action(target, source, env):
 
     strPatchDefinition = env['HBOOTIMAGE_PATCH_DEFINITION']
 
-    iChipTyp = env['BOOTBLOCK_CHIPTYPE']
+    strChipTyp = env['BOOTBLOCK_CHIPTYPE']
     tCompiler = hboot_image_compiler.hboot_image.HbootImage(
         env,
-        iChipTyp,
+        strChipTyp,
         patch_definition=strPatchDefinition,
         includes=astrIncludePaths,
         sniplibs=astrSnippetSearchPaths,
@@ -147,10 +147,10 @@ def __hboot_image_emitter(target, source, env):
     else:
         # Get the chip type.
         strRelPatchDefinition = None
-        iChipTyp = env['BOOTBLOCK_CHIPTYPE']
-        if iChipTyp == 4000:
+        strChipTyp = env['BOOTBLOCK_CHIPTYPE']
+        if strChipTyp == '4000_RELAXED':
             strRelPatchDefinition = 'hboot_netx4000_patch_table.xml'
-        elif iChipTyp == 56:
+        elif strChipTyp == '56':
             strRelPatchDefinition = 'hboot_netx56_patch_table.xml'
         else:
             raise Exception('Invalid chip type: "%s"' % iChipTyp)

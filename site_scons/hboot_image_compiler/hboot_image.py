@@ -74,7 +74,7 @@ class HbootImage:
 
     __astrDependencies = None
 
-    __uiNetxType = None
+    __strNetxType = None
     __tImageType = None
     __astrToImageType = None
     __IMAGE_TYPE_REGULAR = 0
@@ -94,7 +94,7 @@ class HbootImage:
 
     __resolver = None
 
-    def __init__(self, tEnv, uiNetxType, **kwargs):
+    def __init__(self, tEnv, strNetxType, **kwargs):
         strPatchDefinition = None
         strKeyromFile = None
         astrIncludePaths = []
@@ -162,7 +162,7 @@ class HbootImage:
         self.__atGlobalDefines = atGlobalDefines
 
         if self.__fVerbose:
-            print '[HBootImage] Configuration: netX type = %s' % str(uiNetxType)
+            print '[HBootImage] Configuration: netX type = %s' % strNetxType
             print '[HBootImage] Configuration: patch definitions = "%s"' % strPatchDefinition
             print '[HBootImage] Configuration: Keyrom = "%s"' % str(strKeyromFile)
 
@@ -190,7 +190,7 @@ class HbootImage:
 
         self.__cSnippetLibrary = snippet_library.SnippetLibrary('.sniplib.dblite', astrSnippetSearchPaths, debug=self.__fVerbose)
 
-        self.__uiNetxType = uiNetxType
+        self.__strNetxType = strNetxType
         self.__tImageType = None
         self.__sizHashDw = None
 
@@ -401,9 +401,9 @@ class HbootImage:
     def __build_standard_header(self, atChunks):
 
         ulMagicCookie = None
-        if self.__uiNetxType == 56:
+        if self.__strNetxType == '56':
             ulMagicCookie = self.__MAGIC_COOKIE_NETX56
-        elif self.__uiNetxType == 4000:
+        elif self.__strNetxType == '4000_RELAXED':
             ulMagicCookie = self.__MAGIC_COOKIE_NETX4000
         else:
             raise Exception('Missing platform configuration: no standard header configured, please update the HBOOT image compiler.')
@@ -566,7 +566,7 @@ class HbootImage:
             atChunk = array.array('B')
             atChunk.fromstring(strData)
         else:
-            if self.__uiNetxType == 56:
+            if self.__strNetxType == '56':
                 # Pad the option chunk plus a CRC16 to 32 bit size.
                 strPadding = chr(0x00) * ((4 - ((len(strData) + 2) % 4)) & 3)
                 strChunk = strData + strPadding
@@ -584,7 +584,7 @@ class HbootImage:
                 atChunk.append(len(aulData))
                 atChunk.extend(aulData)
 
-            elif self.__uiNetxType == 4000:
+            elif self.__strNetxType == '4000_RELAXED':
                 # Pad the option chunk to 32 bit size.
                 strPadding = chr(0x00) * ((4 - (len(strData) % 4)) & 3)
                 strChunk = strData + strPadding
@@ -1945,7 +1945,7 @@ class HbootImage:
                                 # Found an execute node.
                                 if self.__tImageType == self.__IMAGE_TYPE_SECMEM:
                                     raise Exception('ExecuteCA9 chunks are not allowed in SECMEM images.')
-                                if self.__uiNetxType == 56:
+                                if self.__strNetxType == '56':
                                     raise Exception('ExecuteCA9 chunks are not allowed on netx56.')
                                 atChunk = self.__build_chunk_execute_ca9(tChunkNode)
                                 self.__atChunks.extend(atChunk)
@@ -1965,7 +1965,7 @@ class HbootImage:
                                 # Found a root certificate node.
                                 if self.__tImageType == self.__IMAGE_TYPE_SECMEM:
                                     raise Exception('RootCert chunks are not allowed in SECMEM images.')
-                                if self.__uiNetxType == 56:
+                                if self.__strNetxType == '56':
                                     raise Exception('RootCert chunks are not allowed on netx56.')
                                 atChunk = self.__build_chunk_root_cert(tChunkNode)
                                 self.__atChunks.extend(atChunk)
@@ -1973,7 +1973,7 @@ class HbootImage:
                                 # Found a license certificate node.
                                 if self.__tImageType == self.__IMAGE_TYPE_SECMEM:
                                     raise Exception('LicenseCert chunks are not allowed in SECMEM images.')
-                                if self.__uiNetxType == 56:
+                                if self.__strNetxType == '56':
                                     raise Exception('LicenseCert chunks are not allowed on netx56.')
                                 atChunk = self.__build_chunk_license_cert(tChunkNode)
                                 self.__atChunks.extend(atChunk)
@@ -1981,7 +1981,7 @@ class HbootImage:
                                 # Found a CR7 software node.
                                 if self.__tImageType == self.__IMAGE_TYPE_SECMEM:
                                     raise Exception('CR7Software chunks are not allowed in SECMEM images.')
-                                if self.__uiNetxType == 56:
+                                if self.__strNetxType == '56':
                                     raise Exception('CR7Software chunks are not allowed on netx56.')
                                 atChunk = self.__build_chunk_cr7sw(tChunkNode)
                                 self.__atChunks.extend(atChunk)
@@ -1989,7 +1989,7 @@ class HbootImage:
                                 # Found a CA9 software node.
                                 if self.__tImageType == self.__IMAGE_TYPE_SECMEM:
                                     raise Exception('CA9Software chunks are not allowed in SECMEM images.')
-                                if self.__uiNetxType == 56:
+                                if self.__strNetxType == '56':
                                     raise Exception('CA9Software chunks are not allowed on netx56.')
                                 atChunk = self.__build_chunk_ca9sw(tChunkNode)
                                 self.__atChunks.extend(atChunk)
