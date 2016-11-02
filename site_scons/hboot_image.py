@@ -149,7 +149,9 @@ def __hboot_image_emitter(target, source, env):
         strRelPatchDefinition = None
         strChipTyp = env['BOOTBLOCK_CHIPTYPE']
         if strChipTyp == '4000_RELAXED':
-            strRelPatchDefinition = 'hboot_netx4000_patch_table.xml'
+            strRelPatchDefinition = 'hboot_netx4000_relaxed_patch_table.xml'
+        elif strChipTyp == '90_MPW':
+            strRelPatchDefinition = 'hboot_netx90_mpw_patch_table.xml'
         elif strChipTyp == '56':
             strRelPatchDefinition = 'hboot_netx56_patch_table.xml'
         else:
