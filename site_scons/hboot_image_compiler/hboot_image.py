@@ -474,11 +474,7 @@ class HbootImage:
         if strFilePath[0] == '@':
             strFileId = strFilePath[1:]
             if strFileId in self.__atKnownFiles:
-                tFile = self.__atKnownFiles[strFileId]
-                if isinstance(tFile, basestring):
-                    strAbsFilePath = tFile
-                else:
-                    strAbsFilePath = tFile.get_path()
+                strAbsFilePath = self.__atKnownFiles[strFileId]
         else:
             # Try the current working directory first.
             if os.access(strFilePath, os.R_OK) == True:
