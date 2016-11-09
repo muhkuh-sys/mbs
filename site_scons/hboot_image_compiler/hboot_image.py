@@ -761,7 +761,7 @@ class HbootImage:
 
         aulChunk = array.array('I')
         aulChunk.append(self.__get_tag_id('T', 'E', 'X', 'T'))
-        aulChunk.append(len(aulData) + 1 + self.__sizHashDw)
+        aulChunk.append(len(aulData) + self.__sizHashDw)
         aulChunk.extend(aulData)
 
         # Get the hash for the chunk.
