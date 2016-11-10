@@ -723,6 +723,55 @@ class HbootImage:
 
         return aulChunk
 
+    def __build_chunk_xip(self, tChunkNode):
+        # Get the data block.
+        atData = {}
+        self.__get_data_contents(tChunkNode, atData)
+        strData = atData['data']
+        pulLoadAddress = atData['load_address']
+
+        # Get the current offset in bytes.
+        ulOffsetCurrent = 64 + (len(self.__atChunks) * 4)
+
+        # Get the start of the XIP area on the current platform.
+        if self.__strNetxType == 'NETX56':
+            raise Exception('Continue here!')
+	elif self.__strNetxType == 'NETX4000_RELAXED':
+            raise Exception('Continue here!')
+        elif self.__strNetxType == 'NETX90_MPW':
+            pulXipAreaStart = 0x64000000
+            pulXipAreaEnd = 0x68000000
+            if (pulLoadAddress < pulXipAreaStart) or (pulLoadAddress >= pulXipAreaEnd):
+                raise Exception('The load address 0x%08x of the XIP block is outside the available XIP regions of the platform.' % pulLoadAddress)
+            # Get the requested offset of the data in the XIP area. This is the requested offset.
+            ulOffsetRequested = pulLoadAddress - pulXipAreaStart
+            # The requested offset must be the current offset + 8 (4 for the ID and 4 for the length).
+            ulOffsetCurrentData = ulOffsetCurrent + 8
+            if ulOffsetRequested != ulOffsetCurrentData:
+                raise Exception('The current offset 0x%08x does not match the requested offset 0x%08x of the XIP data.' % (ulOffsetCurrentData, ulOffsetRequested))
+
+        # The load address must be exactly the address where the code starts.
+        # Pad the application size to a multiple of DWORDs.
+        strPadding = chr(0x00) * ((4 - (len(strData) % 4)) & 3)
+        strChunk = strData + strPadding
+
+        # Convert the padded data to an array.
+        aulData = array.array('I')
+        aulData.fromstring(strChunk)
+
+        aulChunk = array.array('I')
+        aulChunk.append(self.__get_tag_id('T', 'E', 'X', 'T'))
+        aulChunk.append(len(aulData) + self.__sizHashDw)
+        aulChunk.extend(aulData)
+
+        # Get the hash for the chunk.
+        tHash = hashlib.sha384()
+        tHash.update(aulChunk.tostring())
+        strHash = tHash.digest()
+        aulHash = array.array('I', strHash[:self.__sizHashDw * 4])
+        aulChunk.extend(aulHash)
+        return aulChunk
+
     def __get_execute_data(self, tExecuteNode, atData):
         pfnExecFunction = None
         ulR0 = None
@@ -935,27 +984,64 @@ class HbootImage:
         sizRelative = len(strRelative)
 
         sizSkip = 0
+        sizSkipParameter = 0
 
         if (sizAbsolute == 0) and (sizRelative == 0):
             raise Exception('The skip node has no "absolute" or "relative" attribute!')
         elif (sizAbsolute != 0) and (sizRelative != 0):
             raise Exception('The skip node has an "absolute" and a "relative" attribute!')
         elif sizAbsolute != 0:
-            # Parse the data.
+            # Get the new absolute offset in bytes.
             sizOffsetNew = self.__parse_numeric_expression(strAbsolute) * 4
-            sizOffsetCurrent = len(self.__atChunks) * 4
+            # Get the current offset in bytes. Add the size of the ID, the length and the hash.
+            sizOffsetCurrent = 64 + (len(self.__atChunks) * 4)
+            # Add the size of the SKIP chunk itself to the current position.
+            if self.__strNetxType == 'NETX4000_RELAXED':
+                sizOffsetCurrent += (1 + 1 + self.__sizHashDw) * 4
+            elif self.__strNetxType == 'NETX90_MPW':
+                sizOffsetCurrent += (1 + 1 + self.__sizHashDw) * 4
+            else:
+		raise Exception('Continue here!')
+
             if sizOffsetNew < sizOffsetCurrent:
                 raise Exception('Skip tries to set the offset back from %d to %d.' % (sizOffsetCurrent, sizOffsetNew))
-            sizSkip = (sizOffsetNew - sizOffsetCurrent) / 4
+
+            if self.__strNetxType == 'NETX90_MPW':
+                # The netX90 MPW ROM has a bug in the ROM code.
+                # The SKIP chunk forwards the offset by the argument - 1.
+
+                # The netX90 has 2 XIP areas: SQIROM and SRAM. As parallel
+                # flashes are quite unusual in the netX90 area, we can safely
+                # default to SQIROM here and ignore the rest.
+                sizSkip = (sizOffsetNew - sizOffsetCurrent) / 4
+                sizSkipParameter = sizOffsetNew - sizOffsetCurrent + 1 - self.__sizHashDw
+
+	    elif self.__strNetxType == 'NETX4000_RELAXED':
+		# The netX4000 relaxed ROM has a bug in the ROM code.
+		# The SKIP chunk forwards the offset by the argument - 1.
+
+                # The netX4000 has a lot of XIP areas including SQIROM, SRAM
+		# and NAND. Fortunately booting from parallel NOR flash and
+		# NAND is unusual. The NAND booter has no ECC support and the
+		# parallel NOR flashes are quite unusual in the netX4000 area.
+		# That's why we can safely default to SQIROM here and ignore
+        	# the rest.
+		sizSkip = (sizOffsetNew - sizOffsetCurrent) / 4
+		sizSkipParameter = sizOffsetNew - sizOffsetCurrent + 1 - self.__sizHashDw
+
+            else:
+                sizSkip = (sizOffsetNew - sizOffsetCurrent) / 4
+                sizSkipParameter = sizSkip
         else:
             # Parse the data.
             sizSkip = self.__parse_numeric_expression(strRelative)
             if sizSkip < 0:
                 raise Exception('Skip does not accept a negative value for the relative attribute:' % sizSkip)
+            sizSkipParameter = sizSkip
 
         aulChunk = array.array('I')
         aulChunk.append(self.__get_tag_id('S', 'K', 'I', 'P'))
-        aulChunk.append(sizSkip + self.__sizHashDw)
+        aulChunk.append(sizSkipParameter + self.__sizHashDw)
 
         # Get the hash for the chunk.
         tHash = hashlib.sha384()
@@ -1924,23 +2010,30 @@ class HbootImage:
                     # Loop over all nodes, these are the chunks.
                     for tChunkNode in tImageNode.childNodes:
                         if tChunkNode.nodeType == tChunkNode.ELEMENT_NODE:
-                            if tChunkNode.localName == 'Options':
+                            strChunkName = tChunkNode.localName
+                            if strChunkName == 'Options':
                                 # Found an option node.
                                 atChunk = self.__build_chunk_options(tChunkNode)
                                 self.__atChunks.extend(atChunk)
-                            elif tChunkNode.localName == 'Data':
+                            elif strChunkName == 'Data':
                                 # Found a data node.
                                 if self.__tImageType == self.__IMAGE_TYPE_SECMEM:
                                     raise Exception('Data chunks are not allowed in SECMEM images.')
                                 atChunk = self.__build_chunk_data(tChunkNode)
                                 self.__atChunks.extend(atChunk)
-                            elif tChunkNode.localName == 'Execute':
+                            elif strChunkName == 'XIP':
+                                # Found an XIP node.
+                                if self.__tImageType == self.__IMAGE_TYPE_SECMEM:
+                                    raise Exception('XIP chunks are not allowed in SECMEM images.')
+                                atChunk = self.__build_chunk_xip(tChunkNode)
+                                self.__atChunks.extend(atChunk)
+                            elif strChunkName == 'Execute':
                                 # Found an execute node.
                                 if self.__tImageType == self.__IMAGE_TYPE_SECMEM:
                                     raise Exception('Execute chunks are not allowed in SECMEM images.')
                                 atChunk = self.__build_chunk_execute(tChunkNode)
                                 self.__atChunks.extend(atChunk)
-                            elif tChunkNode.localName == 'ExecuteCA9':
+                            elif strChunkName == 'ExecuteCA9':
                                 # Found an execute node.
                                 if self.__tImageType == self.__IMAGE_TYPE_SECMEM:
                                     raise Exception('ExecuteCA9 chunks are not allowed in SECMEM images.')
@@ -1948,19 +2041,19 @@ class HbootImage:
                                     raise Exception('ExecuteCA9 chunks are not allowed on netx56.')
                                 atChunk = self.__build_chunk_execute_ca9(tChunkNode)
                                 self.__atChunks.extend(atChunk)
-                            elif tChunkNode.localName == 'SpiMacro':
+                            elif strChunkName == 'SpiMacro':
                                 # Found a SPI macro.
                                 if self.__tImageType == self.__IMAGE_TYPE_SECMEM:
                                     raise Exception('SpiMacro chunks are not allowed in SECMEM images.')
                                 atChunk = self.__build_chunk_spi_macro(tChunkNode)
                                 self.__atChunks.extend(atChunk)
-                            elif tChunkNode.localName == 'Skip':
+                            elif strChunkName == 'Skip':
                                 # Found a skip node.
                                 if self.__tImageType == self.__IMAGE_TYPE_SECMEM:
                                     raise Exception('Skip chunks are not allowed in SECMEM images.')
                                 atChunk = self.__build_chunk_skip(tChunkNode)
                                 self.__atChunks.extend(atChunk)
-                            elif tChunkNode.localName == 'RootCert':
+                            elif strChunkName == 'RootCert':
                                 # Found a root certificate node.
                                 if self.__tImageType == self.__IMAGE_TYPE_SECMEM:
                                     raise Exception('RootCert chunks are not allowed in SECMEM images.')
@@ -1968,7 +2061,7 @@ class HbootImage:
                                     raise Exception('RootCert chunks are not allowed on netx56.')
                                 atChunk = self.__build_chunk_root_cert(tChunkNode)
                                 self.__atChunks.extend(atChunk)
-                            elif tChunkNode.localName == 'LicenseCert':
+                            elif strChunkName == 'LicenseCert':
                                 # Found a license certificate node.
                                 if self.__tImageType == self.__IMAGE_TYPE_SECMEM:
                                     raise Exception('LicenseCert chunks are not allowed in SECMEM images.')
@@ -1976,7 +2069,7 @@ class HbootImage:
                                     raise Exception('LicenseCert chunks are not allowed on netx56.')
                                 atChunk = self.__build_chunk_license_cert(tChunkNode)
                                 self.__atChunks.extend(atChunk)
-                            elif tChunkNode.localName == 'CR7Software':
+                            elif strChunkName == 'CR7Software':
                                 # Found a CR7 software node.
                                 if self.__tImageType == self.__IMAGE_TYPE_SECMEM:
                                     raise Exception('CR7Software chunks are not allowed in SECMEM images.')
@@ -1984,7 +2077,7 @@ class HbootImage:
                                     raise Exception('CR7Software chunks are not allowed on netx56.')
                                 atChunk = self.__build_chunk_cr7sw(tChunkNode)
                                 self.__atChunks.extend(atChunk)
-                            elif tChunkNode.localName == 'CA9Software':
+                            elif strChunkName == 'CA9Software':
                                 # Found a CA9 software node.
                                 if self.__tImageType == self.__IMAGE_TYPE_SECMEM:
                                     raise Exception('CA9Software chunks are not allowed in SECMEM images.')
@@ -1992,14 +2085,14 @@ class HbootImage:
                                     raise Exception('CA9Software chunks are not allowed on netx56.')
                                 atChunk = self.__build_chunk_ca9sw(tChunkNode)
                                 self.__atChunks.extend(atChunk)
-                            elif tChunkNode.localName == 'MemoryDeviceUp':
+                            elif strChunkName == 'MemoryDeviceUp':
                                 # Found a memory device up node.
                                 if self.__tImageType == self.__IMAGE_TYPE_SECMEM:
                                     raise Exception('MemoryDeviceUp chunks are not allowed in SECMEM images.')
                                 atChunk = self.__build_chunk_memory_device_up(tChunkNode)
                                 self.__atChunks.extend(atChunk)
                             else:
-                                raise Exception('Unknown chunk ID: %s' % tChunkNode.localName)
+                                raise Exception('Unknown chunk ID: %s' % strChunkName)
                 else:
                     raise Exception('Unknown element: %s' % tImageNode.localName)
 
