@@ -92,9 +92,9 @@ def build_version_strings(env):
 
                     strOutput = subprocess.check_output([
                         env['GIT'],
-                        'remote',
-                        'get-url',
-                        'origin'
+                        'config',
+                        '--get',
+                        'remote.origin.url'
                     ])
                     strProjectVersionVCSURL = string.strip(strOutput)
                 except:
