@@ -183,19 +183,23 @@ def set_build_path(env, build_path, source_path, sources):
 	return [src.replace(source_path, build_path) for src in sources]
 
 
-def create_compiler_environment(env, strAsicTyp, aAttributesCommon, aAttributesLinker=None):
+def create_compiler_environment(env, strAsicTyp, aAttributesCommon, linker_attributes=None, name=None):
 	# Find the library paths for gcc and newlib.
 
 	# Use the common attributes both for the detect and the linker phase if no special linker attributes were specified.
-	if aAttributesLinker is None:
-		aAttributesLinker = aAttributesCommon
+	if linker_attributes is None:
+		linker_attributes = aAttributesCommon
+
+	# Use the ASIC typ as the default name.
+	if name is None:
+		name = strAsicTyp
 
 	# Prepend an 'm' to each attribute and create a set from this list.
 	aMAttributesCommon = set(['m'+strAttr for strAttr in aAttributesCommon])
 
 	# Prepend an '-m' to each attribute.
 	aOptAttributesCommon = ['-m'+strAttr for strAttr in aAttributesCommon]
-	aOptAttributesLinker = ['-m'+strAttr for strAttr in aAttributesLinker]
+	aOptAttributesLinker = ['-m'+strAttr for strAttr in linker_attributes]
 
 	# Get the mapping for multiple library search directories.
 	strMultilibPath = None
@@ -224,7 +228,7 @@ def create_compiler_environment(env, strAsicTyp, aAttributesCommon, aAttributesL
 	env_new.Replace(ASIC_TYP = '%s' % strAsicTyp)
 
 	# Add the new environment to the list.
-	setattr(env['MBS_ENVIRONMENT_LIST'], strAsicTyp, env_new)
+	setattr(env['MBS_ENVIRONMENT_LIST'], name, env_new)
 
 	return env_new
 
