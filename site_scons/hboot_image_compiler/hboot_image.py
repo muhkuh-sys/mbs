@@ -730,25 +730,41 @@ class HbootImage:
         strData = atData['data']
         pulLoadAddress = atData['load_address']
 
-        # Get the current offset in bytes.
-        ulOffsetCurrent = 64 + (len(self.__atChunks) * 4)
-
-        # Get the start of the XIP area on the current platform.
+        # Get the available XIP areas for the current platform.
+        atXIPAreas = None
         if self.__strNetxType == 'NETX56':
             raise Exception('Continue here!')
 	elif self.__strNetxType == 'NETX4000_RELAXED':
             raise Exception('Continue here!')
         elif self.__strNetxType == 'NETX90_MPW':
-            pulXipAreaStart = 0x64000000
-            pulXipAreaEnd = 0x68000000
-            if (pulLoadAddress < pulXipAreaStart) or (pulLoadAddress >= pulXipAreaEnd):
-                raise Exception('The load address 0x%08x of the XIP block is outside the available XIP regions of the platform.' % pulLoadAddress)
-            # Get the requested offset of the data in the XIP area. This is the requested offset.
-            ulOffsetRequested = pulLoadAddress - pulXipAreaStart
-            # The requested offset must be the current offset + 8 (4 for the ID and 4 for the length).
-            ulOffsetCurrentData = ulOffsetCurrent + 8
-            if ulOffsetRequested != ulOffsetCurrentData:
-                raise Exception('The current offset 0x%08x does not match the requested offset 0x%08x of the XIP data.' % (ulOffsetCurrentData, ulOffsetRequested))
+            atXIPAreas = [
+                (0x64000000, 0x68000000),   # SQI flash
+                (0x00100000, 0x00200000)    # IFLASH0 and 1
+            ]
+
+        pulXipStartAddress = None
+        for tXipArea in atXIPAreas:
+            if (pulLoadAddress >= tXipArea[0]) and (pulLoadAddress < tXipArea[1]):
+                pulXipStartAddress = tXipArea[0]
+                break
+        if pulXipStartAddress is None:
+            raise Exception('The load address 0x%08x of the XIP block is outside the available XIP regions of the platform.' % pulLoadAddress)
+
+        # Get the requested offset of the data in the XIP area.
+        ulOffsetRequested = pulLoadAddress - pulXipStartAddress
+
+        # The requested offset must be the current offset + 8 (4 for the ID and 4 for the length).
+        ulOffsetRequestedData = 8
+
+        # Get the current offset in bytes.
+        # It is 64 bytes for the header and the size of all chunks.
+        # FIXME: If an image starts not at the beginning of the flash, the offset is different. Get the offset from the XML file?
+        ulOffsetCurrent = 64 + (len(self.__atChunks) * 4)
+
+        # The requested offset must be the current offset + the data offset
+        ulOffsetCurrentData = ulOffsetCurrent + ulOffsetRequestedData
+        if ulOffsetRequested != ulOffsetCurrentData:
+            raise Exception('The current offset 0x%08x does not match the requested offset 0x%08x of the XIP data.' % (ulOffsetCurrentData, ulOffsetRequested))
 
         # The load address must be exactly the address where the code starts.
         # Pad the application size to a multiple of DWORDs.
