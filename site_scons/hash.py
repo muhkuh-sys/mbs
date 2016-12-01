@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #-------------------------------------------------------------------------#
-#   Copyright (C) 2011 by Christoph Thelen                                #
+#   Copyright (C) 2016 by Christoph Thelen                                #
 #   doc_bacardi@users.sourceforge.net                                     #
 #                                                                         #
 #   This program is free software; you can redistribute it and/or modify  #
@@ -33,17 +33,17 @@ def hash_action(target, source, env):
 	# Init the results array.
 	aHashes = []
 
-	tTemplate = env['HASH_TEMPLATE_OBJECT']
+	tTemplate = Template(env['HASH_TEMPLATE'])
 
 	# Get the directory path of the target file. This is the working dir and all paths in the hash file must be relative to this.
 	strWorkingDir = os.path.dirname(target[0].get_path())
 
 	# Create a new hash object with the requested algorithm.
+	strHashId = env['HASH_ALGORITHM']
 	try:
-		tHashBase = hashlib.new(env['HASH_ALGORITHM'])
-	except ValueError,e:
-		print 'Supported hash types: %s'%', '.join(hashlib.algorithms)
-		raise e
+		tHashBase = hashlib.new(strHashId)
+	except ValueError:
+		raise Exception('Unknown hash algorithm "%s". Supported algorithms: %s' % (strHashId, ', '.join(hashlib.algorithms)))
 
 	# Loop over all sources.
 	for tSource in source:
@@ -73,9 +73,6 @@ def hash_emitter(target, source, env):
 	Depends(target, SCons.Node.Python.Value(env['HASH_ALGORITHM']))
 	Depends(target, SCons.Node.Python.Value(env['HASH_TEMPLATE']))
 
-	# Create hash templete object.
-	env['HASH_TEMPLATE_OBJECT'] = Template(env['HASH_TEMPLATE'])
-
 	return target, source
 
 
@@ -90,7 +87,7 @@ def ApplyToEnv(env):
 	#
 	env['HASH_ALGORITHM'] = 'sha1'
 	env['HASH_TEMPLATE'] = '${HASH} *${PATH}\n'
-	
+
 
 	hash_act = SCons.Action.Action(hash_action, hash_string)
 	hash_bld = Builder(action=hash_act, emitter=hash_emitter)
