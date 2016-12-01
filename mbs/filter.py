@@ -30,7 +30,7 @@ def create_substitute_dict(aCfg, strMbsDir):
 	strSconsPath = aCfg['scons_path']
 	
 	# Get the project version.
-	strProjectVersion = '%d.%d.%d' % (aCfg['project_version_major'], aCfg['project_version_minor'], aCfg['project_version_micro'])
+	strProjectVersion = aCfg['project_version']
 	
 	# Get the tools.
 	aToolPaths = []

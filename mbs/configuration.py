@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #-------------------------------------------------------------------------#
-#   Copyright (C) 2012 by Christoph Thelen                                #
+#   Copyright (C) 2016 by Christoph Thelen                                #
 #   doc_bacardi@users.sourceforge.net                                     #
 #                                                                         #
 #   This program is free software; you can redistribute it and/or modify  #
@@ -21,6 +21,7 @@
 
 import os.path
 import platform
+import re
 import string
 import xml.etree.ElementTree
 
@@ -76,11 +77,15 @@ def read_project_config(strConfigPath, aCfg):
 	if os.path.isfile(strConfigPath)==True:
 		tXml = xml.etree.ElementTree.ElementTree()
 		tXml.parse(strConfigPath)
-		
-		aCfg['project_version_major'] = long(tXml.findtext('project_version/major'))
-		aCfg['project_version_minor'] = long(tXml.findtext('project_version/minor'))
-		aCfg['project_version_micro'] = long(tXml.findtext('project_version/micro'))
-		
+
+		# Get the complete version.
+		strVersion = tXml.findtext('project_version')
+		# Check the version string.
+		if re.match('\d+(\.\d+)*', strVersion) is None:
+			raise Exception('Invalid version: "%s".' % strVersion)
+		# Add the complete version.
+		aCfg['project_version'] = strVersion
+
 		strPath = tXml.findtext('paths/marker')
 		if strPath!=None:
 			aCfg['marker_path'] = os.path.abspath(os.path.expanduser(strPath))
