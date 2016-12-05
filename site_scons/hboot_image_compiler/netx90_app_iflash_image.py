@@ -48,12 +48,12 @@ def patch_image(strInputFile, strOutputFile, fVerbose=False):
 
     # Create a SHA384 hash over the cm4 vectors and the complete application
     # (i.e. the complete file without the first 512 bytes).
-    tHash = hashlib.sha224()
+    tHash = hashlib.sha384()
     tHash.update(strInputImage[0:448])
     tHash.update(strInputImage[512:])
     aulHash = array.array('I', tHash.digest())
 
-    # Write the hash to the HBOOT header.
+    # Write the first 7 DWORDs of the hash to the HBOOT header.
     aulHBoot[0x08] = aulHash[0]
     aulHBoot[0x09] = aulHash[1]
     aulHBoot[0x0a] = aulHash[2]
