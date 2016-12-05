@@ -384,6 +384,20 @@ class HbootImage:
         tParentNode.removeChild(tIncludeNode)
 
     def __preprocess(self, tXmlDocument):
+        if self.__strNetxType == 'NETX90_MPW':
+            # The netX90 MPW does not have a 'StartAPP' function yet.
+            # Replace it with a snippet.
+            atNodes = tXmlDocument.getElementsByTagName('StartAPP')
+            for tReplaceNode in atNodes:
+                strNewText = '<Snip artifact="start_app_cpu_netx90_mpw" group="org.muhkuh.hboot.sniplib" version="1.0.0"/>'
+                tNewXml = xml.dom.minidom.parseString('<?xml version="1.0" encoding="utf-8"?><Root>%s</Root>' % strNewText)
+		tParentNode = tReplaceNode.parentNode
+                for tChildNode in tNewXml.documentElement.childNodes:
+                    tClonedNode = tChildNode.cloneNode(True)
+                    tParentNode.insertBefore(tClonedNode, tReplaceNode)
+                # Remove the old "StartAPP" node.
+                tParentNode.removeChild(tReplaceNode)
+
         # Look for all 'Snip' nodes repeatedly until the maximum count is
         # reached or no more 'Snip' nodes are found.
         uiMaximumDepth = 100
