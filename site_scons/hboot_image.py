@@ -244,7 +244,7 @@ def ApplyToEnv(env):
     env['HBOOTIMAGE_KEYROM_XML'] = None
     env['HBOOTIMAGE_INCLUDE_PATHS'] = None
     env['HBOOTIMAGE_SNIPLIB_SEARCHPATHS'] = [
-        'mbs/sniplib',
+        'sniplib',
         'src/sniplib',
         'targets/snippets'
     ]
