@@ -44,6 +44,7 @@ import hash
 import hboot_image
 import hboot_snippet
 import hexdump
+import iflash_image
 import objimport
 import pom_template
 import svnversion
@@ -153,6 +154,7 @@ def CreateEnvironment(env, astrToolPatterns=None):
 	hboot_image.ApplyToEnv(tEnvNew)
 	hboot_snippet.ApplyToEnv(tEnvNew)
 	hexdump.ApplyToEnv(tEnvNew)
+	iflash_image.ApplyToEnv(tEnvNew)
 	objimport.ApplyToEnv(tEnvNew)
 	pom_template.ApplyToEnv(tEnvNew)
 	ApplyToEnv(tEnvNew)
