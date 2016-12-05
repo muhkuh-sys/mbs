@@ -95,6 +95,10 @@ class HbootImage:
 
     __resolver = None
 
+    __ulStartOffset = 0
+
+    __strDevice = None
+
     def __init__(self, tEnv, strNetxType, **kwargs):
         strPatchDefinition = None
         strKeyromFile = None
@@ -738,14 +742,16 @@ class HbootImage:
             raise Exception('Continue here!')
         elif self.__strNetxType == 'NETX90_MPW':
             atXIPAreas = [
-                (0x64000000, 0x68000000),   # SQI flash
-                (0x00100000, 0x00200000)    # IFLASH0 and 1
+                { 'device':'SQIROM',   'start':0x64000000, 'end':0x68000000 },   # SQI flash
+                { 'device':'INTFLASH', 'start':0x00100000, 'end':0x00200000 }    # IFLASH0 and 1
             ]
 
         pulXipStartAddress = None
         for tXipArea in atXIPAreas:
-            if (pulLoadAddress >= tXipArea[0]) and (pulLoadAddress < tXipArea[1]):
-                pulXipStartAddress = tXipArea[0]
+            if (pulLoadAddress >= tXipArea['start']) and (pulLoadAddress < tXipArea['end']):
+                if tXipArea['device'] != self.__strDevice:
+                    raise Exception('The XIP load address matches the %s device, but the image specifies %s' % (tXipArea['device'], self.__strDevice))
+                pulXipStartAddress = tXipArea['start']
                 break
         if pulXipStartAddress is None:
             raise Exception('The load address 0x%08x of the XIP block is outside the available XIP regions of the platform.' % pulLoadAddress)
@@ -1024,13 +1030,14 @@ class HbootImage:
 
             if self.__strNetxType == 'NETX90_MPW':
                 # The netX90 MPW ROM has a bug in the ROM code.
-                # The SKIP chunk forwards the offset by the argument - 1.
-
-                # The netX90 has 2 XIP areas: SQIROM and SRAM. As parallel
-                # flashes are quite unusual in the netX90 area, we can safely
-                # default to SQIROM here and ignore the rest.
-                sizSkip = (sizOffsetNew - sizOffsetCurrent) / 4
-                sizSkipParameter = sizOffsetNew - sizOffsetCurrent + 1 - self.__sizHashDw
+                # The SKIP chunk for SQI flash forwards the offset by the
+                # argument - 1.
+		if self.__strDevice == 'SQIROM':
+                    sizSkip = (sizOffsetNew - sizOffsetCurrent) / 4
+                    sizSkipParameter = sizOffsetNew - sizOffsetCurrent + 1 - self.__sizHashDw
+                else:
+                    sizSkip = (sizOffsetNew - sizOffsetCurrent) / 4
+                    sizSkipParameter = sizSkip
 
 	    elif self.__strNetxType == 'NETX4000_RELAXED':
 		# The netX4000 relaxed ROM has a bug in the ROM code.
@@ -2011,6 +2018,30 @@ class HbootImage:
         else:
             # Set the default hash size.
             self.__sizHashDw = 1
+
+        # Get the start offset. Default to 0.
+        ulStartOffset = 0
+        strStartOffset = tXmlRootNode.getAttribute('offset')
+        if len(strStartOffset) != 0:
+            ulStartOffset = long(strStartOffset)
+            if ulStartOffset < 0:
+                raise Exception('The start offset is invalid: %d' % ulStartOffset)
+        self.__ulStartOffset = ulStartOffset
+
+        # Get the device. Default to "UNSPECIFIED".
+        astrValidDeviceNames = [
+            'UNSPECIFIED',
+            'INTFLASH',
+            'SQIROM'
+        ]
+        strDevice = tXmlRootNode.getAttribute('device')
+        if len(strDevice) == 0:
+            strDevice = 'UNSPECIFIED'
+        else:
+            # Check the device name.
+            if strDevice not in astrValidDeviceNames:
+                raise Exception('Invalid device name specified: "%s". Valid names are %s.' % (strDevice, ', '.join(astrValidDeviceNames)))
+        self.__strDevice = strDevice
 
         # Loop over all children.
         for tImageNode in tXmlRootNode.childNodes:
