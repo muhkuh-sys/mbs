@@ -1028,7 +1028,7 @@ class HbootImage:
             raise Exception('The skip node has an "absolute" and a "relative" attribute!')
         elif sizAbsolute != 0:
             # Get the new absolute offset in bytes.
-            sizOffsetNew = self.__parse_numeric_expression(strAbsolute) * 4
+            sizOffsetNew = self.__parse_numeric_expression(strAbsolute)
             # Get the current offset in bytes. Add the size of the ID, the length and the hash.
             sizOffsetCurrent = 64 + (len(self.__atChunks) * 4)
             # Add the size of the SKIP chunk itself to the current position.
