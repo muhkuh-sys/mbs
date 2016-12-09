@@ -8,10 +8,9 @@ import hboot_image
 
 tParser = argparse.ArgumentParser(usage='usage: hboot_image [options]')
 tParser.add_argument('-n', '--netx-type',
-                     dest='uiNetxType',
-                     type=int,
+                     dest='strNetxType',
                      required=True,
-                     choices=[56, 4000],
+                     choices=['NETX56', 'NETX90_MPW', 'NETX4000_RELAXED'],
                      metavar='NETX',
                      help='Build the image for netx type NETX.')
 tParser.add_argument('-c', '--objcopy',
@@ -72,11 +71,12 @@ tArgs = tParser.parse_args()
 
 # Set the default for the patch table here.
 atDefaultPatchTables = {
-    56: 'hboot_netx56_patch_table.xml',
-    4000: 'hboot_netx4000_patch_table.xml'
+    'NETX56': 'hboot_netx56_patch_table.xml',
+    'NETX90_MPW': 'hboot_netx90_mpw_patch_table.xml',
+    'NETX4000_RELAXED': 'hboot_netx4000_relaxed_patch_table.xml'
 }
 if tArgs.strPatchTablePath is None:
-    tArgs.strPatchTablePath = atDefaultPatchTables[tArgs.uiNetxType]
+    tArgs.strPatchTablePath = atDefaultPatchTables[tArgs.strNetxType]
 
 # Parse all alias definitions.
 atKnownFiles = {}
@@ -101,6 +101,6 @@ tEnv = {'OBJCOPY': tArgs.strObjCopy,
         'READELF': tArgs.strReadElf,
         'HBOOT_INCLUDE': tArgs.astrIncludePaths}
 
-tCompiler = hboot_image.HbootImage(tEnv, tArgs.uiNetxType, patch_definition=tArgs.strPatchTablePath, known_files=atKnownFiles, verbose=tArgs.fVerbose)
+tCompiler = hboot_image.HbootImage(tEnv, tArgs.strNetxType, patch_definition=tArgs.strPatchTablePath, known_files=atKnownFiles, verbose=tArgs.fVerbose)
 tCompiler.parse_image(tArgs.strInputFile)
 tCompiler.write(tArgs.strOutputFile)
