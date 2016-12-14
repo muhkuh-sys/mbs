@@ -92,6 +92,7 @@ class HbootImage:
     __MAGIC_COOKIE_NETX56 = 0xf8beaf00
     __MAGIC_COOKIE_NETX4000 = 0xf3beaf00
     __MAGIC_COOKIE_NETX90_MPW = 0xf3beaf00
+    __MAGIC_COOKIE_NETX90_MPW_APP = 0xf3ad9e00
 
     __resolver = None
 
@@ -420,12 +421,19 @@ class HbootImage:
     def __build_standard_header(self, atChunks):
 
         ulMagicCookie = None
+        ulSignature = None
         if self.__strNetxType == 'NETX56':
             ulMagicCookie = self.__MAGIC_COOKIE_NETX56
+            ulSignature = self.__get_tag_id('M', 'O', 'O', 'H')
         elif self.__strNetxType == 'NETX4000_RELAXED':
             ulMagicCookie = self.__MAGIC_COOKIE_NETX4000
-	elif self.__strNetxType == 'NETX90_MPW':
-	    ulMagicCookie = self.__MAGIC_COOKIE_NETX90_MPW
+            ulSignature = self.__get_tag_id('M', 'O', 'O', 'H')
+        elif self.__strNetxType == 'NETX90_MPW':
+            ulMagicCookie = self.__MAGIC_COOKIE_NETX90_MPW
+            ulSignature = self.__get_tag_id('M', 'O', 'O', 'H')
+        elif self.__strNetxType == 'NETX90_MPW_APP':
+            ulMagicCookie = self.__MAGIC_COOKIE_NETX90_MPW_APP
+            ulSignature = self.__get_tag_id('M', 'A', 'P', 'P')
         else:
             raise Exception('Missing platform configuration: no standard header configured, please update the HBOOT image compiler.')
 
@@ -441,13 +449,13 @@ class HbootImage:
 
         # Build the boot block.
         aBootBlock = array.array('I', [0] * 16)
-        aBootBlock[0x00] = ulMagicCookie    # Magic cookie.
-        aBootBlock[0x01] = 0                # reserved
-        aBootBlock[0x02] = 0                # reserved
-        aBootBlock[0x03] = 0                # reserved
+        aBootBlock[0x00] = ulMagicCookie        # Magic cookie.
+        aBootBlock[0x01] = 0                    # reserved
+        aBootBlock[0x02] = 0                    # reserved
+        aBootBlock[0x03] = 0                    # reserved
         aBootBlock[0x04] = len(atChunks)        # chunks dword size
-        aBootBlock[0x05] = 0                # reserved
-        aBootBlock[0x06] = self.__get_tag_id('M', 'O', 'O', 'H')   # 'MOOH' signature
+        aBootBlock[0x05] = 0                    # reserved
+        aBootBlock[0x06] = ulSignature          # The image signature.
         aBootBlock[0x07] = ulParameter0         # Image parameters.
         aBootBlock[0x08] = aulHash[0]           # chunks hash
         aBootBlock[0x09] = aulHash[1]           # chunks hash
@@ -759,6 +767,11 @@ class HbootImage:
                 { 'device':'SQIROM',   'start':0x64000000, 'end':0x68000000 },   # SQI flash
                 { 'device':'INTFLASH', 'start':0x00100000, 'end':0x00200000 }    # IFLASH0 and 1
             ]
+	elif self.__strNetxType == 'NETX90_MPW_APP':
+	    atXIPAreas = [
+		{ 'device':'SQIROM',   'start':0x64000000, 'end':0x68000000 },   # SQI flash
+		{ 'device':'INTFLASH', 'start':0x00200000, 'end':0x00280000 }    # IFLASH2
+	    ]
 
         pulXipStartAddress = None
         for tXipArea in atXIPAreas:
@@ -1036,6 +1049,8 @@ class HbootImage:
                 sizOffsetCurrent += (1 + 1 + self.__sizHashDw) * 4
             elif self.__strNetxType == 'NETX90_MPW':
                 sizOffsetCurrent += (1 + 1 + self.__sizHashDw) * 4
+	    elif self.__strNetxType == 'NETX90_MPW_APP':
+		sizOffsetCurrent += (1 + 1 + self.__sizHashDw) * 4
             else:
 		raise Exception('Continue here!')
 
