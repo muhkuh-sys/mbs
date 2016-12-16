@@ -10,7 +10,7 @@ tParser = argparse.ArgumentParser(usage='usage: hboot_image [options]')
 tParser.add_argument('-n', '--netx-type',
                      dest='strNetxType',
                      required=True,
-                     choices=['NETX56', 'NETX90_MPW', 'NETX90_MPW', 'NETX4000_RELAXED'],
+                     choices=['NETX56', 'NETX90_MPW', 'NETX90_MPW_APP', 'NETX4000_RELAXED'],
                      metavar='NETX',
                      help='Build the image for netx type NETX.')
 tParser.add_argument('-c', '--objcopy',
