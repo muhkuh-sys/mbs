@@ -655,8 +655,15 @@ class HbootImage:
                     # Is this an ELF file?
                     strRoot, strExtension = os.path.splitext(strAbsFilePath)
                     if strExtension == '.elf':
+                        # Get the segment names to dump. It is a comma separated string.
+                        # This is optional. If no segment names are specified, all sections with PROGBITS are dumped.
+                        strSegmentsToDump = string.strip(tNode.getAttribute('segments'))
+                        astrSegmentsToDump = None
+                        if len(strSegmentsToDump)!=0:
+                            astrSegmentsToDump = [string.strip(strSegment) for strSegment in string.split(strSegmentsToDump, ',')]
+
                         # Extract the segments.
-                        atSegments = elf_support.get_segment_table(self.__tEnv, strAbsFilePath)
+                        atSegments = elf_support.get_segment_table(self.__tEnv, strAbsFilePath, astrSegmentsToDump)
                         # Get the estimated binary size from the segments.
                         ulEstimatedBinSize = elf_support.get_estimated_bin_size(atSegments)
                         # Do not create files larger than 512MB.
@@ -668,7 +675,13 @@ class HbootImage:
                         # Extract the binary.
                         tBinFile, strBinFileName = tempfile.mkstemp()
                         os.close(tBinFile)
-                        subprocess.check_call([self.__tEnv['OBJCOPY'], '-O', 'binary', strAbsFilePath, strBinFileName])
+                        astrCmd = [self.__tEnv['OBJCOPY'], '--output-target=binary']
+                        if astrSegmentsToDump is not None:
+                            for strSegment in astrSegmentsToDump:
+                                astrCmd.append('--only-section=%s' % strSegment)
+                        astrCmd.append(strAbsFilePath)
+                        astrCmd.append(strBinFileName)
+                        subprocess.check_call(astrCmd)
 
                         # Get the application data.
                         tBinFile = open(strBinFileName, 'rb')
@@ -760,18 +773,18 @@ class HbootImage:
         atXIPAreas = None
         if self.__strNetxType == 'NETX56':
             raise Exception('Continue here!')
-	elif self.__strNetxType == 'NETX4000_RELAXED':
+        elif self.__strNetxType == 'NETX4000_RELAXED':
             raise Exception('Continue here!')
         elif self.__strNetxType == 'NETX90_MPW':
             atXIPAreas = [
                 { 'device':'SQIROM',   'start':0x64000000, 'end':0x68000000 },   # SQI flash
                 { 'device':'INTFLASH', 'start':0x00100000, 'end':0x00200000 }    # IFLASH0 and 1
             ]
-	elif self.__strNetxType == 'NETX90_MPW_APP':
-	    atXIPAreas = [
-		{ 'device':'SQIROM',   'start':0x64000000, 'end':0x68000000 },   # SQI flash
-		{ 'device':'INTFLASH', 'start':0x00200000, 'end':0x00280000 }    # IFLASH2
-	    ]
+        elif self.__strNetxType == 'NETX90_MPW_APP':
+            atXIPAreas = [
+                { 'device':'SQIROM',   'start':0x64000000, 'end':0x68000000 },   # SQI flash
+                { 'device':'INTFLASH', 'start':0x00200000, 'end':0x00280000 }    # IFLASH2
+            ]
 
         pulXipStartAddress = None
         for tXipArea in atXIPAreas:
