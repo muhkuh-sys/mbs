@@ -30,24 +30,26 @@ import subprocess
 import datetime
 
 
-def get_segment_table(env, strFileName):
+def get_segment_table(env, strFileName, astrSegmentsToConsider=None):
 	atSegments = []
 	aCmd = [env['OBJDUMP'], '-h', '-w', strFileName]
 	proc = subprocess.Popen(aCmd, stdout=subprocess.PIPE)
 	strOutput = proc.communicate()[0]
 	for match_obj in re.finditer('[ \t]*([0-9]+)[ \t]+([^ \t]+)[ \t]+([0-9a-fA-F]+)[ \t]+([0-9a-fA-F]+)[ \t]+([0-9a-fA-F]+)[ \t]+([0-9a-fA-F]+)[ \t]+([0-9*]+)[ \t]+([a-zA-Z ,]+)', strOutput):
-		uiAlign = eval(match_obj.group(7))
-		astrFlags = match_obj.group(8).split(', ')
-		atSegments.append(dict({
-			'idx':		long(match_obj.group(1)),
-			'name' :	match_obj.group(2),
-			'size' :	long(match_obj.group(3),16),
-			'vma' :		long(match_obj.group(4),16),
-			'lma' :		long(match_obj.group(5),16),
-			'file_off' :	long(match_obj.group(6),16),
-			'align' :	uiAlign,
-			'flags' :	astrFlags
-		}))
+		strName = match_obj.group(2)
+		if (astrSegmentsToConsider is None) or (strName in astrSegmentsToConsider):
+			uiAlign = eval(match_obj.group(7))
+			astrFlags = match_obj.group(8).split(', ')
+			atSegments.append(dict({
+				'idx':		long(match_obj.group(1)),
+				'name' :	strName,
+				'size' :	long(match_obj.group(3),16),
+				'vma' :		long(match_obj.group(4),16),
+				'lma' :		long(match_obj.group(5),16),
+				'file_off' :	long(match_obj.group(6),16),
+				'align' :	uiAlign,
+				'flags' :	astrFlags
+			}))
 	return atSegments
 
 
