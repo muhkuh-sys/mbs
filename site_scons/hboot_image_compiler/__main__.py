@@ -55,6 +55,12 @@ tParser.add_argument('-A', '--alias',
                      action='append',
                      metavar='ALIAS=FILE',
                      help='Add an alias in the form ALIAS=FILE.')
+tParser.add_argument('-D', '--define',
+                     dest='astrDefines',
+                     required=False,
+                     action='append',
+                     metavar='NAME=VALUE',
+                     help='Add a define in the form NAME=VALUE.')
 tParser.add_argument('-I', '--include',
                      dest='astrIncludePaths',
                      required=False,
@@ -93,6 +99,20 @@ if tArgs.astrAliases is not None:
             raise Exception('Double defined alias "%s". The old value "%s" should be overwritten with "%s".' % (strAlias, atKnownFiles[strAlias], strFile))
         atKnownFiles[strAlias] = strFile
 
+# Parse all defines.
+atDefinitions = {}
+if tArgs.astrDefines is not None:
+    tPattern = re.compile('([a-zA-Z0-9_]+)=(.+)$')
+    for strDefine in tArgs.astrDefines:
+        tMatch = re.match(tPattern, strDefine)
+        if tMatch is None:
+            raise Exception('Invalid define: "%s". It must be "NAME=VALUE" instead.' % strDefine)
+        strName = tMatch.group(1)
+        strValue = tMatch.group(2)
+        if strName in atDefinitions:
+            raise Exception('Double defined name "%s". The old value "%s" should be overwritten with "%s".' % (strName, atKnownFiles[strName], strValue))
+        atDefinitions[strName] = strValue
+
 # Set an empty list of include paths if nothing was specified.
 if tArgs.astrIncludePaths is None:
     tArgs.astrIncludePaths = []
@@ -105,6 +125,7 @@ tEnv = {'OBJCOPY': tArgs.strObjCopy,
 tCompiler = hboot_image.HbootImage(
     tEnv,
     tArgs.strNetxType,
+    defines=atDefinitions,
     includes=tArgs.astrIncludePaths,
     known_files=atKnownFiles,
     patch_definition=tArgs.strPatchTablePath,
