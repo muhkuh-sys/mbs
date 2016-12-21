@@ -29,7 +29,7 @@ class SnippetLibrary:
         # Set the filename of the SQLITE3 database.
         self.__strDatabasePath = strDatabasePath
         if self.__fDebug:
-            print '[SnipLib] Configuration: Database path = "%s"' % strDatabasePath
+            print('[SnipLib] Configuration: Database path = "%s"' % strDatabasePath)
 
         # The connection to the database is not open yet.
         self.__tDb = None
@@ -42,7 +42,7 @@ class SnippetLibrary:
         # Print all search paths in debug mode.
         if self.__fDebug:
             for strPath in self.__astrSnippetSearchPaths:
-                print '[SnipLib] Configuration: Search path "%s"' % strPath
+                print('[SnipLib] Configuration: Search path "%s"' % strPath)
 
         # The snippet library was not scanned yet.
         self.__fSnipLibIsAlreadyScanned = False
@@ -91,7 +91,7 @@ class SnippetLibrary:
         # Construct the "CREATE" statement for the "snippets" table.
         strCreateStatement = 'CREATE TABLE snippets (id INTEGER PRIMARY KEY, search_path TEXT NOT NULL, path TEXT NOT NULL, hash TEXT NOT NULL, groupid TEXT NOT NULL, artifact TEXT NOT NULL, version TEXT NOT NULL, clean INTEGER DEFAULT 0)'
         if self.__fDebug:
-            print '[SnipLib] Database: The current CREATE statement for the "snippet" table is "%s".' % strCreateStatement
+            print('[SnipLib] Database: The current CREATE statement for the "snippet" table is "%s".' % strCreateStatement)
 
         # Compare the current "CREATE" statement with the statement of the
         # existing table.
@@ -100,13 +100,13 @@ class SnippetLibrary:
         if tRes is None:
             # The table does not exist yet. Create it now.
             if self.__fDebug:
-                print '[SnipLib] Database: The "snippet" table does not yet exist. Create it now.'
+                print('[SnipLib] Database: The "snippet" table does not yet exist. Create it now.')
             tCursor.execute(strCreateStatement)
             tDb.commit()
         elif tRes[0] != strCreateStatement:
             if self.__fDebug:
-                print '[SnipLib] Database: The existing "snippet" table has a different CREATE statement: "%s".' % tRes[0]
-                print '[SnipLib] Database: Delete the existing table and re-create it.'
+                print('[SnipLib] Database: The existing "snippet" table has a different CREATE statement: "%s".' % tRes[0])
+                print('[SnipLib] Database: Delete the existing table and re-create it.')
             # Delete the old table.
             tCursor.execute('DROP TABLE snippets')
             tDb.commit()
@@ -115,7 +115,7 @@ class SnippetLibrary:
             tDb.commit()
         else:
             if self.__fDebug:
-                print '[SnipLib] Database: The existing "snippet" table was created with the correct statement.'
+                print('[SnipLib] Database: The existing "snippet" table was created with the correct statement.')
 
     def __snippet_get_gav(self, strPath):
         strGroup = None
@@ -159,14 +159,14 @@ class SnippetLibrary:
 
         # Show all files which are invalidated.
         if self.__fDebug:
-            print '[SnipLib] Scan: Invalidating all cached entries for the search path "%s".' % strSearchPath
+            print('[SnipLib] Scan: Invalidating all cached entries for the search path "%s".' % strSearchPath)
             tCursor.execute('SELECT path,groupid,artifact,version FROM snippets WHERE search_path=?', (strSearchPath, ))
             atRes = tCursor.fetchall()
             if atRes is None or len(atRes) == 0:
-                print '[SnipLib] Scan:  -> No cached entries found for the search path "%s".' % strSearchPath
+                print('[SnipLib] Scan:  -> No cached entries found for the search path "%s".' % strSearchPath)
             else:
                 for tRes in atRes:
-                    print '[SnipLib] Scan:  -> Invalidating entry G="%s" A="%s" V="%s" at "%s".' % (tRes[1], tRes[2], tRes[3], tRes[0])
+                    print('[SnipLib] Scan:  -> Invalidating entry G="%s" A="%s" V="%s" at "%s".' % (tRes[1], tRes[2], tRes[3], tRes[0]))
 
         # Mark all files to be deleted. This flag will be cleared for all files which are present.
         tCursor.execute('UPDATE snippets SET clean=1 WHERE search_path=?', (strSearchPath, ))
@@ -174,7 +174,7 @@ class SnippetLibrary:
 
     def __sniplib_scan(self, strSearchPath):
         if self.__fDebug:
-            print '[SnipLib] Scan: Scanning search path "%s".' % strSearchPath
+            print('[SnipLib] Scan: Scanning search path "%s".' % strSearchPath)
 
         tCursor = self.__tDb.cursor()
         # Search all files recursively.
@@ -191,7 +191,7 @@ class SnippetLibrary:
                     strDigest = self.__get_snip_hash(strAbsPath)
 
                     if self.__fDebug:
-                        print '[SnipLib] Scan:  -> Found snippet at "%s" with the hash "%s".' % (strAbsPath, strDigest)
+                        print('[SnipLib] Scan:  -> Found snippet at "%s" with the hash "%s".' % (strAbsPath, strDigest))
 
                     # Search the snippet in the database.
                     tCursor.execute('SELECT id,hash FROM snippets WHERE search_path=? AND path=?', (strSearchPath, strAbsPath))
@@ -199,11 +199,11 @@ class SnippetLibrary:
                     if atResults is None:
                         # The snippet is not present in the database yet.
                         if self.__fDebug:
-                            print '[SnipLib] Scan:      -> The snippet is not registered in the cache yet. Make a new entry now.'
+                            print('[SnipLib] Scan:      -> The snippet is not registered in the cache yet. Make a new entry now.')
                         strGroup, strArtifact, strVersion = self.__snippet_get_gav(strAbsPath)
                         if strGroup is None:
                             if self.__fDebug:
-                                print '[SnipLib] Scan:      -> Warning: Ignoring file "%s". %s' % (strAbsPath, strArtifact)
+                                print('[SnipLib] Scan:      -> Warning: Ignoring file "%s". %s' % (strAbsPath, strArtifact))
 
                         # Make a new entry.
                         tCursor.execute('INSERT INTO snippets (search_path, path, hash, groupid, artifact, version) VALUES (?, ?, ?, ?, ?, ?)', (strSearchPath, strAbsPath, strDigest, strGroup, strArtifact, strVersion))
@@ -213,7 +213,7 @@ class SnippetLibrary:
                         if atResults[1] == strDigest:
                             # The hash is the same -> the file is already known.
                             if self.__fDebug:
-                                print '[SnipLib] Scan:      -> The snippet is already registered in the cache.'
+                                print('[SnipLib] Scan:      -> The snippet is already registered in the cache.')
 
                             # Found the file. Do not delete it from the database.
                             tCursor.execute('UPDATE snippets SET clean=0 WHERE id=?', (atResults[0], ))
@@ -221,12 +221,12 @@ class SnippetLibrary:
                         else:
                             # The hash differs. Update the entry with the new hash, group, artifact and version.
                             if self.__fDebug:
-                                print '[SnipLib] Scan:      -> The snippet has a different hash than the entry in the cache. Update the metadata now.'
+                                print('[SnipLib] Scan:      -> The snippet has a different hash than the entry in the cache. Update the metadata now.')
 
                             strGroup, strArtifact, strVersion = self.__snippet_get_gav(strAbsPath)
                             if strGroup is None:
                                 if self.__fDebug:
-                                    print '[SnipLib] Scan:      -> Warning: Ignoring file "%s". %s' % (strAbsPath, strArtifact)
+                                    print('[SnipLib] Scan:      -> Warning: Ignoring file "%s". %s' % (strAbsPath, strArtifact))
                             else:
                                 tCursor.execute('UPDATE snippets SET hash=?, groupid=?, artifact=?, version=?, clean=0 WHERE id=?', (strDigest, strGroup, strArtifact, strVersion, atResults[0]))
 
@@ -236,14 +236,14 @@ class SnippetLibrary:
 
         # Show all files which are removed from the cache.
         if self.__fDebug:
-            print '[SnipLib] Scan: Remove all invalidated entries from the cache for the search path "%s".' % strSearchPath
+            print('[SnipLib] Scan: Remove all invalidated entries from the cache for the search path "%s".' % strSearchPath)
             tCursor.execute('SELECT path,groupid,artifact,version FROM snippets WHERE clean!=0 AND search_path=?', (strSearchPath, ))
             atRes = tCursor.fetchall()
             if atRes is None or len(atRes) == 0:
-                print '[SnipLib] Scan:  -> No cache entries are removed.'
+                print('[SnipLib] Scan:  -> No cache entries are removed.')
             else:
                 for tRes in atRes:
-                    print '[SnipLib] Scan:  -> Removing cache entry G="%s" A="%s" V="%s" at "%s".' % (tRes[1], tRes[2], tRes[3], tRes[0])
+                    print('[SnipLib] Scan:  -> Removing cache entry G="%s" A="%s" V="%s" at "%s".' % (tRes[1], tRes[2], tRes[3], tRes[0]))
 
         tCursor.execute('DELETE FROM snippets WHERE clean!=0 AND search_path=?', (strSearchPath, ))
         self.__tDb.commit()
@@ -279,7 +279,7 @@ class SnippetLibrary:
 
         strAbsPath = atMatch[0]
         if self.__fDebug:
-            print '[SnipLib] Resolve: Found %s at "%s".' % (strSnippetName, strAbsPath)
+            print('[SnipLib] Resolve: Found %s at "%s".' % (strSnippetName, strAbsPath))
 
         # Try to parse the snippet file.
         try:
@@ -338,7 +338,7 @@ class SnippetLibrary:
 
         if len(astrUnused) != 0:
             if self.__fDebug:
-                print '[SnipLib] Resolve: the snippet %s does not use the following parameters: %s' % (strSnippetName, ', '.join(astrUnused))
+                print('[SnipLib] Resolve: the snippet %s does not use the following parameters: %s' % (strSnippetName, ', '.join(astrUnused)))
 
         # Find the "Snippet" node.
         tSnippetNode = self.__xml_get_node(tRootNode, 'Snippet')

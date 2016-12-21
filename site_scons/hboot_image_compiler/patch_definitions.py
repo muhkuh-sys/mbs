@@ -52,7 +52,7 @@ class PatchDefinitions:
 
     def read_patch_definition(self, tInput):
         # A string must be the filename of the XML.
-        if isinstance(tInput, basestring):
+        if isinstance(tInput, ("".__class__, u"".__class__)):
             tXml = xml.dom.minidom.parse(tInput)
         elif isinstance(tInput, xml.dom.minidom.Document):
             tXml = tInput

@@ -5,8 +5,8 @@ import hashlib
 
 
 def patch_image(strInputFile, strOutputFile, fVerbose=False):
-    if fVerbose == True:
-        print 'Reading the input image from "%s".' % strInputFile
+    if fVerbose is True:
+        print('Reading the input image from "%s".' % strInputFile)
 
     # Read the complete input file to a string.
     tFile = open(strInputFile, 'rb')
@@ -14,15 +14,15 @@ def patch_image(strInputFile, strOutputFile, fVerbose=False):
     tFile.close()
     sizInputImage = len(strInputImage)
 
-    if fVerbose == True:
-        print 'Read %d bytes.' % sizInputImage
+    if fVerbose is True:
+        print('Read %d bytes.' % sizInputImage)
 
     # The input image must have at least...
     #   448 bytes of CM4 header,
     #    64 bytes of APP HBOOT header,
     #     4 bytes of application data.
     # In total this is 516 bytes.
-    if sizInputImage<516:
+    if sizInputImage < 516:
         raise Exception('The input image is too small. It must have at least 516 bytes.')
 
     # The input image must be a multiple of DWORDS.
@@ -73,16 +73,16 @@ def patch_image(strInputFile, strOutputFile, fVerbose=False):
     aulHBoot[0x0f] = ulBootblockChecksum
 
     # Write the complete image to the output file.
-    if fVerbose == True:
-        print 'Writing patched image to "%s".' % strOutputFile
+    if fVerbose is True:
+        print('Writing patched image to "%s".' % strOutputFile)
     tFile = open(strOutputFile, 'wb')
     tFile.write(strInputImage[0:448])
     aulHBoot.tofile(tFile)
     tFile.write(strInputImage[512:])
     tFile.close()
 
-    if fVerbose == True:
-        print 'OK.'
+    if fVerbose is True:
+        print('OK.')
 
 
 if __name__ == '__main__':
@@ -104,4 +104,3 @@ if __name__ == '__main__':
     tArgs = tParser.parse_args()
 
     patch_image(tArgs.strInputFile, tArgs.strOutputFile, tArgs.fVerbose)
-
