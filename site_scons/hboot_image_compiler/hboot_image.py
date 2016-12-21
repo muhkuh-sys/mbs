@@ -501,13 +501,13 @@ class HbootImage:
                 strAbsFilePath = self.__atKnownFiles[strFileId]
         else:
             # Try the current working directory first.
-            if os.access(strFilePath, os.R_OK) == True:
+            if os.access(strFilePath, os.R_OK) is True:
                 strAbsFilePath = os.path.abspath(strFilePath)
             else:
                 # Loop over all include folders.
                 for strIncludePath in self.__astrIncludePaths:
                     strPath = os.path.abspath(os.path.join(strIncludePath, strFilePath))
-                    if os.access(strPath, os.R_OK) == True:
+                    if os.access(strPath, os.R_OK) is True:
                         strAbsFilePath = strPath
                         break
 
@@ -657,7 +657,7 @@ class HbootImage:
                         # This is optional. If no segment names are specified, all sections with PROGBITS are dumped.
                         strSegmentsToDump = string.strip(tNode.getAttribute('segments'))
                         astrSegmentsToDump = None
-                        if len(strSegmentsToDump)!=0:
+                        if len(strSegmentsToDump) != 0:
                             astrSegmentsToDump = [string.strip(strSegment) for strSegment in string.split(strSegmentsToDump, ',')]
 
                         # Extract the segments.
@@ -775,13 +775,35 @@ class HbootImage:
             raise Exception('Continue here!')
         elif self.__strNetxType == 'NETX90_MPW':
             atXIPAreas = [
-                { 'device':'SQIROM',   'start':0x64000000, 'end':0x68000000 },   # SQI flash
-                { 'device':'INTFLASH', 'start':0x00100000, 'end':0x00200000 }    # IFLASH0 and 1
+                # SQI flash
+                {
+                    'device': 'SQIROM',
+                    'start': 0x64000000,
+                    'end': 0x68000000
+                },
+
+                # IFLASH0 and 1
+                {
+                    'device': 'INTFLASH',
+                    'start': 0x00100000,
+                    'end': 0x00200000
+                }
             ]
         elif self.__strNetxType == 'NETX90_MPW_APP':
             atXIPAreas = [
-                { 'device':'SQIROM',   'start':0x64000000, 'end':0x68000000 },   # SQI flash
-                { 'device':'INTFLASH', 'start':0x00200000, 'end':0x00280000 }    # IFLASH2
+                # SQI flash
+                {
+                    'device': 'SQIROM',
+                    'start': 0x64000000,
+                    'end': 0x68000000
+                },
+
+                # IFLASH2
+                {
+                    'device': 'INTFLASH',
+                    'start': 0x00200000,
+                    'end': 0x00280000
+                }
             ]
 
         pulXipStartAddress = None
