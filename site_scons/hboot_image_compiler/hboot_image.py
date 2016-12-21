@@ -390,7 +390,7 @@ class HbootImage:
             for tReplaceNode in atNodes:
                 strNewText = '<Snip artifact="start_app_cpu_netx90_mpw" group="org.muhkuh.hboot.sniplib" version="1.0.0"/>'
                 tNewXml = xml.dom.minidom.parseString('<?xml version="1.0" encoding="utf-8"?><Root>%s</Root>' % strNewText)
-		tParentNode = tReplaceNode.parentNode
+                tParentNode = tReplaceNode.parentNode
                 for tChildNode in tNewXml.documentElement.childNodes:
                     tClonedNode = tChildNode.cloneNode(True)
                     tParentNode.insertBefore(tClonedNode, tReplaceNode)
@@ -1060,10 +1060,10 @@ class HbootImage:
                 sizOffsetCurrent += (1 + 1 + self.__sizHashDw) * 4
             elif self.__strNetxType == 'NETX90_MPW':
                 sizOffsetCurrent += (1 + 1 + self.__sizHashDw) * 4
-	    elif self.__strNetxType == 'NETX90_MPW_APP':
-		sizOffsetCurrent += (1 + 1 + self.__sizHashDw) * 4
+            elif self.__strNetxType == 'NETX90_MPW_APP':
+                sizOffsetCurrent += (1 + 1 + self.__sizHashDw) * 4
             else:
-		raise Exception('Continue here!')
+                raise Exception('Continue here!')
 
             if sizOffsetNew < sizOffsetCurrent:
                 raise Exception('Skip tries to set the offset back from %d to %d.' % (sizOffsetCurrent, sizOffsetNew))
@@ -1072,25 +1072,25 @@ class HbootImage:
                 # The netX90 MPW ROM has a bug in the ROM code.
                 # The SKIP chunk for SQI flash forwards the offset by the
                 # argument - 1.
-		if self.__strDevice == 'SQIROM':
+                if self.__strDevice == 'SQIROM':
                     sizSkip = (sizOffsetNew - sizOffsetCurrent) / 4
                     sizSkipParameter = sizOffsetNew - sizOffsetCurrent + 1 - self.__sizHashDw
                 else:
                     sizSkip = (sizOffsetNew - sizOffsetCurrent) / 4
                     sizSkipParameter = sizSkip
 
-	    elif self.__strNetxType == 'NETX4000_RELAXED':
-		# The netX4000 relaxed ROM has a bug in the ROM code.
-		# The SKIP chunk forwards the offset by the argument - 1.
+            elif self.__strNetxType == 'NETX4000_RELAXED':
+                # The netX4000 relaxed ROM has a bug in the ROM code.
+                # The SKIP chunk forwards the offset by the argument - 1.
 
                 # The netX4000 has a lot of XIP areas including SQIROM, SRAM
-		# and NAND. Fortunately booting from parallel NOR flash and
-		# NAND is unusual. The NAND booter has no ECC support and the
-		# parallel NOR flashes are quite unusual in the netX4000 area.
-		# That's why we can safely default to SQIROM here and ignore
-        	# the rest.
-		sizSkip = (sizOffsetNew - sizOffsetCurrent) / 4
-		sizSkipParameter = sizOffsetNew - sizOffsetCurrent + 1 - self.__sizHashDw
+                # and NAND. Fortunately booting from parallel NOR flash and
+                # NAND is unusual. The NAND booter has no ECC support and the
+                # parallel NOR flashes are quite unusual in the netX4000 area.
+                # That's why we can safely default to SQIROM here and ignore
+                # the rest.
+                sizSkip = (sizOffsetNew - sizOffsetCurrent) / 4
+                sizSkipParameter = sizOffsetNew - sizOffsetCurrent + 1 - self.__sizHashDw
 
             else:
                 sizSkip = (sizOffsetNew - sizOffsetCurrent) / 4
