@@ -35,8 +35,6 @@ class ResolveDefines(ast.NodeTransformer):
             tValueNode = None
             if type(tValue) is int:
                 tValueNode = ast.Num(n=tValue)
-            elif type(tValue) is long:
-                tValueNode = ast.Num(n=tValue)
             elif type(tValue) is str:
                 tValueNode = ast.Str(s=tValue)
             else:
@@ -875,7 +873,7 @@ class HbootImage:
                     atSymbols = elf_support.get_symbol_table(self.__tEnv, strAbsFilePath)
                     if strStartSymbol not in atSymbols:
                         raise Exception('The symbol for the start startaddress "%s" could not be found!' % strStartSymbol)
-                    pfnExecFunction = long(atSymbols[strStartSymbol])
+                    pfnExecFunction = int(atSymbols[strStartSymbol])
                 elif tNode.localName == 'Address':
                     # Is there already an exec function?
                     if pfnExecFunction is not None:
@@ -1195,8 +1193,8 @@ class HbootImage:
         tMatch = tReExp.search(strStdout)
         if tMatch is None:
             raise Exception('Can not find public exponent!')
-        ulExp = long(tMatch.group(1))
-        ulExpHex = long(tMatch.group(2), 16)
+        ulExp = int(tMatch.group(1))
+        ulExpHex = int(tMatch.group(2), 16)
         if ulExp != ulExpHex:
             raise Exception('Decimal version differs from hex version!')
         if (ulExp < 0) or (ulExp > 0xffffff):
@@ -2053,7 +2051,7 @@ class HbootImage:
         # Get the hash size. Default to 1 DWORD.
         strHashSize = tXmlRootNode.getAttribute('hashsize')
         if len(strHashSize) != 0:
-            uiHashSize = long(strHashSize)
+            uiHashSize = int(strHashSize)
             if (uiHashSize < 1) or (uiHashSize > 12):
                 raise Exception('Invalid hash size: %d' % uiHashSize)
             self.__sizHashDw = uiHashSize
@@ -2065,7 +2063,7 @@ class HbootImage:
         ulStartOffset = 0
         strStartOffset = tXmlRootNode.getAttribute('offset')
         if len(strStartOffset) != 0:
-            ulStartOffset = long(strStartOffset)
+            ulStartOffset = int(strStartOffset)
             if ulStartOffset < 0:
                 raise Exception('The start offset is invalid: %d' % ulStartOffset)
         self.__ulStartOffset = ulStartOffset
