@@ -119,7 +119,7 @@ class HbootImage:
                 astrSnippetSearchPaths = []
                 if tValue is None:
                     pass
-                elif isinstance(tValue, basestring):
+                elif isinstance(tValue, ("".__class__, u"".__class__)):
                     astrSnippetSearchPaths.append(tValue)
                 else:
                     astrSnippetSearchPaths.extend(tValue)
@@ -127,7 +127,7 @@ class HbootImage:
             elif strKey == 'includes':
                 if tValue is None:
                     pass
-                elif isinstance(tValue, basestring):
+                elif isinstance(tValue, ("".__class__, u"".__class__)):
                     astrIncludePaths.append(tValue)
                 else:
                     astrIncludePaths.extend(tValue)
