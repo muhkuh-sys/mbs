@@ -166,27 +166,27 @@ class HbootImage:
         self.__atGlobalDefines = atGlobalDefines
 
         if self.__fVerbose:
-            print '[HBootImage] Configuration: netX type = %s' % strNetxType
-            print '[HBootImage] Configuration: patch definitions = "%s"' % strPatchDefinition
-            print '[HBootImage] Configuration: Keyrom = "%s"' % str(strKeyromFile)
+            print('[HBootImage] Configuration: netX type = %s' % strNetxType)
+            print('[HBootImage] Configuration: patch definitions = "%s"' % strPatchDefinition)
+            print('[HBootImage] Configuration: Keyrom = "%s"' % str(strKeyromFile))
 
             if len(astrSnippetSearchPaths) == 0:
-                print '[HBootImage] Configuration: No Sniplibs.'
+                print('[HBootImage] Configuration: No Sniplibs.')
             else:
                 for strPath in astrSnippetSearchPaths:
-                    print '[HBootImage] Configuration: Sniplib at "%s"' % strPath
+                    print('[HBootImage] Configuration: Sniplib at "%s"' % strPath)
 
             if len(astrIncludePaths) == 0:
-                print '[HBootImage] Configuration: No include paths.'
+                print('[HBootImage] Configuration: No include paths.')
             else:
                 for strPath in astrIncludePaths:
-                    print '[HBootImage] Configuration: Include path "%s"' % strPath
+                    print('[HBootImage] Configuration: Include path "%s"' % strPath)
 
             if len(atKnownFiles) == 0:
-                print '[HBootImage] Configuration: No known files.'
+                print('[HBootImage] Configuration: No known files.')
             else:
                 for strKey, strPath in atKnownFiles.iteritems():
-                    print '[HBootImage] Configuration: Known file "%s" at "%s".' % (strKey, strPath)
+                    print('[HBootImage] Configuration: Known file "%s" at "%s".' % (strKey, strPath))
 
         if strPatchDefinition is not None:
             self.__cPatchDefinitions = patch_definitions.PatchDefinitions()
@@ -210,9 +210,9 @@ class HbootImage:
         # Read the keyrom file if specified.
         if strKeyromFile is not None:
             if self.__fVerbose:
-                print '[HBootImage] Init: Reading key ROM file "%s".' % strKeyromFile
+                print('[HBootImage] Init: Reading key ROM file "%s".' % strKeyromFile)
             # Parse the XML file.
-            print repr(strKeyromFile)
+            print(repr(strKeyromFile))
             tFile = open(strKeyromFile, 'rt')
             strXml = tFile.read()
             tFile.close()
