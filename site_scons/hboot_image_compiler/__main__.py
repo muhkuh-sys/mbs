@@ -102,6 +102,13 @@ tEnv = {'OBJCOPY': tArgs.strObjCopy,
         'READELF': tArgs.strReadElf,
         'HBOOT_INCLUDE': tArgs.astrIncludePaths}
 
-tCompiler = hboot_image.HbootImage(tEnv, tArgs.strNetxType, patch_definition=tArgs.strPatchTablePath, known_files=atKnownFiles, verbose=tArgs.fVerbose)
+tCompiler = hboot_image.HbootImage(
+    tEnv,
+    tArgs.strNetxType,
+    includes=tArgs.astrIncludePaths,
+    known_files=atKnownFiles,
+    patch_definition=tArgs.strPatchTablePath,
+    verbose=tArgs.fVerbose
+)
 tCompiler.parse_image(tArgs.strInputFile)
 tCompiler.write(tArgs.strOutputFile)
