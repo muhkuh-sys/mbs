@@ -668,7 +668,11 @@ class HbootImage:
                         if ulEstimatedBinSize >= 0x20000000:
                             raise Exception("The resulting file seems to extend 512MBytes. Too scared to continue!")
 
-                        pulLoadAddress = elf_support.get_load_address(atSegments)
+                        strOverwriteAddress = string.strip(tNode.getAttribute('overwrite_address'))
+                        if len(strOverwriteAddress) == 0:
+                            pulLoadAddress = elf_support.get_load_address(atSegments)
+                        else:
+                            pulLoadAddress = int(strOverwriteAddress, 0)
 
                         # Extract the binary.
                         tBinFile, strBinFileName = tempfile.mkstemp()
