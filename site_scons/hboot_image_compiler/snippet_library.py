@@ -319,7 +319,7 @@ class SnippetLibrary:
         atReplace = {}
         astrMissing = []
         # Add all default values and find missing values.
-        for strName, tDefault in atParameterList.iteritems():
+        for strName, tDefault in iter(atParameterList.items()):
             if tDefault is not None:
                 atReplace[strName] = tDefault
             if strName not in atParameter:
@@ -330,7 +330,7 @@ class SnippetLibrary:
         # Add all required parameters which have assigned values.
         # Find unused parameter.
         astrUnused = []
-        for strName, strValue in atParameter.iteritems():
+        for strName, strValue in iter(atParameter.items()):
             if strName in atParameterList:
                 atReplace[strName] = strValue
             else:

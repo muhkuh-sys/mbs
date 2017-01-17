@@ -108,7 +108,7 @@ class HbootImage:
         fVerbose = False
 
         # Parse the kwargs.
-        for strKey, tValue in kwargs.iteritems():
+        for strKey, tValue in iter(kwargs.items()):
             if strKey == 'patch_definition':
                 strPatchDefinition = tValue
 
@@ -655,10 +655,10 @@ class HbootImage:
                     if strExtension == '.elf':
                         # Get the segment names to dump. It is a comma separated string.
                         # This is optional. If no segment names are specified, all sections with PROGBITS are dumped.
-                        strSegmentsToDump = string.strip(tNode.getAttribute('segments'))
+                        strSegmentsToDump = tNode.getAttribute('segments').strip()
                         astrSegmentsToDump = None
                         if len(strSegmentsToDump) != 0:
-                            astrSegmentsToDump = [string.strip(strSegment) for strSegment in string.split(strSegmentsToDump, ',')]
+                            astrSegmentsToDump = [strSegment.strip() for strSegment in string.split(strSegmentsToDump, ',')]
 
                         # Extract the segments.
                         atSegments = elf_support.get_segment_table(self.__tEnv, strAbsFilePath, astrSegmentsToDump)
@@ -668,7 +668,7 @@ class HbootImage:
                         if ulEstimatedBinSize >= 0x20000000:
                             raise Exception("The resulting file seems to extend 512MBytes. Too scared to continue!")
 
-                        strOverwriteAddress = string.strip(tNode.getAttribute('overwrite_address'))
+                        strOverwriteAddress = tNode.getAttribute('overwrite_address').strip()
                         if len(strOverwriteAddress) == 0:
                             pulLoadAddress = elf_support.get_load_address(atSegments)
                         else:
@@ -1147,7 +1147,7 @@ class HbootImage:
     def __remove_all_whitespace(self, strData):
         astrWhitespace = [' ', '\t', '\n', '\r']
         for strWhitespace in astrWhitespace:
-            strData = string.replace(strData, strWhitespace, '')
+            strData = strData.replace(strWhitespace, '')
         return strData
 
     # This function gets a data block from the OpenSSL output.
@@ -1165,7 +1165,7 @@ class HbootImage:
                     break
                 else:
                     for strData in string.split(strLine, ':'):
-                        strDataMirror += string.strip(strData)
+                        strDataMirror += strData.strip()
 
         # Skip the first byte and mirror the string.
         strDataMirrorBin = binascii.unhexlify(strDataMirror)
