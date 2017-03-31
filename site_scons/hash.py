@@ -21,8 +21,7 @@
 
 import hashlib
 import os.path
-
-from string import Template
+import string
 
 import SCons
 import SCons.Node.FS
@@ -33,32 +32,38 @@ def hash_action(target, source, env):
 	# Init the results array.
 	aHashes = []
 
-	tTemplate = Template(env['HASH_TEMPLATE'])
+	tTemplate = string.Template(env['HASH_TEMPLATE'])
 
 	# Get the directory path of the target file. This is the working dir and all paths in the hash file must be relative to this.
 	strWorkingDir = os.path.dirname(target[0].get_path())
 
 	# Create a new hash object with the requested algorithm.
-	strHashId = env['HASH_ALGORITHM']
-	try:
-		tHashBase = hashlib.new(strHashId)
-	except ValueError:
-		raise Exception('Unknown hash algorithm "%s". Supported algorithms: %s' % (strHashId, ', '.join(hashlib.algorithms)))
+	astrHashIDs = string.split(env['HASH_ALGORITHM'], ',')
+	for strHashName in astrHashIDs:
+		strHashID = string.lower(string.strip(strHashName))
+		strHashID_upper = string.upper(strHashID)
 
-	# Loop over all sources.
-	for tSource in source:
-		# Get a copy of the hash base.
-		tHash = tHashBase.copy()
-		# Process the complete file.
-		tHash.update(tSource.get_contents())
-		# Get the relative path to the working folder.
-		strRelPath = os.path.relpath(tSource.get_path(), strWorkingDir)
-		# Append the hash sum to the results.
-		aSubstitute = dict({
-			'HASH': tHash.hexdigest(),
-			'PATH': strRelPath
-		})
-		aHashes.append(tTemplate.safe_substitute(aSubstitute))
+		try:
+			tHashBase = hashlib.new(strHashID)
+		except ValueError:
+			raise Exception('Unknown hash algorithm "%s". Supported algorithms: %s' % (strHashID, ', '.join(hashlib.algorithms)))
+
+		# Loop over all sources.
+		for tSource in source:
+			# Get a copy of the hash base.
+			tHash = tHashBase.copy()
+			# Process the complete file.
+			tHash.update(tSource.get_contents())
+			# Get the relative path to the working folder.
+			strRelPath = os.path.relpath(tSource.get_path(), strWorkingDir)
+			# Append the hash sum to the results.
+			aSubstitute = dict({
+				'ID': strHashID,
+				'ID_UC': strHashID_upper,
+				'HASH': tHash.hexdigest(),
+				'PATH': strRelPath
+			})
+			aHashes.append(tTemplate.safe_substitute(aSubstitute))
 
 	# Write all hashes to the target file.
 	tFileTarget = open(target[0].get_path(), 'w')
