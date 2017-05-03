@@ -776,7 +776,21 @@ class HbootImage:
         if self.__strNetxType == 'NETX56':
             raise Exception('Continue here!')
         elif self.__strNetxType == 'NETX4000_RELAXED':
-            raise Exception('Continue here!')
+            atXIPAreas = [
+                # SQIROM0
+                {
+                    'device': 'SQIROM0',
+                    'start': 0x10000000,
+                    'end': 0x14000000
+                },
+
+                # SQIROM1
+                {
+                    'device': 'SQIROM1',
+                    'start': 0x14000000,
+                    'end': 0x18000000
+                }
+            ]
         elif self.__strNetxType == 'NETX90_MPW':
             atXIPAreas = [
                 # SQI flash
@@ -2098,7 +2112,9 @@ class HbootImage:
         astrValidDeviceNames = [
             'UNSPECIFIED',
             'INTFLASH',
-            'SQIROM'
+            'SQIROM',
+            'SQIROM0',
+            'SQIROM1'
         ]
         strDevice = tXmlRootNode.getAttribute('device')
         if len(strDevice) == 0:
