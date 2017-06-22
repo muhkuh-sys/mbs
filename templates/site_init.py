@@ -4,12 +4,6 @@
 # ${NOTE}
 
 
-import os
-import os.path
-
-# Make sure that the target folder exists.
-if os.path.exists('targets')!=True:
-    os.mkdir('targets')
 # Move the SCons database to the targets folder.
 SCons.SConsign.DB_Name = 'targets/.sconsign'
 

@@ -35,8 +35,10 @@ ulVersion = long(aVer[0])*0x01000000 + long(aVer[1])*0x00001000 + long(aVer[2])
 # Add the local site_scons folder to the search path.
 from SCons.Script.Main import _load_site_scons_dir
 if ulVersion>=0x02001000:
+	_load_site_scons_dir(Dir('#targets').get_abspath(), 'site_scons')
 	_load_site_scons_dir(Dir('.').get_abspath(), 'site_scons')
 else:
+	_load_site_scons_dir(Dir('#targets'), 'site_scons')
 	_load_site_scons_dir(Dir('#'), 'site_scons')
 
 # Import all local modules.
