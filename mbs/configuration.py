@@ -140,8 +140,6 @@ def create():
 		'depack_path': os.path.abspath(os.path.expanduser('~/.mbs/depack')),
 		'repositories': ['http://downloads.sourceforge.net/project/muhkuh/mbs', 'https://dl.bintray.com/muhkuh/Muhkuh'],
 		'filter': dict({
-			'scons.bat': 'templates/scons.bat',
-			'scons.sh': 'templates/scons.sh',
 			'site_scons/site_init.py': 'templates/site_init.py'
 			})
 		})
