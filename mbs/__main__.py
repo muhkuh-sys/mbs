@@ -30,6 +30,7 @@ if sys.hexversion<iMinimumInterpreterVersion_hex:
 
 
 import os
+import os.path
 import subprocess
 
 import clean_orphaned_pyc
@@ -80,5 +81,6 @@ print 'Running scons (%s)' % aCfg['scons_path']
 sys.stdout.flush()
 sys.stderr.flush()
 astrArguments = [sys.executable, aCfg['scons_path']]
+astrArguments.append('--site-dir=%s' % os.path.abspath('targets/site_scons'))
 astrArguments.extend(sys.argv[1:])
 sys.exit(subprocess.call(astrArguments))
