@@ -82,5 +82,7 @@ sys.stdout.flush()
 sys.stderr.flush()
 astrArguments = [sys.executable, aCfg['scons_path']]
 astrArguments.append('--site-dir=%s' % os.path.abspath('targets/site_scons'))
+astrArguments.append('--include-dir=%s' % os.path.abspath('site_scons'))
+astrArguments.append('--include-dir=%s' % os.path.abspath('mbs/site_scons'))
 astrArguments.extend(sys.argv[1:])
 sys.exit(subprocess.call(astrArguments))
