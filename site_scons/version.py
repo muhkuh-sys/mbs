@@ -42,7 +42,8 @@ def build_version_strings(env):
         strProjectVersionVCSURL = 'unknown'
 
         # Use the root folder to get the version. This is important for HG
-        # and SVN>=1.7 .
+        # and SVN>=1.7, but also for GIT as the build folder can be a
+        # different filesystem.
         strSconsRoot = SCons.Script.Dir('#').abspath
 
         if os.path.exists(os.path.join(strSconsRoot, '.git')):
@@ -52,6 +53,7 @@ def build_version_strings(env):
                 try:
                     strOutput = subprocess.check_output([
                         env['GIT'],
+                        '-C', strSconsRoot,
                         'describe',
                         '--abbrev=12',
                         '--always',
@@ -92,6 +94,7 @@ def build_version_strings(env):
 
                     strOutput = subprocess.check_output([
                         env['GIT'],
+                        '-C', strSconsRoot,
                         'config',
                         '--get',
                         'remote.origin.url'
