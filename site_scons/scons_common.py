@@ -37,6 +37,7 @@ import bootblock
 import build_properties
 import data_array
 import diff
+import filter
 import flex_zip
 import gcc_symbol_template
 import gen_random_seq
@@ -147,6 +148,7 @@ def CreateEnvironment(env, astrToolPatterns=None):
 	build_properties.ApplyToEnv(tEnvNew)
 	data_array.ApplyToEnv(tEnvNew)
 	diff.ApplyToEnv(tEnvNew)
+	filter.ApplyToEnv(tEnvNew)
 	flex_zip.ApplyToEnv(tEnvNew)
 	gcc_symbol_template.ApplyToEnv(tEnvNew)
 	gen_random_seq.ApplyToEnv(tEnvNew)
