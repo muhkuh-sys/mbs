@@ -21,7 +21,7 @@
 
 
 import string
-import SCons.Script
+import SCons
 
 
 def filter_action(target, source, env):
@@ -40,7 +40,15 @@ def filter_action(target, source, env):
         dst_oldtxt = ''
 
     # Filter the src file.
+    # NOTE: This replaces only $ID and ${ID}.
     dst_newtxt = tTemplate.safe_substitute(atSubstitutions)
+
+    # Replace @ID@.
+    for strKey, tValue in atSubstitutions.items():
+        dst_newtxt = string.replace(dst_newtxt, '@%s@' % strKey, tValue)
+
+    # Write the target file only if the current text differs from the file
+    # contents.
     if dst_newtxt != dst_oldtxt:
         # Overwrite the file.
         dst_file = open(target[0].get_path(), 'w')
