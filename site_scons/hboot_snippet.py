@@ -1,11 +1,8 @@
 # -*- coding: utf-8 -*-
 
 import codecs
-import os.path
-import string
-import xml.dom.minidom
-
-from SCons.Script import *
+import xml
+import SCons
 
 
 def hboot_snippet_action(target, source, env):
@@ -111,12 +108,8 @@ def hboot_snippet_string(target, source, env):
 
 
 def ApplyToEnv(env):
-    #-------------------------------------------------------------------------
-    #
     # Add HBootSnippet builder.
-    #
     env['PARAMETER'] = {}
     hboot_snippet_act = SCons.Action.Action(hboot_snippet_action, hboot_snippet_string)
-    hboot_snippet_bld = Builder(action=hboot_snippet_act, emitter=hboot_snippet_emitter, suffix='.xml')
+    hboot_snippet_bld = SCons.Script.Builder(action=hboot_snippet_act, emitter=hboot_snippet_emitter, suffix='.xml')
     env['BUILDERS']['HBootSnippet'] = hboot_snippet_bld
-
