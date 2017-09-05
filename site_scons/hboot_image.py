@@ -42,53 +42,58 @@ def __hboot_definition_scan(node, env, path):
     # This is the list of dependencies.
     atDependencies = []
 
-    if node.exists() is True:
-        atKnownFiles = {}
-        if 'HBOOTIMAGE_KNOWN_FILES' in env:
-            atK = env['HBOOTIMAGE_KNOWN_FILES']
-            if atK is not None:
-                atKnownFiles = __get_clean_known_files(atK)
+    fNoDependencyScan = False
+    if 'HBOOTIMAGE_NO_DEPENDENCY_SCAN' in env:
+        fNoDependencyScan = bool(env['HBOOTIMAGE_NO_DEPENDENCY_SCAN'])
 
-        astrIncludePaths = None
-        if 'HBOOTIMAGE_INCLUDE_PATHS' in env:
-            atValues = env['HBOOTIMAGE_INCLUDE_PATHS']
-            if (atValues is not None) and (len(atValues) != 0):
-                astrIncludePaths = []
-                astrIncludePaths.extend(atValues)
+    if fNoDependencyScan is not True:
+        if node.exists() is True:
+            atKnownFiles = {}
+            if 'HBOOTIMAGE_KNOWN_FILES' in env:
+                atK = env['HBOOTIMAGE_KNOWN_FILES']
+                if atK is not None:
+                    atKnownFiles = __get_clean_known_files(atK)
 
-        astrSnippetSearchPaths = None
-        if len(env['HBOOTIMAGE_SNIPLIB_SEARCHPATHS']) != 0:
-            astrSnippetSearchPaths = []
-            astrSnippetSearchPaths.extend(
-                env['HBOOTIMAGE_SNIPLIB_SEARCHPATHS']
+            astrIncludePaths = None
+            if 'HBOOTIMAGE_INCLUDE_PATHS' in env:
+                atValues = env['HBOOTIMAGE_INCLUDE_PATHS']
+                if (atValues is not None) and (len(atValues) != 0):
+                    astrIncludePaths = []
+                    astrIncludePaths.extend(atValues)
+
+            astrSnippetSearchPaths = None
+            if len(env['HBOOTIMAGE_SNIPLIB_SEARCHPATHS']) != 0:
+                astrSnippetSearchPaths = []
+                astrSnippetSearchPaths.extend(
+                    env['HBOOTIMAGE_SNIPLIB_SEARCHPATHS']
+                )
+
+            atDefines = {}
+            if 'HBOOTIMAGE_DEFINES' in env:
+                atValues = env['HBOOTIMAGE_DEFINES']
+                if atValues is not None:
+                    atDefines = dict(atValues)
+
+            fVerbose = False
+            if 'HBOOTIMAGE_VERBOSE' in env:
+                fVerbose = bool(env['HBOOTIMAGE_VERBOSE'])
+
+            strAsicTyp = env['ASIC_TYP']
+            strSrcFile = node.get_path()
+            tCompiler = hboot_image_compiler.hboot_image.HbootImage(
+                env,
+                strAsicTyp,
+                includes=astrIncludePaths,
+                sniplibs=astrSnippetSearchPaths,
+                known_files=atKnownFiles,
+                defines=atDefines,
+                verbose=fVerbose
             )
-
-        atDefines = {}
-        if 'HBOOTIMAGE_DEFINES' in env:
-            atValues = env['HBOOTIMAGE_DEFINES']
-            if atValues is not None:
-                atDefines = dict(atValues)
-
-        fVerbose = False
-        if 'HBOOTIMAGE_VERBOSE' in env:
-            fVerbose = bool(env['HBOOTIMAGE_VERBOSE'])
-
-        strAsicTyp = env['ASIC_TYP']
-        strSrcFile = node.get_path()
-        tCompiler = hboot_image_compiler.hboot_image.HbootImage(
-            env,
-            strAsicTyp,
-            includes=astrIncludePaths,
-            sniplibs=astrSnippetSearchPaths,
-            known_files=atKnownFiles,
-            defines=atDefines,
-            verbose=fVerbose
-        )
-        astrDependencies = tCompiler.dependency_scan(strSrcFile)
-        # Translate the list of paths to a list of SCons.Node.FS.File objects.
-        atDependencies = []
-        for strFile in astrDependencies:
-            atDependencies.append(SCons.Script.File(strFile))
+            astrDependencies = tCompiler.dependency_scan(strSrcFile)
+            # Translate the list of paths to a list of SCons.Node.FS.File objects.
+            atDependencies = []
+            for strFile in astrDependencies:
+                atDependencies.append(SCons.Script.File(strFile))
 
     return atDependencies
 
@@ -229,6 +234,11 @@ def __hboot_image_emitter(target, source, env):
         fVerbose = bool(env['HBOOTIMAGE_VERBOSE'])
     env.Depends(target, SCons.Node.Python.Value(str(fVerbose)))
 
+    fNoDependencyScan = False
+    if 'HBOOTIMAGE_NO_DEPENDENCY_SCAN' in env:
+        fNoDependencyScan = bool(env['HBOOTIMAGE_NO_DEPENDENCY_SCAN'])
+    env.Depends(target, SCons.Node.Python.Value(str(fNoDependencyScan)))
+
     return target, source
 
 
@@ -252,6 +262,7 @@ def ApplyToEnv(env):
     ]
     env['HBOOTIMAGE_DEFINES'] = None
     env['HBOOTIMAGE_VERBOSE'] = False
+    env['HBOOTIMAGE_NO_DEPENDENCY_SCAN'] = False
 
     hboot_image_act = SCons.Action.Action(
         __hboot_image_action,
