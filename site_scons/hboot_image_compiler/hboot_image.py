@@ -74,6 +74,8 @@ class HbootImage:
 
     __strNetxType = None
     __tImageType = None
+    __fHasHeader = None
+    __fHasEndMarker = None
     __astrToImageType = None
     __IMAGE_TYPE_REGULAR = 0
     __IMAGE_TYPE_INTRAM = 1
@@ -2135,6 +2137,16 @@ class HbootImage:
 
         return aulChunk
 
+    def __string_to_bool(self, strBool):
+        strBool = string.upper(strBool)
+        if (strBool == 'TRUE') or (strBool == 'T') or (strBool == 'YES') or (strBool == 'Y') or (strBool == '1'):
+            fBool = True
+        elif (strBool == 'FALSE') or (strBool == 'F') or (strBool == 'NO') or (strBool == 'N') or (strBool == '0'):
+            fBool = False
+        else:
+            fBool = None
+        return fBool
+
     def parse_image(self, tInput):
         # Parsing an image requires the patch definition.
         if self.__cPatchDefinitions is None:
@@ -2164,6 +2176,24 @@ class HbootImage:
         else:
             # Set the default type.
             self.__tImageType = self.__IMAGE_TYPE_REGULAR
+
+        # Check if a header should be written to the output file.
+        fHasHeader = True
+        strBool = tXmlRootNode.getAttribute('has_header')
+        if len(strBool) != 0:
+            fBool = self.__string_to_bool(strBool)
+            if fBool is not None:
+                fHasHeader = fBool
+        self.__fHasHeader = fHasHeader
+
+        # Check if an end marker should be written to the output file.
+        fHasEndMarker = True
+        strBool = tXmlRootNode.getAttribute('has_end')
+        if len(strBool) != 0:
+            fBool = self.__string_to_bool(strBool)
+            if fBool is not None:
+                fHasEndMarker = fBool
+        self.__fHasEndMarker = fHasEndMarker
 
         # INTRAM and REGULAR images are DWORD based, SECMEM images are byte
         # based.
@@ -2407,6 +2437,10 @@ class HbootImage:
 
             # Do not add headers in a SECMEM image.
             atHeader = array.array('B')
+
+            # Do not add end markers in a SECMEM image.
+            atEndMarker = array.array('B')
+
         else:
             # Get a copy of the chunk data.
             atChunks = array.array('I', self.__atChunks)
@@ -2420,11 +2454,19 @@ class HbootImage:
             # Combine the standard header with the overrides.
             atHeader = self.__combine_headers(atHeaderStandard)
 
+            # Get a fresh copy of the chunk data.
+            atChunks = array.array('I', self.__atChunks)
+
+            # Terminate the chunks with a DWORD of 0.
+            atEndMarker = array.array('I', [0x00000000])
+
         # Write all components to the output file.
         tFile = open(strTargetPath, 'wb')
-
-        atHeader.tofile(tFile)
+        if self.__fHasHeader is True:
+            atHeader.tofile(tFile)
         atChunks.tofile(tFile)
+        if self.__fHasEndMarker is True:
+            atEndMarker.tofile(tFile)
         tFile.close()
 
     def dependency_scan(self, strInput):
