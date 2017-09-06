@@ -1082,64 +1082,103 @@ class HbootImage:
         sizAbsolute = len(strAbsolute)
         strRelative = tChunkNode.getAttribute('relative')
         sizRelative = len(strRelative)
+        strFill = tChunkNode.getAttribute('fill')
+        sizFill = len(strFill)
+
+        strFile = ''
+        # Loop over all children.
+        for tChildNode in tChunkNode.childNodes:
+            # Is this a node element?
+            if tChildNode.nodeType == tChildNode.ELEMENT_NODE:
+                # Is this a 'Header' node?
+                if tChildNode.localName == 'File':
+                    # Get the file name.
+                    strFile = tChildNode.getAttribute('name')
+                    if len(strFile) == 0:
+                        raise Exception("The file node has no name attribute!")
+        sizFile = len(strFile)
 
         sizSkip = 0
         sizSkipParameter = 0
 
-        if (sizAbsolute == 0) and (sizRelative == 0):
-            raise Exception('The skip node has no "absolute" or "relative" attribute!')
+        if sizFile != 0:
+            if os.path.exists(strFile) is not True:
+                raise Exception('The file "%s" for the skip command does not exist.' % strFile)
+
+        ucFill = 0xff
+        if sizFill != 0:
+            ucFill = self.__parse_numeric_expression(strFill)
+            if ucFill < 0:
+                raise Exception('Skip does not accept a negative fill value:' % ucFill)
+            if ucFill > 0xff:
+                raise Exception('Skip does not accept a fill value larger than 8 bit:' % ucFill)
+
+        # Get the current offset in bytes. Add the size of the ID, the length and the hash.
+        sizOffsetCurrent = 64 + (len(self.__atChunks) * 4)
+        # Add the size of the SKIP chunk itself to the current position.
+        if self.__strNetxType == 'NETX4000_RELAXED':
+            sizOffsetCurrent += (1 + 1 + self.__sizHashDw) * 4
+        elif self.__strNetxType == 'NETX90_MPW':
+            sizOffsetCurrent += (1 + 1 + self.__sizHashDw) * 4
+        elif self.__strNetxType == 'NETX90_MPW_APP':
+            sizOffsetCurrent += (1 + 1 + self.__sizHashDw) * 4
+        else:
+            raise Exception('Continue here!')
+        sizOffsetNew = sizOffsetCurrent
+
+        if (sizAbsolute == 0) and (sizRelative == 0) and (sizFile == 0):
+            raise Exception('The skip node has no "absolute", "relative" or "file" attribute!')
         elif (sizAbsolute != 0) and (sizRelative != 0):
             raise Exception('The skip node has an "absolute" and a "relative" attribute!')
         elif sizAbsolute != 0:
             # Get the new absolute offset in bytes.
             sizOffsetNew = self.__parse_numeric_expression(strAbsolute)
-            # Get the current offset in bytes. Add the size of the ID, the length and the hash.
-            sizOffsetCurrent = 64 + (len(self.__atChunks) * 4)
-            # Add the size of the SKIP chunk itself to the current position.
-            if self.__strNetxType == 'NETX4000_RELAXED':
-                sizOffsetCurrent += (1 + 1 + self.__sizHashDw) * 4
-            elif self.__strNetxType == 'NETX90_MPW':
-                sizOffsetCurrent += (1 + 1 + self.__sizHashDw) * 4
-            elif self.__strNetxType == 'NETX90_MPW_APP':
-                sizOffsetCurrent += (1 + 1 + self.__sizHashDw) * 4
-            else:
-                raise Exception('Continue here!')
 
-            if sizOffsetNew < sizOffsetCurrent:
-                raise Exception('Skip tries to set the offset back from %d to %d.' % (sizOffsetCurrent, sizOffsetNew))
-
-            if self.__strNetxType == 'NETX90_MPW':
-                # The netX90 MPW ROM has a bug in the ROM code.
-                # The SKIP chunk for SQI flash forwards the offset by the
-                # argument - 1.
-                if self.__strDevice == 'SQIROM':
-                    sizSkip = (sizOffsetNew - sizOffsetCurrent) / 4
-                    sizSkipParameter = sizOffsetNew - sizOffsetCurrent + 1 - self.__sizHashDw
-                else:
-                    sizSkip = (sizOffsetNew - sizOffsetCurrent) / 4
-                    sizSkipParameter = sizSkip
-
-            elif self.__strNetxType == 'NETX4000_RELAXED':
-                # The netX4000 relaxed ROM has a bug in the ROM code.
-                # The SKIP chunk forwards the offset by the argument - 1.
-
-                # The netX4000 has a lot of XIP areas including SQIROM, SRAM
-                # and NAND. Fortunately booting from parallel NOR flash and
-                # NAND is unusual. The NAND booter has no ECC support and the
-                # parallel NOR flashes are quite unusual in the netX4000 area.
-                # That's why we can safely default to SQIROM here and ignore
-                # the rest.
-                sizSkip = (sizOffsetNew - sizOffsetCurrent) / 4
-                sizSkipParameter = sizOffsetNew - sizOffsetCurrent + 1 - self.__sizHashDw
-
-            else:
-                sizSkip = (sizOffsetNew - sizOffsetCurrent) / 4
-                sizSkipParameter = sizSkip
-        else:
+        elif sizRelative != 0:
             # Parse the data.
             sizSkip = self.__parse_numeric_expression(strRelative)
             if sizSkip < 0:
                 raise Exception('Skip does not accept a negative value for the relative attribute:' % sizSkip)
+            sizOffsetNew = sizOffsetCurrent + sizSkip
+
+        elif sizFile != 0:
+            # No "absolute" or "relative" attribute provided. Use the length
+            # of the file as a relative skip.
+            sizSkip = os.path.getsize(strFile)
+            sizOffsetNew = sizOffsetCurrent + sizSkip
+
+        else:
+            raise Exception('Internal error!')
+
+        if sizOffsetNew < sizOffsetCurrent:
+            raise Exception('Skip tries to set the offset back from %d to %d.' % (sizOffsetCurrent, sizOffsetNew))
+
+        if self.__strNetxType == 'NETX90_MPW':
+            # The netX90 MPW ROM has a bug in the ROM code.
+            # The SKIP chunk for SQI flash forwards the offset by the
+            # argument - 1.
+            if self.__strDevice == 'SQIROM':
+                sizSkip = (sizOffsetNew - sizOffsetCurrent) / 4
+                sizSkipParameter = sizOffsetNew - sizOffsetCurrent + 1 - self.__sizHashDw
+            else:
+                sizSkip = (sizOffsetNew - sizOffsetCurrent) / 4
+                sizSkipParameter = sizSkip
+
+        elif self.__strNetxType == 'NETX4000_RELAXED':
+            # The netX4000 relaxed ROM has a bug in the ROM code.
+            # The SKIP chunk forwards the offset by the argument - 1.
+
+            # The netX4000 has a lot of XIP areas including SQIROM, SRAM
+            # and NAND. Fortunately booting from parallel NOR flash and
+            # NAND is unusual. The NAND booter has no ECC support and the
+            # parallel NOR flashes are quite unusual in the netX4000 area.
+            # That's why we can safely default to SQIROM here and ignore
+            # the rest.
+            sizSkip = (sizOffsetNew - sizOffsetCurrent) / 4
+            sizSkipParameter = sizOffsetNew - sizOffsetCurrent + 1 - self.__sizHashDw
+
+        else:
+            sizSkip = (sizOffsetNew - sizOffsetCurrent) / 4
             sizSkipParameter = sizSkip
 
         aulChunk = array.array('I')
@@ -1154,7 +1193,26 @@ class HbootImage:
         aulChunk.extend(aulHash)
 
         # Append the placeholder for the skip area.
-        aulChunk.extend([0xffffffff] * sizSkip)
+        if sizFile != 0:
+            # sizSkip is the numbers of DWORDS to skip. Convert it to bytes.
+            sizSkipBytes = sizSkip * 4
+
+            # Read at mose sizSkipBytes from the file.
+            tFile = open(strFile, 'rb')
+            strFillData = tFile.read(sizSkipBytes)
+            tFile.close()
+            sizFillData = len(strFillData)
+
+            # Fill up to the requested size.
+            if sizFillData < sizSkipBytes:
+                strFillData += chr(ucFill) * (sizSkipBytes - sizFillData)
+
+            # Append the contents to the chunk.
+            aulChunk.fromstring(strFillData)
+
+        else:
+            ulFill = ucFill + 256 * ucFill + 65536 * ucFill + 16777216 * ucFill
+            aulChunk.extend([ulFill] * sizSkip)
 
         return aulChunk
 
