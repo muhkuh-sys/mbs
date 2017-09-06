@@ -764,6 +764,32 @@ class HbootImage:
 
         return aulChunk
 
+    def __build_chunk_text(self, tChunkNode):
+        # Get the text block.
+        strText = self.__xml_get_all_text(tChunkNode)
+
+        # Pad the text to a multiple of DWORDs.
+        strPadding = chr(0x00) * ((4 - (len(strText) % 4)) & 3)
+        strChunk = strText + strPadding
+
+        # Convert the padded text to an array.
+        aulData = array.array('I')
+        aulData.fromstring(strChunk)
+
+        aulChunk = array.array('I')
+        aulChunk.append(self.__get_tag_id('T', 'E', 'X', 'T'))
+        aulChunk.append(len(aulData) + self.__sizHashDw)
+        aulChunk.extend(aulData)
+
+        # Get the hash for the chunk.
+        tHash = hashlib.sha384()
+        tHash.update(aulChunk.tostring())
+        strHash = tHash.digest()
+        aulHash = array.array('I', strHash[:self.__sizHashDw * 4])
+        aulChunk.extend(aulHash)
+
+        return aulChunk
+
     def __build_chunk_xip(self, tChunkNode):
         # Get the data block.
         atData = {}
@@ -2207,6 +2233,12 @@ class HbootImage:
                                 if self.__tImageType == self.__IMAGE_TYPE_SECMEM:
                                     raise Exception('Data chunks are not allowed in SECMEM images.')
                                 atChunk = self.__build_chunk_data(tChunkNode)
+                                self.__atChunks.extend(atChunk)
+                            elif strChunkName == 'Text':
+                                # Found a text node.
+                                if self.__tImageType == self.__IMAGE_TYPE_SECMEM:
+                                    raise Exception('Text chunks are not allowed in SECMEM images.')
+                                atChunk = self.__build_chunk_text(tChunkNode)
                                 self.__atChunks.extend(atChunk)
                             elif strChunkName == 'XIP':
                                 # Found an XIP node.
