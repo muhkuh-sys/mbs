@@ -67,6 +67,12 @@ tParser.add_argument('-I', '--include',
                      action='append',
                      metavar='PATH',
                      help='Add PATH to the list of include paths.')
+tParser.add_argument('-S', '--sniplib',
+                     dest='astrSnipLib',
+                     required=False,
+                     action='append',
+                     metavar='PATH',
+                     help='Add PATH to the list of sniplib paths.')
 tParser.add_argument('strInputFile',
                      metavar='FILE',
                      help='Read the HBoot definition from FILE.')
@@ -117,6 +123,10 @@ if tArgs.astrDefines is not None:
 if tArgs.astrIncludePaths is None:
     tArgs.astrIncludePaths = []
 
+# Set an empty list of sniplib paths if nothing was specified.
+if tArgs.astrSnipLib is None:
+    tArgs.astrSnipLib = []
+
 tEnv = {'OBJCOPY': tArgs.strObjCopy,
         'OBJDUMP': tArgs.strObjDump,
         'READELF': tArgs.strReadElf,
@@ -129,7 +139,8 @@ tCompiler = hboot_image.HbootImage(
     includes=tArgs.astrIncludePaths,
     known_files=atKnownFiles,
     patch_definition=tArgs.strPatchTablePath,
-    verbose=tArgs.fVerbose
+    verbose=tArgs.fVerbose,
+    sniplibs = tArgs.astrSnipLib
 )
 tCompiler.parse_image(tArgs.strInputFile)
 tCompiler.write(tArgs.strOutputFile)
