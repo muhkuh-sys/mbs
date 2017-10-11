@@ -20,182 +20,212 @@
 # ----------------------------------------------------------------------- #
 
 
+import argparse
 import datetime
 import os
 import re
 import string
 import subprocess
 
-import SCons.Script
+if __name__ != '__main__':
+    import SCons.Script
 
 
-def build_version_strings(env):
+def build_version_strings(strProjectRootPath, strGit, strMercurial, strSvnversion):
+    # The default version is 'unknown'.
+    strProjectVersionVcsSystem = 'unknown'
+    strProjectVersionVcsVersion = 'unknown'
+    strProjectVersionVcsVersionLong = 'unknown'
+    strProjectVersionVCS = 'unknown'
+    strProjectVersionVCSLong = 'unknown'
+    strProjectVersionLastCommit = 'unknown'
+    strProjectVersionVCSURL = 'unknown'
+
+    if os.path.exists(os.path.join(strProjectRootPath, '.git')):
+        if strGit is not None:
+            strProjectVersionVcsSystem = 'GIT'
+            # Get the GIT ID.
+            try:
+                tProcess = subprocess.Popen([
+                    strGit,
+                    'describe',
+                    '--abbrev=12',
+                    '--always',
+                    '--dirty=+',
+                    '--long'
+                ], stdout=subprocess.PIPE, cwd=strProjectRootPath)
+                strOutput, strError = tProcess.communicate()
+                if tProcess.returncode != 0:
+                    raise Exception('git failed!')
+                strGitId = string.strip(strOutput)
+                tMatch = re.match('[0-9a-f]{12}\+?$', strGitId)
+                if tMatch is not None:
+                    # This is a repository with no tags.
+                    # Use the raw SHA sum.
+                    strProjectVersionVcsVersion = strGitId
+                    strProjectVersionVcsVersionLong = strGitId
+                else:
+                    tMatch = re.match(
+                        'v(\d+(\.\d+)*)-(\d+)-g([0-9a-f]{12}\+?)$',
+                        strGitId
+                    )
+                    if tMatch is None:
+                        # The description has an unknown format.
+                        strProjectVersionVcsVersion = strGitId
+                        strProjectVersionVcsVersionLong = strGitId
+                    else:
+                        ulRevsSinceTag = long(tMatch.group(3))
+                        if ulRevsSinceTag==0:
+                            # This is a repository which is exactly on a
+                            # tag. Use the tag name.
+                            strProjectVersionVcsVersion = tMatch.group(1)
+                            strProjectVersionVcsVersionLong = '%s-%s' % (tMatch.group(1), tMatch.group(4))
+                        else:
+                            # This is a repository with commits after
+                            # the last tag. Use the checkin ID.
+                            strProjectVersionVcsVersion = tMatch.group(4)
+                            strProjectVersionVcsVersionLong = tMatch.group(4)
+
+                strProjectVersionVCS = strProjectVersionVcsSystem + strProjectVersionVcsVersion
+                strProjectVersionVCSLong = strProjectVersionVcsSystem + strProjectVersionVcsVersionLong
+
+                tProcess = subprocess.Popen([
+                    strGit,
+                    'config',
+                    '--get',
+                    'remote.origin.url'
+                ], stdout=subprocess.PIPE, cwd=strProjectRootPath)
+                strOutput, strError = tProcess.communicate()
+                if tProcess.returncode != 0:
+                    raise Exception('git failed!')
+                strProjectVersionVCSURL = string.strip(strOutput)
+            except:
+                pass
+
+    elif os.path.exists(os.path.join(strProjectRootPath, '.hg')):
+        if strMercurial is not None:
+            strProjectVersionVcsSystem = 'HG'
+            # Get the mercurial ID.
+            try:
+                tProcess = subprocess.Popen([
+                    strMercurial,
+                    'id',
+                    '-i'
+                ], stdout=subprocess.PIPE, cwd=strProjectRootPath)
+                strOutput, strError = tProcess.communicate()
+                if tProcess.returncode != 0:
+                    raise Exception('hg failed!')
+                strHgId = string.strip(strOutput)
+                strProjectVersionVcsVersion = strHgId
+                strProjectVersionVCS = strProjectVersionVcsSystem + strProjectVersionVcsVersion
+            except:
+                pass
+
+            # Is this version completely checked in?
+            if strHgId[-1] == '+':
+                strProjectVersionLastCommit = 'SNAPSHOT'
+            else:
+                # Get the date of the last commit.
+                try:
+                    strOutput = subprocess.Popen([
+                        strMercurial,
+                        'log',
+                        '-r',
+                        strHgId,
+                        '--template',
+                        '{date|hgdate}'
+                    ], stdout=subprocess.PIPE, cwd=strProjectRootPath)
+                    strOutput, strError = tProcess.communicate()
+                    if tProcess.returncode != 0:
+                        raise Exception('hg failed!')
+                    strHgDate = string.strip(strOutput)
+                    tMatch = re.match('(\d+)\s+([+-]?\d+)', strHgDate)
+                    if tMatch is not None:
+                        tTimeStamp = datetime.datetime.fromtimestamp(
+                            float(tMatch.group(1))
+                        )
+                        strProjectVersionLastCommit = '%04d%02d%02d_%02d%02d%02d' % (tTimeStamp.year, tTimeStamp.month, tTimeStamp.day, tTimeStamp.hour, tTimeStamp.minute, tTimeStamp.second)
+                except:
+                    pass
+    elif os.path.exists(os.path.join(strProjectRootPath, '.svn')):
+        if env['SVNVERSION']:
+            strProjectVersionVcsSystem = 'SVN'
+
+            # Get the SVN version.
+            try:
+                strSvnId = subprocess.Popen([env['SVNVERSION']], stdout=subprocess.PIPE, cwd=strProjectRootPath)
+                strOutput, strError = tProcess.communicate()
+                if tProcess.returncode != 0:
+                    raise Exception('svnversion failed!')
+                strProjectVersionVcsVersion = strSvnId
+                strProjectVersionVCS = strProjectVersionVcsSystem + strProjectVersionVcsVersion
+            except:
+                pass
+
+    tVersion = {
+        'VcsSystem': strProjectVersionVcsSystem,
+        'VcsVersion': strProjectVersionVcsVersion,
+        'VcsVersionLong': strProjectVersionVcsVersionLong,
+        'VCS': strProjectVersionVCS,
+        'VCSLong': strProjectVersionVCSLong,
+        'LastCommit': strProjectVersionLastCommit,
+        'VCSURL': strProjectVersionVCSURL
+    }
+
+    return tVersion
+
+
+def add_version_strings_to_env(env):
     # Is the VCS ID already set?
     if 'PROJECT_VERSION_VCS' not in env:
-        # The default version is 'unknown'.
-        strProjectVersionVcsSystem = 'unknown'
-        strProjectVersionVcsVersion = 'unknown'
-        strProjectVersionVcsVersionLong = 'unknown'
-        strProjectVersionVCS = 'unknown'
-        strProjectVersionVCSLong = 'unknown'
-        strProjectVersionLastCommit = 'unknown'
-        strProjectVersionVCSURL = 'unknown'
-
         # Use the root folder to get the version. This is important for HG
         # and SVN>=1.7, but also for GIT as the build folder can be a
         # different filesystem.
         strSconsRoot = SCons.Script.Dir('#').abspath
-
-        if os.path.exists(os.path.join(strSconsRoot, '.git')):
-            if env['GIT']:
-                strProjectVersionVcsSystem = 'GIT'
-                # Get the GIT ID.
-                try:
-                    strOutput = subprocess.check_output([
-                        env['GIT'],
-                        '-C', strSconsRoot,
-                        'describe',
-                        '--abbrev=12',
-                        '--always',
-                        '--dirty=+',
-                        '--long'
-                    ])
-                    strGitId = string.strip(strOutput)
-                    tMatch = re.match('[0-9a-f]{12}\+?$', strGitId)
-                    if tMatch is not None:
-                        # This is a repository with no tags.
-                        # Use the raw SHA sum.
-                        strProjectVersionVcsVersion = strGitId
-                        strProjectVersionVcsVersionLong = strGitId
-                    else:
-                        tMatch = re.match(
-                            'v(\d+(\.\d+)*)-(\d+)-g([0-9a-f]{12}\+?)$',
-                            strGitId
-                        )
-                        if tMatch is None:
-                            # The description has an unknown format.
-                            strProjectVersionVcsVersion = strGitId
-                            strProjectVersionVcsVersionLong = strGitId
-                        else:
-                            ulRevsSinceTag = long(tMatch.group(3))
-                            if ulRevsSinceTag==0:
-                                # This is a repository which is exactly on a
-                                # tag. Use the tag name.
-                                strProjectVersionVcsVersion = tMatch.group(1)
-                                strProjectVersionVcsVersionLong = '%s-%s' % (tMatch.group(1), tMatch.group(4))
-                            else:
-                                # This is a repository with commits after
-                                # the last tag. Use the checkin ID.
-                                strProjectVersionVcsVersion = tMatch.group(4)
-                                strProjectVersionVcsVersionLong = tMatch.group(4)
-
-                    strProjectVersionVCS = strProjectVersionVcsSystem + strProjectVersionVcsVersion
-                    strProjectVersionVCSLong = strProjectVersionVcsSystem + strProjectVersionVcsVersionLong
-
-                    strOutput = subprocess.check_output([
-                        env['GIT'],
-                        '-C', strSconsRoot,
-                        'config',
-                        '--get',
-                        'remote.origin.url'
-                    ])
-                    strProjectVersionVCSURL = string.strip(strOutput)
-                except:
-                    pass
-
-        elif os.path.exists(os.path.join(strSconsRoot, '.hg')):
-            if env['MERCURIAL']:
-                strProjectVersionVcsSystem = 'HG'
-                # Get the mercurial ID.
-                try:
-                    strOutput = subprocess.check_output([
-                        env['MERCURIAL'],
-                        'id',
-                        '-i'
-                    ])
-                    strHgId = string.strip(strOutput)
-                    strProjectVersionVcsVersion = strHgId
-                    strProjectVersionVCS = strProjectVersionVcsSystem + strProjectVersionVcsVersion
-                except:
-                    pass
-
-                # Is this version completely checked in?
-                if strHgId[-1] == '+':
-                    strProjectVersionLastCommit = 'SNAPSHOT'
-                else:
-                    # Get the date of the last commit.
-                    try:
-                        strOutput = subprocess.check_output([
-                            env['MERCURIAL'],
-                            'log',
-                            '-r',
-                            strHgId,
-                            '--template',
-                            '{date|hgdate}'
-                        ])
-                        strHgDate = string.strip(strOutput)
-                        tMatch = re.match('(\d+)\s+([+-]?\d+)', strHgDate)
-                        if tMatch is not None:
-                            tTimeStamp = datetime.datetime.fromtimestamp(
-                                float(tMatch.group(1))
-                            )
-                            strProjectVersionLastCommit = '%04d%02d%02d_%02d%02d%02d' % (tTimeStamp.year, tTimeStamp.month, tTimeStamp.day, tTimeStamp.hour, tTimeStamp.minute, tTimeStamp.second)
-                    except:
-                        pass
-        elif os.path.exists(os.path.join(strSconsRoot, '.svn')):
-            if env['SVNVERSION']:
-                strProjectVersionVcsSystem = 'SVN'
-
-                # Get the SVN version.
-                try:
-                    strSvnId = subprocess.check_output([env['SVNVERSION']])
-                    strProjectVersionVcsVersion = strSvnId
-                    strProjectVersionVCS = strProjectVersionVcsSystem + strProjectVersionVcsVersion
-                except:
-                    pass
+        tVersion = build_version_strings(strSconsRoot, env['GIT'], env['MERCURIAL'], env['SVNVERSION'])
 
         # Add the version to the environment.
-        env['PROJECT_VERSION_VCS'] = strProjectVersionVCS
-        env['PROJECT_VERSION_VCS_LONG'] = strProjectVersionVCSLong
-        env['PROJECT_VERSION_LAST_COMMIT'] = strProjectVersionLastCommit
-        env['PROJECT_VERSION_VCS_SYSTEM'] = strProjectVersionVcsSystem
-        env['PROJECT_VERSION_VCS_VERSION'] = strProjectVersionVcsVersion
-        env['PROJECT_VERSION_VCS_VERSION_LONG'] = strProjectVersionVcsVersionLong
-        env['PROJECT_VERSION_VCS_URL'] = strProjectVersionVCSURL
+        env['PROJECT_VERSION_VCS'] = tVersion['VCS']
+        env['PROJECT_VERSION_VCS_LONG'] = tVersion['VCSLong']
+        env['PROJECT_VERSION_LAST_COMMIT'] = tVersion['LastCommit']
+        env['PROJECT_VERSION_VCS_SYSTEM'] = tVersion['VcsSystem']
+        env['PROJECT_VERSION_VCS_VERSION'] = tVersion['VcsVersion']
+        env['PROJECT_VERSION_VCS_VERSION_LONG'] = tVersion['VcsVersionLong']
+        env['PROJECT_VERSION_VCS_URL'] = tVersion['VCSURL']
 
 
 def get_project_version_vcs(env):
-    build_version_strings(env)
+    add_version_strings_to_env(env)
     return env['PROJECT_VERSION_VCS']
 
 
 def get_project_version_vcs_long(env):
-    build_version_strings(env)
+    add_version_strings_to_env(env)
     return env['PROJECT_VERSION_VCS_LONG']
 
 
 def get_project_version_last_commit(env):
-    build_version_strings(env)
+    add_version_strings_to_env(env)
     return env['PROJECT_VERSION_LAST_COMMIT']
 
 
 def get_project_version_vcs_system(env):
-    build_version_strings(env)
+    add_version_strings_to_env(env)
     return env['PROJECT_VERSION_VCS_SYSTEM']
 
 
 def get_project_version_vcs_version(env):
-    build_version_strings(env)
+    add_version_strings_to_env(env)
     return env['PROJECT_VERSION_VCS_VERSION']
 
 
 def get_project_version_vcs_version_long(env):
-    build_version_strings(env)
+    add_version_strings_to_env(env)
     return env['PROJECT_VERSION_VCS_VERSION_LONG']
 
 
 def get_project_version_vcs_url(env):
-    build_version_strings(env)
+    add_version_strings_to_env(env)
     return env['PROJECT_VERSION_VCS_URL']
 
 
@@ -209,6 +239,7 @@ def version_action(target, source, env):
         'PROJECT_VERSION_MINOR': version_info[1],
         'PROJECT_VERSION_MICRO': version_info[2],
         'PROJECT_VERSION_VCS': env['PROJECT_VERSION_VCS'],
+        'PROJECT_VERSION_VCS_LONG': env['PROJECT_VERSION_VCS_LONG'],
         'PROJECT_VERSION': SCons.Script.PROJECT_VERSION,
         'PROJECT_VERSION_VCS_SYSTEM': env['PROJECT_VERSION_VCS_SYSTEM'],
         'PROJECT_VERSION_VCS_VERSION': env['PROJECT_VERSION_VCS_VERSION'],
@@ -233,7 +264,7 @@ def version_action(target, source, env):
 
 
 def version_emitter(target, source, env):
-    build_version_strings(env)
+    add_version_strings_to_env(env)
 
     # Make the target depend on the project version and the VCS ID.
     env.Depends(target, SCons.Node.Python.Value(SCons.Script.PROJECT_VERSION))
@@ -272,3 +303,14 @@ def ApplyToEnv(env):
     env.AddMethod(get_project_version_vcs_version, "Version_GetVcsVersion")
     env.AddMethod(get_project_version_vcs_version_long, "Version_GetVcsVersionLong")
     env.AddMethod(get_project_version_vcs_url, 'Version_GetVcsUrl')
+
+if __name__ == '__main__':
+    tParser = argparse.ArgumentParser(description='Get the project version from the VCS.')
+    tParser.add_argument('strProjectRootPath', help='The path to the project root.')
+    tParser.add_argument('--git', dest='strGit', default=None, help='The path to the "git" tool.')
+    tParser.add_argument('--hg', dest='strMercurial', default=None, help='The path to the "hg" tool.')
+    tParser.add_argument('--svnversion', dest='strSvnversion', default=None, help='The path to the "svnversion" tool.')
+    tArgs = tParser.parse_args()
+
+    tVersion = build_version_strings(tArgs.strProjectRootPath, tArgs.strGit, tArgs.strMercurial, tArgs.strSvnversion)
+    print('%s,%s,%s' % (tVersion['VCS'], tVersion['VCSLong'], tVersion['VCSURL']))
