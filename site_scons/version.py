@@ -46,14 +46,8 @@ def build_version_strings(strProjectRootPath, strGit, strMercurial, strSvnversio
             strProjectVersionVcsSystem = 'GIT'
             # Get the GIT ID.
             try:
-                tProcess = subprocess.Popen([
-                    strGit,
-                    'describe',
-                    '--abbrev=12',
-                    '--always',
-                    '--dirty=+',
-                    '--long'
-                ], stdout=subprocess.PIPE, cwd=strProjectRootPath)
+                strCmd = '%s describe --abbrev=12 --always --dirty=+ --long' % strGit
+                tProcess = subprocess.Popen(strCmd, stdout=subprocess.PIPE, cwd=strProjectRootPath, shell=True)
                 strOutput, strError = tProcess.communicate()
                 if tProcess.returncode != 0:
                     raise Exception('git failed!')
@@ -89,12 +83,8 @@ def build_version_strings(strProjectRootPath, strGit, strMercurial, strSvnversio
                 strProjectVersionVCS = strProjectVersionVcsSystem + strProjectVersionVcsVersion
                 strProjectVersionVCSLong = strProjectVersionVcsSystem + strProjectVersionVcsVersionLong
 
-                tProcess = subprocess.Popen([
-                    strGit,
-                    'config',
-                    '--get',
-                    'remote.origin.url'
-                ], stdout=subprocess.PIPE, cwd=strProjectRootPath)
+                strCmd = '%s config --get remote.origin.url' % strGit
+                tProcess = subprocess.Popen(strCmd, stdout=subprocess.PIPE, cwd=strProjectRootPath, shell=True)
                 strOutput, strError = tProcess.communicate()
                 if tProcess.returncode != 0:
                     raise Exception('git failed!')
@@ -107,11 +97,8 @@ def build_version_strings(strProjectRootPath, strGit, strMercurial, strSvnversio
             strProjectVersionVcsSystem = 'HG'
             # Get the mercurial ID.
             try:
-                tProcess = subprocess.Popen([
-                    strMercurial,
-                    'id',
-                    '-i'
-                ], stdout=subprocess.PIPE, cwd=strProjectRootPath)
+                strCmd = '%s id -i' % strMercurial
+                tProcess = subprocess.Popen(strCmd, stdout=subprocess.PIPE, cwd=strProjectRootPath, shell=True)
                 strOutput, strError = tProcess.communicate()
                 if tProcess.returncode != 0:
                     raise Exception('hg failed!')
@@ -127,14 +114,8 @@ def build_version_strings(strProjectRootPath, strGit, strMercurial, strSvnversio
             else:
                 # Get the date of the last commit.
                 try:
-                    strOutput = subprocess.Popen([
-                        strMercurial,
-                        'log',
-                        '-r',
-                        strHgId,
-                        '--template',
-                        '{date|hgdate}'
-                    ], stdout=subprocess.PIPE, cwd=strProjectRootPath)
+                    strCmd = '%s log -r %s --template {date|hgdate}' % (strMercurial, strHgId)
+                    strOutput = subprocess.Popen(strCmd, stdout=subprocess.PIPE, cwd=strProjectRootPath, shell=True)
                     strOutput, strError = tProcess.communicate()
                     if tProcess.returncode != 0:
                         raise Exception('hg failed!')
@@ -148,12 +129,13 @@ def build_version_strings(strProjectRootPath, strGit, strMercurial, strSvnversio
                 except:
                     pass
     elif os.path.exists(os.path.join(strProjectRootPath, '.svn')):
-        if env['SVNVERSION']:
+        if strSvnversion is not None:
             strProjectVersionVcsSystem = 'SVN'
 
             # Get the SVN version.
             try:
-                strSvnId = subprocess.Popen([env['SVNVERSION']], stdout=subprocess.PIPE, cwd=strProjectRootPath)
+                strCmd = '%s' % strSvnversion
+                strSvnId = subprocess.Popen(strCmd, stdout=subprocess.PIPE, cwd=strProjectRootPath, shell=True)
                 strOutput, strError = tProcess.communicate()
                 if tProcess.returncode != 0:
                     raise Exception('svnversion failed!')
