@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import argparse
+import os.path
 import re
 
 import hboot_image
@@ -89,7 +90,7 @@ atDefaultPatchTables = {
     'NETX4000_RELAXED': 'hboot_netx4000_relaxed_patch_table.xml'
 }
 if tArgs.strPatchTablePath is None:
-    tArgs.strPatchTablePath = atDefaultPatchTables[tArgs.strNetxType]
+    tArgs.strPatchTablePath = os.path.join(os.path.dirname(os.path.dirname(os.path.realpath(__file__))), atDefaultPatchTables[tArgs.strNetxType])
 
 # Parse all alias definitions.
 atKnownFiles = {}
