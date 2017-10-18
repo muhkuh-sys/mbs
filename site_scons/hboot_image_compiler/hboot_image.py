@@ -2216,7 +2216,7 @@ class HbootImage:
         ulStartOffset = 0
         strStartOffset = tXmlRootNode.getAttribute('offset')
         if len(strStartOffset) != 0:
-            ulStartOffset = int(strStartOffset)
+            ulStartOffset = int(strStartOffset, 0)
             if ulStartOffset < 0:
                 raise Exception('The start offset is invalid: %d' % ulStartOffset)
         self.__ulStartOffset = ulStartOffset
