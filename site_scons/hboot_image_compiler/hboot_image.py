@@ -104,7 +104,7 @@ class HbootImage:
         strPatchDefinition = None
         strKeyromFile = None
         astrIncludePaths = []
-        astrSnippetSearchPaths = None
+        astrSnippetSearchPaths = []
         atKnownFiles = {}
         atGlobalDefines = {}
         fVerbose = False
@@ -118,7 +118,6 @@ class HbootImage:
                 strKeyromFile = tValue
 
             elif strKey == 'sniplibs':
-                astrSnippetSearchPaths = []
                 if tValue is None:
                     pass
                 elif isinstance(tValue, ("".__class__, u"".__class__)):
@@ -147,7 +146,7 @@ class HbootImage:
                 atGlobalDefines = dict(tValue)
 
         # Set the default search path if nothing was specified.
-        if astrSnippetSearchPaths is None:
+        if len(astrSnippetSearchPaths) == 0:
             astrSnippetSearchPaths = ['sniplib']
 
         self.__fVerbose = fVerbose
