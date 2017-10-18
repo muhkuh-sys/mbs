@@ -870,7 +870,10 @@ class HbootImage:
         # Get the current offset in bytes.
         # It is 64 bytes for the header and the size of all chunks.
         # FIXME: If an image starts not at the beginning of the flash, the offset is different. Get the offset from the XML file?
-        ulOffsetCurrent = 64 + (len(self.__atChunks) * 4)
+        ulOffsetCurrent = self.__ulStartOffset
+        if self.__fHasHeader == True:
+            ulOffsetCurrent += 64
+        ulOffsetCurrent += len(self.__atChunks) * 4
 
         # The requested offset must be the current offset + the data offset
         ulOffsetCurrentData = ulOffsetCurrent + ulOffsetRequestedData
@@ -1141,7 +1144,10 @@ class HbootImage:
                 raise Exception('Skip does not accept a fill value larger than 8 bit:' % ucFill)
 
         # Get the current offset in bytes. Add the size of the ID, the length and the hash.
-        sizOffsetCurrent = 64 + (len(self.__atChunks) * 4)
+        sizOffsetCurrent = self.__ulStartOffset
+        if self.__fHasHeader == True:
+            sizOffsetCurrent += 64
+        sizOffsetCurrent += len(self.__atChunks) * 4
         # Add the size of the SKIP chunk itself to the current position.
         if self.__strNetxType == 'NETX4000_RELAXED':
             sizOffsetCurrent += (1 + 1 + self.__sizHashDw) * 4
