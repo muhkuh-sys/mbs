@@ -1727,116 +1727,133 @@ class HbootImage:
         return aulChunk
 
     def __build_chunk_license_cert(self, tChunkNode):
-        # Generate an array with default values where possible.
-        __atCert = {
-            # The key index must be set by the user.
-            'Key': {
-                'idx': None
-            },
-
-            # The Binding must be set by the user.
-            'Binding': {
-                'mask': None,
-                'ref': None
-            },
-
-            # The new register values are empty by default.
-            'NewRegisterValues': {
-                'data': ''
-            },
-
-            # The user content is empty by default.
-            'UserContent': {
-                'data': ''
-            }
-        }
-
-        # Loop over all children.
+        aulChunk = None
+        tFileNode = None
         for tNode in tChunkNode.childNodes:
-            if tNode.nodeType == tNode.ELEMENT_NODE:
-                if tNode.localName == 'Key':
-                    self.__cert_get_key_index(tNode, __atCert['Key'])
-                elif tNode.localName == 'Binding':
-                    self.__root_cert_parse_binding(tNode, __atCert['Binding'])
-                elif tNode.localName == 'NewRegisterValues':
-                    self.__root_cert_parse_new_register_values(tNode, __atCert['NewRegisterValues'])
-                elif tNode.localName == 'UserContent':
-                    self.__root_cert_parse_user_content(tNode, __atCert['UserContent'])
-                else:
-                    raise Exception('Unexpected node: %s' % tNode.localName)
+            if (tNode.nodeType == tNode.ELEMENT_NODE) and (tNode.localName == 'File'):
+                tFileNode = tNode
+                break
+        if tFileNode is not None:
+            strFileName = tFileNode.getAttribute('name')
 
-        # Check if all required data was set.
-        astrErr = []
-        if __atCert['Key']['idx'] is None:
-            astrErr.append('No "idx" set in the LicenseCert.')
-        if __atCert['Binding']['mask'] is None:
-            astrErr.append('No "mask" set in the Binding.')
-        if __atCert['Binding']['ref'] is None:
-            astrErr.append('No "ref" set in the Binding.')
-        if len(astrErr) != 0:
-            raise Exception('\n'.join(astrErr))
+            # Search the file in the current path and all include paths.
+            strAbsName = self.__find_file(strFileName)
+            if strAbsName is None:
+                raise Exception('Failed to read file "%s": file not found.' % strFileName)
 
-        # Combine all data to the chunk.
-        atData = array.array('B')
+            aulChunk = self.__get_chunk_from_file(strAbsName)
 
-        atData.extend(__atCert['Binding']['mask'])
-        atData.extend(__atCert['Binding']['ref'])
+        else:
+            # Generate an array with default values where possible.
+            __atCert = {
+                # The key index must be set by the user.
+                'Key': {
+                    'idx': None
+                },
 
-        sizData = len(__atCert['NewRegisterValues']['data'])
-        atData.append(sizData)
-        atData.extend(__atCert['NewRegisterValues']['data'])
+                # The Binding must be set by the user.
+                'Binding': {
+                    'mask': None,
+                    'ref': None
+                },
 
-        sizData = len(__atCert['UserContent']['data'])
-        atData.append(sizData & 0xff)
-        atData.append((sizData >> 8) & 0xff)
-        atData.append((sizData >> 16) & 0xff)
-        atData.append((sizData >> 32) & 0xff)
-        atData.extend(__atCert['UserContent']['data'])
+                # The new register values are empty by default.
+                'NewRegisterValues': {
+                    'data': ''
+                },
 
-        # Get the key in DER encoded format.
-        strKeyDER = self.__keyrom_get_key(__atCert['Key']['idx'])
+                # The user content is empty by default.
+                'UserContent': {
+                    'data': ''
+                }
+            }
 
-        # Create a temporary file for the keypair.
-        iFile, strPathKeypair = tempfile.mkstemp(suffix='der', prefix='tmp_hboot_image', dir=None, text=False)
-        os.close(iFile)
+            # Loop over all children.
+            for tNode in tChunkNode.childNodes:
+                if tNode.nodeType == tNode.ELEMENT_NODE:
+                    if tNode.localName == 'Key':
+                        self.__cert_get_key_index(tNode, __atCert['Key'])
+                    elif tNode.localName == 'Binding':
+                        self.__root_cert_parse_binding(tNode, __atCert['Binding'])
+                    elif tNode.localName == 'NewRegisterValues':
+                        self.__root_cert_parse_new_register_values(tNode, __atCert['NewRegisterValues'])
+                    elif tNode.localName == 'UserContent':
+                        self.__root_cert_parse_user_content(tNode, __atCert['UserContent'])
+                    else:
+                        raise Exception('Unexpected node: %s' % tNode.localName)
 
-        # Create a temporary file for the data to sign.
-        iFile, strPathSignatureInputData = tempfile.mkstemp(suffix='bin', prefix='tmp_hboot_image', dir=None, text=False)
-        os.close(iFile)
+            # Check if all required data was set.
+            astrErr = []
+            if __atCert['Key']['idx'] is None:
+                astrErr.append('No "idx" set in the LicenseCert.')
+            if __atCert['Binding']['mask'] is None:
+                astrErr.append('No "mask" set in the Binding.')
+            if __atCert['Binding']['ref'] is None:
+                astrErr.append('No "ref" set in the Binding.')
+            if len(astrErr) != 0:
+                raise Exception('\n'.join(astrErr))
 
-        # Write the DER key to the temporary file.
-        tFile = open(strPathKeypair, 'wt')
-        tFile.write(strKeyDER)
-        tFile.close()
+            # Combine all data to the chunk.
+            atData = array.array('B')
 
-        # Write the data to sign to the temporary file.
-        tFile = open(strPathSignatureInputData, 'wb')
-        tFile.write(atData.tostring())
-        tFile.close()
+            atData.extend(__atCert['Binding']['mask'])
+            atData.extend(__atCert['Binding']['ref'])
 
-        strSignature = subprocess.check_output([self.__cfg_openssl, 'dgst', '-sign', strPathKeypair, '-keyform', 'DER', '-sigopt', 'rsa_padding_mode:pss', '-sigopt', 'rsa_pss_saltlen:-1', '-sha384', strPathSignatureInputData])
+            sizData = len(__atCert['NewRegisterValues']['data'])
+            atData.append(sizData)
+            atData.extend(__atCert['NewRegisterValues']['data'])
 
-        # Remove the temp files.
-        os.remove(strPathKeypair)
-        os.remove(strPathSignatureInputData)
+            sizData = len(__atCert['UserContent']['data'])
+            atData.append(sizData & 0xff)
+            atData.append((sizData >> 8) & 0xff)
+            atData.append((sizData >> 16) & 0xff)
+            atData.append((sizData >> 32) & 0xff)
+            atData.extend(__atCert['UserContent']['data'])
 
-        # Append the signature to the chunk.
-        aulSignature = array.array('B', strSignature)
-        atData.extend(aulSignature)
+            # Get the key in DER encoded format.
+            strKeyDER = self.__keyrom_get_key(__atCert['Key']['idx'])
 
-        # Pad the data to a multiple of dwords.
-        strData = atData.tostring()
-        strPadding = chr(0x00) * ((4 - (len(strData) % 4)) & 3)
-        strChunk = strData + strPadding
+            # Create a temporary file for the keypair.
+            iFile, strPathKeypair = tempfile.mkstemp(suffix='der', prefix='tmp_hboot_image', dir=None, text=False)
+            os.close(iFile)
 
-        # Convert the padded data to an array.
-        aulData = array.array('I')
-        aulData.fromstring(strChunk)
+            # Create a temporary file for the data to sign.
+            iFile, strPathSignatureInputData = tempfile.mkstemp(suffix='bin', prefix='tmp_hboot_image', dir=None, text=False)
+            os.close(iFile)
 
-        aulChunk = array.array('I')
-        aulChunk.append(self.__get_tag_id('L', 'C', 'R', 'T'))
-        aulChunk.append(len(aulData))
-        aulChunk.extend(aulData)
+            # Write the DER key to the temporary file.
+            tFile = open(strPathKeypair, 'wt')
+            tFile.write(strKeyDER)
+            tFile.close()
+
+            # Write the data to sign to the temporary file.
+            tFile = open(strPathSignatureInputData, 'wb')
+            tFile.write(atData.tostring())
+            tFile.close()
+
+            strSignature = subprocess.check_output([self.__cfg_openssl, 'dgst', '-sign', strPathKeypair, '-keyform', 'DER', '-sigopt', 'rsa_padding_mode:pss', '-sigopt', 'rsa_pss_saltlen:-1', '-sha384', strPathSignatureInputData])
+
+            # Remove the temp files.
+            os.remove(strPathKeypair)
+            os.remove(strPathSignatureInputData)
+
+            # Append the signature to the chunk.
+            aulSignature = array.array('B', strSignature)
+            atData.extend(aulSignature)
+
+            # Pad the data to a multiple of dwords.
+            strData = atData.tostring()
+            strPadding = chr(0x00) * ((4 - (len(strData) % 4)) & 3)
+            strChunk = strData + strPadding
+
+            # Convert the padded data to an array.
+            aulData = array.array('I')
+            aulData.fromstring(strChunk)
+
+            aulChunk = array.array('I')
+            aulChunk.append(self.__get_tag_id('L', 'C', 'R', 'T'))
+            aulChunk.append(len(aulData))
+            aulChunk.extend(aulData)
 
         return aulChunk
 
