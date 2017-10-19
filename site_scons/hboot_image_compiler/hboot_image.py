@@ -13,6 +13,7 @@ import string
 import subprocess
 import tempfile
 import xml.dom.minidom
+import xml.etree.ElementTree
 
 import elf_support
 import option_compiler
@@ -1303,15 +1304,12 @@ class HbootImage:
 
         return strKeyDER
 
-    def __get_cert_mod_exp(self, tNodeParent, uiIndex):
+    def __get_cert_mod_exp(self, tNodeParent, strKeyDER):
         __atKnownRsaSizes = {
             0: {'mod': 256, 'exp': 3, 'rsa': 2048},
             1: {'mod': 384, 'exp': 3, 'rsa': 3072},
             2: {'mod': 512, 'exp': 3, 'rsa': 4096}
         }
-
-        # Get the key in DER encoded format.
-        strKeyDER = self.__keyrom_get_key(uiIndex)
 
         # Extract all information from the key.
         tProcess = subprocess.Popen([self.__cfg_openssl, 'rsa', '-inform', 'DER', '-text', '-noout'], stdin=subprocess.PIPE, stdout=subprocess.PIPE)
@@ -1377,27 +1375,79 @@ class HbootImage:
         return aucBinding
 
     def __root_cert_parse_root_public_key(self, tNodeParent, atData):
+        strKeyDER = None
         # Get the index.
         strIdx = tNodeParent.getAttribute('idx')
-        if len(strIdx) == 0:
-            raise Exception('No "idx" attribute found!')
-        ulIdx = self.__parse_numeric_expression(strIdx)
+        if len(strIdx) != 0:
+            ulIdx = self.__parse_numeric_expression(strIdx)
 
-        (uiId, aucMod, aucExp) = self.__get_cert_mod_exp(tNodeParent, ulIdx)
+            # Get the key in DER encoded format.
+            strKeyDER = self.__keyrom_get_key(ulIdx)
+
+        else:
+            # Search for a "File" child node.
+            tFileNode = None
+            for tNode in tNodeParent.childNodes:
+                if (tNode.nodeType == tNode.ELEMENT_NODE) and (tNode.localName == 'File'):
+                    tFileNode = tNode
+                    break
+            if tFileNode is not None:
+                strFileName = tFileNode.getAttribute('name')
+
+                # Search the file in the current path and all include paths.
+                strAbsName = self.__find_file(strFileName)
+                if strAbsName is None:
+                    raise Exception('Failed to read file "%s": file not found.' % strFileName)
+
+                # Read the complete key.
+                tFile = open(strAbsName, 'rb')
+                strKeyDER = tFile.read()
+                tFile.close()
+
+        if strKeyDER is None:
+            raise Exception('No "idx" attribute and no child "File" found!')
+
+        (uiId, aucMod, aucExp) = self.__get_cert_mod_exp(tNodeParent, strKeyDER)
 
         atData['id'] = uiId
         atData['mod'] = aucMod
         atData['exp'] = aucExp
         atData['idx'] = ulIdx
 
-    def __cert_get_key_index(self, tNodeParent, atData):
+    def __cert_get_key_der(self, tNodeParent, atData):
+        strKeyDER = None
         # Get the index.
         strIdx = tNodeParent.getAttribute('idx')
-        if len(strIdx) == 0:
-            raise Exception('No "idx" attribute found!')
-        ulIdx = self.__parse_numeric_expression(strIdx)
+        if len(strIdx) != 0:
+            ulIdx = self.__parse_numeric_expression(strIdx)
 
-        atData['idx'] = ulIdx
+            # Get the key in DER encoded format.
+            strKeyDER = self.__keyrom_get_key(ulIdx)
+
+        else:
+            # Search for a "File" child node.
+            tFileNode = None
+            for tNode in tNodeParent.childNodes:
+                if (tNode.nodeType == tNode.ELEMENT_NODE) and (tNode.localName == 'File'):
+                    tFileNode = tNode
+                    break
+            if tFileNode is not None:
+                strFileName = tFileNode.getAttribute('name')
+
+                # Search the file in the current path and all include paths.
+                strAbsName = self.__find_file(strFileName)
+                if strAbsName is None:
+                    raise Exception('Failed to read file "%s": file not found.' % strFileName)
+
+                # Read the complete key.
+                tFile = open(strAbsName, 'rb')
+                strKeyDER = tFile.read()
+                tFile.close()
+
+        if strKeyDER is None:
+            raise Exception('No "idx" attribute and no child "File" found!')
+
+        atData['der'] = strKeyDER
 
     def __root_cert_parse_binding(self, tNodeParent, atData):
         atData['mask'] = self.__cert_parse_binding(tNodeParent, 'Mask')
@@ -1461,13 +1511,39 @@ class HbootImage:
         atData['data'] = atValues
 
     def __root_cert_parse_trusted_path(self, tNodeParent, atData):
+        strKeyDER = None
         # Get the index.
         strIdx = tNodeParent.getAttribute('idx')
-        if len(strIdx) == 0:
-            raise Exception('No "idx" attribute found!')
-        ulIdx = self.__parse_numeric_expression(strIdx)
+        if len(strIdx) != 0:
+            ulIdx = self.__parse_numeric_expression(strIdx)
 
-        (uiId, aucMod, aucExp) = self.__get_cert_mod_exp(tNodeParent, ulIdx)
+            # Get the key in DER encoded format.
+            strKeyDER = self.__keyrom_get_key(ulIdx)
+
+        else:
+            # Search for a "File" child node.
+            tFileNode = None
+            for tNode in tNodeParent.childNodes:
+                if (tNode.nodeType == tNode.ELEMENT_NODE) and (tNode.localName == 'File'):
+                    tFileNode = tNode
+                    break
+            if tFileNode is not None:
+                strFileName = tFileNode.getAttribute('name')
+
+                # Search the file in the current path and all include paths.
+                strAbsName = self.__find_file(strFileName)
+                if strAbsName is None:
+                    raise Exception('Failed to read file "%s": file not found.' % strFileName)
+
+                # Read the complete key.
+                tFile = open(strAbsName, 'rb')
+                strKeyDER = tFile.read()
+                tFile.close()
+
+        if strKeyDER is None:
+            raise Exception('No "idx" attribute and no child "File" found!')
+
+        (uiId, aucMod, aucExp) = self.__get_cert_mod_exp(tNodeParent, strKeyDER)
 
         aucMask = self.__cert_parse_binding(tNodeParent, 'Mask')
 
@@ -1748,7 +1824,7 @@ class HbootImage:
             __atCert = {
                 # The key index must be set by the user.
                 'Key': {
-                    'idx': None
+                    'der': None
                 },
 
                 # The Binding must be set by the user.
@@ -1772,7 +1848,7 @@ class HbootImage:
             for tNode in tChunkNode.childNodes:
                 if tNode.nodeType == tNode.ELEMENT_NODE:
                     if tNode.localName == 'Key':
-                        self.__cert_get_key_index(tNode, __atCert['Key'])
+                        self.__cert_get_key_der(tNode, __atCert['Key'])
                     elif tNode.localName == 'Binding':
                         self.__root_cert_parse_binding(tNode, __atCert['Binding'])
                     elif tNode.localName == 'NewRegisterValues':
@@ -1784,8 +1860,8 @@ class HbootImage:
 
             # Check if all required data was set.
             astrErr = []
-            if __atCert['Key']['idx'] is None:
-                astrErr.append('No "idx" set in the LicenseCert.')
+            if __atCert['Key']['der'] is None:
+                astrErr.append('No key set in the LicenseCert.')
             if __atCert['Binding']['mask'] is None:
                 astrErr.append('No "mask" set in the Binding.')
             if __atCert['Binding']['ref'] is None:
@@ -1811,7 +1887,7 @@ class HbootImage:
             atData.extend(__atCert['UserContent']['data'])
 
             # Get the key in DER encoded format.
-            strKeyDER = self.__keyrom_get_key(__atCert['Key']['idx'])
+            strKeyDER = __atCert['Key']['der']
 
             # Create a temporary file for the keypair.
             iFile, strPathKeypair = tempfile.mkstemp(suffix='der', prefix='tmp_hboot_image', dir=None, text=False)
@@ -1879,7 +1955,7 @@ class HbootImage:
             __atCert = {
                 # The key index must be set by the user.
                 'Key': {
-                    'idx': None
+                    'der': None
                 },
 
                 # The Binding must be set by the user.
@@ -1913,7 +1989,7 @@ class HbootImage:
             for tNode in tChunkNode.childNodes:
                 if tNode.nodeType == tNode.ELEMENT_NODE:
                     if tNode.localName == 'Key':
-                        self.__cert_get_key_index(tNode, __atCert['Key'])
+                        self.__cert_get_key_der(tNode, __atCert['Key'])
                     elif tNode.localName == 'Binding':
                         self.__root_cert_parse_binding(tNode, __atCert['Binding'])
                     elif tNode.localName == 'Data':
@@ -1927,8 +2003,8 @@ class HbootImage:
 
             # Check if all required data was set.
             astrErr = []
-            if __atCert['Key']['idx'] is None:
-                astrErr.append('No "idx" set in the LicenseCert.')
+            if __atCert['Key']['der'] is None:
+                astrErr.append('No key set in the CR7Software.')
             if __atCert['Binding']['mask'] is None:
                 astrErr.append('No "mask" set in the Binding.')
             if __atCert['Binding']['ref'] is None:
@@ -1970,7 +2046,7 @@ class HbootImage:
             atData.extend(__atCert['UserContent']['data'])
 
             # Get the key in DER encoded format.
-            strKeyDER = self.__keyrom_get_key(__atCert['Key']['idx'])
+            strKeyDER = __atCert['Key']['der']
 
             # Create a temporary file for the keypair.
             iFile, strPathKeypair = tempfile.mkstemp(suffix='der', prefix='tmp_hboot_image', dir=None, text=False)
@@ -2038,7 +2114,7 @@ class HbootImage:
             __atCert = {
                 # The key index must be set by the user.
                 'Key': {
-                    'idx': None
+                    'der': None
                 },
 
                 # The Binding must be set by the user.
@@ -2079,7 +2155,7 @@ class HbootImage:
             for tNode in tChunkNode.childNodes:
                 if tNode.nodeType == tNode.ELEMENT_NODE:
                     if tNode.localName == 'Key':
-                        self.__cert_get_key_index(tNode, __atCert['Key'])
+                        self.__cert_get_key_der(tNode, __atCert['Key'])
                     elif tNode.localName == 'Binding':
                         self.__root_cert_parse_binding(tNode, __atCert['Binding'])
                     elif tNode.localName == 'Data':
@@ -2098,8 +2174,8 @@ class HbootImage:
 
             # Check if all required data was set.
             astrErr = []
-            if __atCert['Key']['idx'] is None:
-                astrErr.append('No "idx" set in the LicenseCert.')
+            if __atCert['Key']['der'] is None:
+                astrErr.append('No key set in the CA9Software.')
             if __atCert['Binding']['mask'] is None:
                 astrErr.append('No "mask" set in the Binding.')
             if __atCert['Binding']['ref'] is None:
@@ -2156,7 +2232,7 @@ class HbootImage:
             atData.extend(__atCert['UserContent']['data'])
 
             # Get the key in DER encoded format.
-            strKeyDER = self.__keyrom_get_key(__atCert['Key']['idx'])
+            strKeyDER = __atCert['Key']['der']
 
             # Create a temporary file for the keypair.
             iFile, strPathKeypair = tempfile.mkstemp(suffix='der', prefix='tmp_hboot_image', dir=None, text=False)
