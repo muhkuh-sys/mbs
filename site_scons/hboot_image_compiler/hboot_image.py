@@ -1858,313 +1858,347 @@ class HbootImage:
         return aulChunk
 
     def __build_chunk_cr7sw(self, tChunkNode):
-        # Generate an array with default values where possible.
-        __atCert = {
-            # The key index must be set by the user.
-            'Key': {
-                'idx': None
-            },
-
-            # The Binding must be set by the user.
-            'Binding': {
-                'mask': None,
-                'ref': None
-            },
-
-            # The data must be set by the user.
-            'Data': {
-                'data': None,
-                'load_address': None
-            },
-
-            # The registers.
-            'Execute': {
-                'pfnExecFunction': None,
-                'ulR0': None,
-                'ulR1': None,
-                'ulR2': None,
-                'ulR3': None
-            },
-
-            # The user content is empty by default.
-            'UserContent': {
-                'data': ''
-            }
-        }
-
-        # Loop over all children.
+        aulChunk = None
+        tFileNode = None
         for tNode in tChunkNode.childNodes:
-            if tNode.nodeType == tNode.ELEMENT_NODE:
-                if tNode.localName == 'Key':
-                    self.__cert_get_key_index(tNode, __atCert['Key'])
-                elif tNode.localName == 'Binding':
-                    self.__root_cert_parse_binding(tNode, __atCert['Binding'])
-                elif tNode.localName == 'Data':
-                    self.__get_data_contents(tNode, __atCert['Data'])
-                elif tNode.localName == 'Execute':
-                    self.__get_execute_data(tNode, __atCert['Execute'])
-                elif tNode.localName == 'UserContent':
-                    self.__root_cert_parse_user_content(tNode, __atCert['UserContent'])
-                else:
-                    raise Exception('Unexpected node: %s' % tNode.localName)
+            if (tNode.nodeType == tNode.ELEMENT_NODE) and (tNode.localName == 'File'):
+                tFileNode = tNode
+                break
+        if tFileNode is not None:
+            strFileName = tFileNode.getAttribute('name')
 
-        # Check if all required data was set.
-        astrErr = []
-        if __atCert['Key']['idx'] is None:
-            astrErr.append('No "idx" set in the LicenseCert.')
-        if __atCert['Binding']['mask'] is None:
-            astrErr.append('No "mask" set in the Binding.')
-        if __atCert['Binding']['ref'] is None:
-            astrErr.append('No "ref" set in the Binding.')
-        if __atCert['Data']['data'] is None:
-            astrErr.append('No "data" set in the Data.')
-        if __atCert['Data']['load_address'] is None:
-            astrErr.append('No "load_address" set in the Data.')
-        if __atCert['Execute']['pfnExecFunction'] is None:
-            astrErr.append('No "pfnExecFunction" set in the Execute.')
-        if __atCert['Execute']['ulR0'] is None:
-            astrErr.append('No "ulR0" set in the Execute.')
-        if __atCert['Execute']['ulR1'] is None:
-            astrErr.append('No "ulR1" set in the Execute.')
-        if __atCert['Execute']['ulR2'] is None:
-            astrErr.append('No "ulR2" set in the Execute.')
-        if __atCert['Execute']['ulR3'] is None:
-            astrErr.append('No "ulR3" set in the Execute.')
-        if len(astrErr) != 0:
-            raise Exception('\n'.join(astrErr))
+            # Search the file in the current path and all include paths.
+            strAbsName = self.__find_file(strFileName)
+            if strAbsName is None:
+                raise Exception('Failed to read file "%s": file not found.' % strFileName)
 
-        # Combine all data to the chunk.
-        atData = array.array('B')
+            aulChunk = self.__get_chunk_from_file(strAbsName)
 
-        atData.extend(__atCert['Binding']['mask'])
-        atData.extend(__atCert['Binding']['ref'])
+        else:
+            # Generate an array with default values where possible.
+            __atCert = {
+                # The key index must be set by the user.
+                'Key': {
+                    'idx': None
+                },
 
-        self.__append_32bit(atData, len(__atCert['Data']['data']))
-        self.__append_32bit(atData, __atCert['Data']['load_address'])
-        atData.extend(array.array('B', __atCert['Data']['data']))
+                # The Binding must be set by the user.
+                'Binding': {
+                    'mask': None,
+                    'ref': None
+                },
 
-        self.__append_32bit(atData, __atCert['Execute']['pfnExecFunction'])
-        self.__append_32bit(atData, __atCert['Execute']['ulR0'])
-        self.__append_32bit(atData, __atCert['Execute']['ulR1'])
-        self.__append_32bit(atData, __atCert['Execute']['ulR2'])
-        self.__append_32bit(atData, __atCert['Execute']['ulR3'])
+                # The data must be set by the user.
+                'Data': {
+                    'data': None,
+                    'load_address': None
+                },
 
-        self.__append_32bit(atData, len(__atCert['UserContent']['data']))
-        atData.extend(__atCert['UserContent']['data'])
+                # The registers.
+                'Execute': {
+                    'pfnExecFunction': None,
+                    'ulR0': None,
+                    'ulR1': None,
+                    'ulR2': None,
+                    'ulR3': None
+                },
 
-        # Get the key in DER encoded format.
-        strKeyDER = self.__keyrom_get_key(__atCert['Key']['idx'])
+                # The user content is empty by default.
+                'UserContent': {
+                    'data': ''
+                }
+            }
 
-        # Create a temporary file for the keypair.
-        iFile, strPathKeypair = tempfile.mkstemp(suffix='der', prefix='tmp_hboot_image', dir=None, text=False)
-        os.close(iFile)
+            # Loop over all children.
+            for tNode in tChunkNode.childNodes:
+                if tNode.nodeType == tNode.ELEMENT_NODE:
+                    if tNode.localName == 'Key':
+                        self.__cert_get_key_index(tNode, __atCert['Key'])
+                    elif tNode.localName == 'Binding':
+                        self.__root_cert_parse_binding(tNode, __atCert['Binding'])
+                    elif tNode.localName == 'Data':
+                        self.__get_data_contents(tNode, __atCert['Data'])
+                    elif tNode.localName == 'Execute':
+                        self.__get_execute_data(tNode, __atCert['Execute'])
+                    elif tNode.localName == 'UserContent':
+                        self.__root_cert_parse_user_content(tNode, __atCert['UserContent'])
+                    else:
+                        raise Exception('Unexpected node: %s' % tNode.localName)
 
-        # Create a temporary file for the data to sign.
-        iFile, strPathSignatureInputData = tempfile.mkstemp(suffix='bin', prefix='tmp_hboot_image', dir=None, text=False)
-        os.close(iFile)
+            # Check if all required data was set.
+            astrErr = []
+            if __atCert['Key']['idx'] is None:
+                astrErr.append('No "idx" set in the LicenseCert.')
+            if __atCert['Binding']['mask'] is None:
+                astrErr.append('No "mask" set in the Binding.')
+            if __atCert['Binding']['ref'] is None:
+                astrErr.append('No "ref" set in the Binding.')
+            if __atCert['Data']['data'] is None:
+                astrErr.append('No "data" set in the Data.')
+            if __atCert['Data']['load_address'] is None:
+                astrErr.append('No "load_address" set in the Data.')
+            if __atCert['Execute']['pfnExecFunction'] is None:
+                astrErr.append('No "pfnExecFunction" set in the Execute.')
+            if __atCert['Execute']['ulR0'] is None:
+                astrErr.append('No "ulR0" set in the Execute.')
+            if __atCert['Execute']['ulR1'] is None:
+                astrErr.append('No "ulR1" set in the Execute.')
+            if __atCert['Execute']['ulR2'] is None:
+                astrErr.append('No "ulR2" set in the Execute.')
+            if __atCert['Execute']['ulR3'] is None:
+                astrErr.append('No "ulR3" set in the Execute.')
+            if len(astrErr) != 0:
+                raise Exception('\n'.join(astrErr))
 
-        # Write the DER key to the temporary file.
-        tFile = open(strPathKeypair, 'wt')
-        tFile.write(strKeyDER)
-        tFile.close()
+            # Combine all data to the chunk.
+            atData = array.array('B')
 
-        # Write the data to sign to the temporary file.
-        tFile = open(strPathSignatureInputData, 'wb')
-        tFile.write(atData.tostring())
-        tFile.close()
+            atData.extend(__atCert['Binding']['mask'])
+            atData.extend(__atCert['Binding']['ref'])
 
-        strSignature = subprocess.check_output([self.__cfg_openssl, 'dgst', '-sign', strPathKeypair, '-keyform', 'DER', '-sigopt', 'rsa_padding_mode:pss', '-sigopt', 'rsa_pss_saltlen:-1', '-sha384', strPathSignatureInputData])
+            self.__append_32bit(atData, len(__atCert['Data']['data']))
+            self.__append_32bit(atData, __atCert['Data']['load_address'])
+            atData.extend(array.array('B', __atCert['Data']['data']))
 
-        # Remove the temp files.
-        os.remove(strPathKeypair)
-        os.remove(strPathSignatureInputData)
+            self.__append_32bit(atData, __atCert['Execute']['pfnExecFunction'])
+            self.__append_32bit(atData, __atCert['Execute']['ulR0'])
+            self.__append_32bit(atData, __atCert['Execute']['ulR1'])
+            self.__append_32bit(atData, __atCert['Execute']['ulR2'])
+            self.__append_32bit(atData, __atCert['Execute']['ulR3'])
 
-        # Append the signature to the chunk.
-        aulSignature = array.array('B', strSignature)
-        atData.extend(aulSignature)
+            self.__append_32bit(atData, len(__atCert['UserContent']['data']))
+            atData.extend(__atCert['UserContent']['data'])
 
-        # Pad the data to a multiple of dwords.
-        strData = atData.tostring()
-        strPadding = chr(0x00) * ((4 - (len(strData) % 4)) & 3)
-        strChunk = strData + strPadding
+            # Get the key in DER encoded format.
+            strKeyDER = self.__keyrom_get_key(__atCert['Key']['idx'])
 
-        # Convert the padded data to an array.
-        aulData = array.array('I')
-        aulData.fromstring(strChunk)
+            # Create a temporary file for the keypair.
+            iFile, strPathKeypair = tempfile.mkstemp(suffix='der', prefix='tmp_hboot_image', dir=None, text=False)
+            os.close(iFile)
 
-        aulChunk = array.array('I')
-        aulChunk.append(self.__get_tag_id('R', '7', 'S', 'W'))
-        aulChunk.append(len(aulData))
-        aulChunk.extend(aulData)
+            # Create a temporary file for the data to sign.
+            iFile, strPathSignatureInputData = tempfile.mkstemp(suffix='bin', prefix='tmp_hboot_image', dir=None, text=False)
+            os.close(iFile)
+
+            # Write the DER key to the temporary file.
+            tFile = open(strPathKeypair, 'wt')
+            tFile.write(strKeyDER)
+            tFile.close()
+
+            # Write the data to sign to the temporary file.
+            tFile = open(strPathSignatureInputData, 'wb')
+            tFile.write(atData.tostring())
+            tFile.close()
+
+            strSignature = subprocess.check_output([self.__cfg_openssl, 'dgst', '-sign', strPathKeypair, '-keyform', 'DER', '-sigopt', 'rsa_padding_mode:pss', '-sigopt', 'rsa_pss_saltlen:-1', '-sha384', strPathSignatureInputData])
+
+            # Remove the temp files.
+            os.remove(strPathKeypair)
+            os.remove(strPathSignatureInputData)
+
+            # Append the signature to the chunk.
+            aulSignature = array.array('B', strSignature)
+            atData.extend(aulSignature)
+
+            # Pad the data to a multiple of dwords.
+            strData = atData.tostring()
+            strPadding = chr(0x00) * ((4 - (len(strData) % 4)) & 3)
+            strChunk = strData + strPadding
+
+            # Convert the padded data to an array.
+            aulData = array.array('I')
+            aulData.fromstring(strChunk)
+
+            aulChunk = array.array('I')
+            aulChunk.append(self.__get_tag_id('R', '7', 'S', 'W'))
+            aulChunk.append(len(aulData))
+            aulChunk.extend(aulData)
 
         return aulChunk
 
     def __build_chunk_ca9sw(self, tChunkNode):
-        # Generate an array with default values where possible.
-        __atCert = {
-            # The key index must be set by the user.
-            'Key': {
-                'idx': None
-            },
-
-            # The Binding must be set by the user.
-            'Binding': {
-                'mask': None,
-                'ref': None
-            },
-
-            # The data must be set by the user.
-            'Data': {
-                'data': None,
-                'load_address': None
-            },
-
-            # The registers.
-            'Execute_Core0': {
-                'pfnExecFunction': None,
-                'ulR0': None,
-                'ulR1': None,
-                'ulR2': None,
-                'ulR3': None
-            },
-            'Execute_Core1': {
-                'pfnExecFunction': None,
-                'ulR0': None,
-                'ulR1': None,
-                'ulR2': None,
-                'ulR3': None
-            },
-
-            # The user content is empty by default.
-            'UserContent': {
-                'data': ''
-            }
-        }
-
-        # Loop over all children.
+        aulChunk = None
+        tFileNode = None
         for tNode in tChunkNode.childNodes:
-            if tNode.nodeType == tNode.ELEMENT_NODE:
-                if tNode.localName == 'Key':
-                    self.__cert_get_key_index(tNode, __atCert['Key'])
-                elif tNode.localName == 'Binding':
-                    self.__root_cert_parse_binding(tNode, __atCert['Binding'])
-                elif tNode.localName == 'Data':
-                    self.__get_data_contents(tNode, __atCert['Data'])
-                elif tNode.localName == 'Execute':
-                    for tRegistersNode in tNode.childNodes:
-                        if tRegistersNode.nodeType == tNode.ELEMENT_NODE:
-                            if tRegistersNode.localName == 'Core0':
-                                self.__get_execute_data(tRegistersNode, __atCert['Execute_Core0'])
-                            elif tRegistersNode.localName == 'Core1':
-                                self.__get_execute_data(tRegistersNode, __atCert['Execute_Core1'])
-                elif tNode.localName == 'UserContent':
-                    self.__root_cert_parse_user_content(tNode, __atCert['UserContent'])
-                else:
-                    raise Exception('Unexpected node: %s' % tNode.localName)
+            if (tNode.nodeType == tNode.ELEMENT_NODE) and (tNode.localName == 'File'):
+                tFileNode = tNode
+                break
+        if tFileNode is not None:
+            strFileName = tFileNode.getAttribute('name')
 
-        # Check if all required data was set.
-        astrErr = []
-        if __atCert['Key']['idx'] is None:
-            astrErr.append('No "idx" set in the LicenseCert.')
-        if __atCert['Binding']['mask'] is None:
-            astrErr.append('No "mask" set in the Binding.')
-        if __atCert['Binding']['ref'] is None:
-            astrErr.append('No "ref" set in the Binding.')
-        if __atCert['Data']['data'] is None:
-            astrErr.append('No "data" set in the Data.')
-        if __atCert['Data']['load_address'] is None:
-            astrErr.append('No "load_address" set in the Data.')
-        if __atCert['Execute_Core0']['pfnExecFunction'] is None:
-            astrErr.append('No "pfnExecFunction" set in the Execute.')
-        if __atCert['Execute_Core0']['ulR0'] is None:
-            astrErr.append('No "ulR0" set in the Execute.')
-        if __atCert['Execute_Core0']['ulR1'] is None:
-            astrErr.append('No "ulR1" set in the Execute.')
-        if __atCert['Execute_Core0']['ulR2'] is None:
-            astrErr.append('No "ulR2" set in the Execute.')
-        if __atCert['Execute_Core0']['ulR3'] is None:
-            astrErr.append('No "ulR3" set in the Execute.')
-        if __atCert['Execute_Core1']['pfnExecFunction'] is None:
-            astrErr.append('No "pfnExecFunction" set in the Execute.')
-        if __atCert['Execute_Core1']['ulR0'] is None:
-            astrErr.append('No "ulR0" set in the Execute.')
-        if __atCert['Execute_Core1']['ulR1'] is None:
-            astrErr.append('No "ulR1" set in the Execute.')
-        if __atCert['Execute_Core1']['ulR2'] is None:
-            astrErr.append('No "ulR2" set in the Execute.')
-        if __atCert['Execute_Core1']['ulR3'] is None:
-            astrErr.append('No "ulR3" set in the Execute.')
-        if len(astrErr) != 0:
-            raise Exception('\n'.join(astrErr))
+            # Search the file in the current path and all include paths.
+            strAbsName = self.__find_file(strFileName)
+            if strAbsName is None:
+                raise Exception('Failed to read file "%s": file not found.' % strFileName)
 
-        # Combine all data to the chunk.
-        atData = array.array('B')
+            aulChunk = self.__get_chunk_from_file(strAbsName)
 
-        atData.extend(__atCert['Binding']['mask'])
-        atData.extend(__atCert['Binding']['ref'])
+        else:
+            # Generate an array with default values where possible.
+            __atCert = {
+                # The key index must be set by the user.
+                'Key': {
+                    'idx': None
+                },
 
-        self.__append_32bit(atData, len(__atCert['Data']['data']))
-        self.__append_32bit(atData, __atCert['Data']['load_address'])
-        atData.extend(array.array('B', __atCert['Data']['data']))
+                # The Binding must be set by the user.
+                'Binding': {
+                    'mask': None,
+                    'ref': None
+                },
 
-        self.__append_32bit(atData, __atCert['Execute_Core0']['pfnExecFunction'])
-        self.__append_32bit(atData, __atCert['Execute_Core0']['ulR0'])
-        self.__append_32bit(atData, __atCert['Execute_Core0']['ulR1'])
-        self.__append_32bit(atData, __atCert['Execute_Core0']['ulR2'])
-        self.__append_32bit(atData, __atCert['Execute_Core0']['ulR3'])
-        self.__append_32bit(atData, __atCert['Execute_Core1']['pfnExecFunction'])
-        self.__append_32bit(atData, __atCert['Execute_Core1']['ulR0'])
-        self.__append_32bit(atData, __atCert['Execute_Core1']['ulR1'])
-        self.__append_32bit(atData, __atCert['Execute_Core1']['ulR2'])
-        self.__append_32bit(atData, __atCert['Execute_Core1']['ulR3'])
+                # The data must be set by the user.
+                'Data': {
+                    'data': None,
+                    'load_address': None
+                },
 
-        self.__append_32bit(atData, len(__atCert['UserContent']['data']))
-        atData.extend(__atCert['UserContent']['data'])
+                # The registers.
+                'Execute_Core0': {
+                    'pfnExecFunction': None,
+                    'ulR0': None,
+                    'ulR1': None,
+                    'ulR2': None,
+                    'ulR3': None
+                },
+                'Execute_Core1': {
+                    'pfnExecFunction': None,
+                    'ulR0': None,
+                    'ulR1': None,
+                    'ulR2': None,
+                    'ulR3': None
+                },
 
-        # Get the key in DER encoded format.
-        strKeyDER = self.__keyrom_get_key(__atCert['Key']['idx'])
+                # The user content is empty by default.
+                'UserContent': {
+                    'data': ''
+                }
+            }
 
-        # Create a temporary file for the keypair.
-        iFile, strPathKeypair = tempfile.mkstemp(suffix='der', prefix='tmp_hboot_image', dir=None, text=False)
-        os.close(iFile)
+            # Loop over all children.
+            for tNode in tChunkNode.childNodes:
+                if tNode.nodeType == tNode.ELEMENT_NODE:
+                    if tNode.localName == 'Key':
+                        self.__cert_get_key_index(tNode, __atCert['Key'])
+                    elif tNode.localName == 'Binding':
+                        self.__root_cert_parse_binding(tNode, __atCert['Binding'])
+                    elif tNode.localName == 'Data':
+                        self.__get_data_contents(tNode, __atCert['Data'])
+                    elif tNode.localName == 'Execute':
+                        for tRegistersNode in tNode.childNodes:
+                            if tRegistersNode.nodeType == tNode.ELEMENT_NODE:
+                                if tRegistersNode.localName == 'Core0':
+                                    self.__get_execute_data(tRegistersNode, __atCert['Execute_Core0'])
+                                elif tRegistersNode.localName == 'Core1':
+                                    self.__get_execute_data(tRegistersNode, __atCert['Execute_Core1'])
+                    elif tNode.localName == 'UserContent':
+                        self.__root_cert_parse_user_content(tNode, __atCert['UserContent'])
+                    else:
+                        raise Exception('Unexpected node: %s' % tNode.localName)
 
-        # Create a temporary file for the data to sign.
-        iFile, strPathSignatureInputData = tempfile.mkstemp(suffix='bin', prefix='tmp_hboot_image', dir=None, text=False)
-        os.close(iFile)
+            # Check if all required data was set.
+            astrErr = []
+            if __atCert['Key']['idx'] is None:
+                astrErr.append('No "idx" set in the LicenseCert.')
+            if __atCert['Binding']['mask'] is None:
+                astrErr.append('No "mask" set in the Binding.')
+            if __atCert['Binding']['ref'] is None:
+                astrErr.append('No "ref" set in the Binding.')
+            if __atCert['Data']['data'] is None:
+                astrErr.append('No "data" set in the Data.')
+            if __atCert['Data']['load_address'] is None:
+                astrErr.append('No "load_address" set in the Data.')
+            if __atCert['Execute_Core0']['pfnExecFunction'] is None:
+                astrErr.append('No "pfnExecFunction" set in the Execute.')
+            if __atCert['Execute_Core0']['ulR0'] is None:
+                astrErr.append('No "ulR0" set in the Execute.')
+            if __atCert['Execute_Core0']['ulR1'] is None:
+                astrErr.append('No "ulR1" set in the Execute.')
+            if __atCert['Execute_Core0']['ulR2'] is None:
+                astrErr.append('No "ulR2" set in the Execute.')
+            if __atCert['Execute_Core0']['ulR3'] is None:
+                astrErr.append('No "ulR3" set in the Execute.')
+            if __atCert['Execute_Core1']['pfnExecFunction'] is None:
+                astrErr.append('No "pfnExecFunction" set in the Execute.')
+            if __atCert['Execute_Core1']['ulR0'] is None:
+                astrErr.append('No "ulR0" set in the Execute.')
+            if __atCert['Execute_Core1']['ulR1'] is None:
+                astrErr.append('No "ulR1" set in the Execute.')
+            if __atCert['Execute_Core1']['ulR2'] is None:
+                astrErr.append('No "ulR2" set in the Execute.')
+            if __atCert['Execute_Core1']['ulR3'] is None:
+                astrErr.append('No "ulR3" set in the Execute.')
+            if len(astrErr) != 0:
+                raise Exception('\n'.join(astrErr))
 
-        # Write the DER key to the temporary file.
-        tFile = open(strPathKeypair, 'wt')
-        tFile.write(strKeyDER)
-        tFile.close()
+            # Combine all data to the chunk.
+            atData = array.array('B')
 
-        # Write the data to sign to the temporary file.
-        tFile = open(strPathSignatureInputData, 'wb')
-        tFile.write(atData.tostring())
-        tFile.close()
+            atData.extend(__atCert['Binding']['mask'])
+            atData.extend(__atCert['Binding']['ref'])
 
-        strSignature = subprocess.check_output([self.__cfg_openssl, 'dgst', '-sign', strPathKeypair, '-keyform', 'DER', '-sigopt', 'rsa_padding_mode:pss', '-sigopt', 'rsa_pss_saltlen:-1', '-sha384', strPathSignatureInputData])
+            self.__append_32bit(atData, len(__atCert['Data']['data']))
+            self.__append_32bit(atData, __atCert['Data']['load_address'])
+            atData.extend(array.array('B', __atCert['Data']['data']))
 
-        # Remove the temp files.
-        os.remove(strPathKeypair)
-        os.remove(strPathSignatureInputData)
+            self.__append_32bit(atData, __atCert['Execute_Core0']['pfnExecFunction'])
+            self.__append_32bit(atData, __atCert['Execute_Core0']['ulR0'])
+            self.__append_32bit(atData, __atCert['Execute_Core0']['ulR1'])
+            self.__append_32bit(atData, __atCert['Execute_Core0']['ulR2'])
+            self.__append_32bit(atData, __atCert['Execute_Core0']['ulR3'])
+            self.__append_32bit(atData, __atCert['Execute_Core1']['pfnExecFunction'])
+            self.__append_32bit(atData, __atCert['Execute_Core1']['ulR0'])
+            self.__append_32bit(atData, __atCert['Execute_Core1']['ulR1'])
+            self.__append_32bit(atData, __atCert['Execute_Core1']['ulR2'])
+            self.__append_32bit(atData, __atCert['Execute_Core1']['ulR3'])
 
-        # Append the signature to the chunk.
-        aulSignature = array.array('B', strSignature)
-        atData.extend(aulSignature)
+            self.__append_32bit(atData, len(__atCert['UserContent']['data']))
+            atData.extend(__atCert['UserContent']['data'])
 
-        # Pad the data to a multiple of dwords.
-        strData = atData.tostring()
-        strPadding = chr(0x00) * ((4 - (len(strData) % 4)) & 3)
-        strChunk = strData + strPadding
+            # Get the key in DER encoded format.
+            strKeyDER = self.__keyrom_get_key(__atCert['Key']['idx'])
 
-        # Convert the padded data to an array.
-        aulData = array.array('I')
-        aulData.fromstring(strChunk)
+            # Create a temporary file for the keypair.
+            iFile, strPathKeypair = tempfile.mkstemp(suffix='der', prefix='tmp_hboot_image', dir=None, text=False)
+            os.close(iFile)
 
-        aulChunk = array.array('I')
-        aulChunk.append(self.__get_tag_id('A', '9', 'S', 'W'))
-        aulChunk.append(len(aulData))
-        aulChunk.extend(aulData)
+            # Create a temporary file for the data to sign.
+            iFile, strPathSignatureInputData = tempfile.mkstemp(suffix='bin', prefix='tmp_hboot_image', dir=None, text=False)
+            os.close(iFile)
+
+            # Write the DER key to the temporary file.
+            tFile = open(strPathKeypair, 'wt')
+            tFile.write(strKeyDER)
+            tFile.close()
+
+            # Write the data to sign to the temporary file.
+            tFile = open(strPathSignatureInputData, 'wb')
+            tFile.write(atData.tostring())
+            tFile.close()
+
+            strSignature = subprocess.check_output([self.__cfg_openssl, 'dgst', '-sign', strPathKeypair, '-keyform', 'DER', '-sigopt', 'rsa_padding_mode:pss', '-sigopt', 'rsa_pss_saltlen:-1', '-sha384', strPathSignatureInputData])
+
+            # Remove the temp files.
+            os.remove(strPathKeypair)
+            os.remove(strPathSignatureInputData)
+
+            # Append the signature to the chunk.
+            aulSignature = array.array('B', strSignature)
+            atData.extend(aulSignature)
+
+            # Pad the data to a multiple of dwords.
+            strData = atData.tostring()
+            strPadding = chr(0x00) * ((4 - (len(strData) % 4)) & 3)
+            strChunk = strData + strPadding
+
+            # Convert the padded data to an array.
+            aulData = array.array('I')
+            aulData.fromstring(strChunk)
+
+            aulChunk = array.array('I')
+            aulChunk.append(self.__get_tag_id('A', '9', 'S', 'W'))
+            aulChunk.append(len(aulData))
+            aulChunk.extend(aulData)
 
         return aulChunk
 
