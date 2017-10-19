@@ -141,7 +141,8 @@ tCompiler = hboot_image.HbootImage(
     known_files=atKnownFiles,
     patch_definition=tArgs.strPatchTablePath,
     verbose=tArgs.fVerbose,
-    sniplibs = tArgs.astrSnipLib
+    sniplibs=tArgs.astrSnipLib,
+    keyrom=tArgs.strKeyRomPath
 )
 tCompiler.parse_image(tArgs.strInputFile)
 tCompiler.write(tArgs.strOutputFile)
