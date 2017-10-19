@@ -871,7 +871,7 @@ class HbootImage:
         # It is 64 bytes for the header and the size of all chunks.
         # FIXME: If an image starts not at the beginning of the flash, the offset is different. Get the offset from the XML file?
         ulOffsetCurrent = self.__ulStartOffset
-        if self.__fHasHeader == True:
+        if self.__fHasHeader is True:
             ulOffsetCurrent += 64
         ulOffsetCurrent += len(self.__atChunks) * 4
 
@@ -1145,7 +1145,7 @@ class HbootImage:
 
         # Get the current offset in bytes. Add the size of the ID, the length and the hash.
         sizOffsetCurrent = self.__ulStartOffset
-        if self.__fHasHeader == True:
+        if self.__fHasHeader is True:
             sizOffsetCurrent += 64
         sizOffsetCurrent += len(self.__atChunks) * 4
         # Add the size of the SKIP chunk itself to the current position.
