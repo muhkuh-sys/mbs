@@ -629,6 +629,29 @@ class HbootImage:
                 aulHash = array.array('I', strHash[:self.__sizHashDw * 4])
                 atChunk.extend(aulHash)
 
+            elif self.__strNetxType == 'NETX90_MPW':
+                # Pad the option chunk to 32 bit size.
+                strPadding = chr(0x00) * ((4 - (len(strData) % 4)) & 3)
+                strChunk = strData + strPadding
+
+                aulData = array.array('I')
+                aulData.fromstring(strChunk)
+
+                atChunk = array.array('I')
+                atChunk.append(self.__get_tag_id('O', 'P', 'T', 'S'))
+                atChunk.append(len(aulData) + self.__sizHashDw)
+                atChunk.extend(aulData)
+
+                # Get the hash for the chunk.
+                tHash = hashlib.sha384()
+                tHash.update(atChunk.tostring())
+                strHash = tHash.digest()
+                aulHash = array.array('I', strHash[:self.__sizHashDw * 4])
+                atChunk.extend(aulHash)
+
+            else:
+                raise Exception('"Opts" chunk is not supported for chip type "%s".' % (self.__strNetxType))
+
         return atChunk
 
     def __get_data_contents(self, tDataNode, atData):
