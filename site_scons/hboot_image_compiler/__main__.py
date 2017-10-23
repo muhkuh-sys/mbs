@@ -11,7 +11,14 @@ tParser = argparse.ArgumentParser(usage='usage: hboot_image [options]')
 tParser.add_argument('-n', '--netx-type',
                      dest='strNetxType',
                      required=True,
-                     choices=['NETX56', 'NETX90_MPW', 'NETX90_MPW_APP', 'NETX4000_RELAXED'],
+                     choices=[
+                         'NETX56',
+                         'NETX90_MPW',
+                         'NETX90_MPW_APP',
+                         'NETX4000_RELAXED',
+                         'NETX4000',
+                         'NETX4100'
+                     ],
                      metavar='NETX',
                      help='Build the image for netx type NETX.')
 tParser.add_argument('-c', '--objcopy',
@@ -87,7 +94,9 @@ atDefaultPatchTables = {
     'NETX56': 'hboot_netx56_patch_table.xml',
     'NETX90_MPW': 'hboot_netx90_mpw_patch_table.xml',
     'NETX90_MPW_APP': 'hboot_netx90_mpw_app_patch_table.xml',
-    'NETX4000_RELAXED': 'hboot_netx4000_relaxed_patch_table.xml'
+    'NETX4000_RELAXED': 'hboot_netx4000_relaxed_patch_table.xml',
+    'NETX4000': 'hboot_netx4000_patch_table.xml',
+    'NETX4100': 'hboot_netx4000_patch_table.xml'
 }
 if tArgs.strPatchTablePath is None:
     tArgs.strPatchTablePath = os.path.join(os.path.dirname(os.path.dirname(os.path.realpath(__file__))), atDefaultPatchTables[tArgs.strNetxType])

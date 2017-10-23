@@ -213,10 +213,14 @@ def __hboot_image_emitter(target, source, env):
         strAsicTyp = env['ASIC_TYP']
         if strAsicTyp == 'NETX4000_RELAXED':
             strRelPatchDefinition = 'hboot_netx4000_relaxed_patch_table.xml'
+        elif strAsicTyp == 'NETX4000':
+            strRelPatchDefinition = 'hboot_netx4000_patch_table.xml'
+        elif strAsicTyp == 'NETX4100':
+            strRelPatchDefinition = 'hboot_netx4000_patch_table.xml'
         elif strAsicTyp == 'NETX90_MPW':
             strRelPatchDefinition = 'hboot_netx90_mpw_patch_table.xml'
-	elif strAsicTyp == 'NETX90_MPW_APP':
-	    strRelPatchDefinition = 'hboot_netx90_mpw_app_patch_table.xml'
+        elif strAsicTyp == 'NETX90_MPW_APP':
+            strRelPatchDefinition = 'hboot_netx90_mpw_app_patch_table.xml'
         elif strAsicTyp == 'NETX56':
             strRelPatchDefinition = 'hboot_netx56_patch_table.xml'
         else:

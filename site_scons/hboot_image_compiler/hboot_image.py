@@ -425,7 +425,7 @@ class HbootImage:
         if self.__strNetxType == 'NETX56':
             ulMagicCookie = self.__MAGIC_COOKIE_NETX56
             ulSignature = self.__get_tag_id('M', 'O', 'O', 'H')
-        elif self.__strNetxType == 'NETX4000_RELAXED':
+        elif (self.__strNetxType == 'NETX4000_RELAXED') or (self.__strNetxType == 'NETX4000') or (self.__strNetxType == 'NETX4100'):
             ulMagicCookie = self.__MAGIC_COOKIE_NETX4000
             ulSignature = self.__get_tag_id('M', 'O', 'O', 'H')
         elif self.__strNetxType == 'NETX90_MPW':
@@ -609,7 +609,7 @@ class HbootImage:
                 atChunk.append(len(aulData))
                 atChunk.extend(aulData)
 
-            elif self.__strNetxType == 'NETX4000_RELAXED':
+            elif (self.__strNetxType == 'NETX4000_RELAXED') or (self.__strNetxType == 'NETX4000') or (self.__strNetxType == 'NETX4100'):
                 # Pad the option chunk to 32 bit size.
                 strPadding = chr(0x00) * ((4 - (len(strData) % 4)) & 3)
                 strChunk = strData + strPadding
@@ -826,7 +826,7 @@ class HbootImage:
         atXIPAreas = None
         if self.__strNetxType == 'NETX56':
             raise Exception('Continue here!')
-        elif self.__strNetxType == 'NETX4000_RELAXED':
+        elif (self.__strNetxType == 'NETX4000_RELAXED') or (self.__strNetxType == 'NETX4000') or (self.__strNetxType == 'NETX4100'):
             atXIPAreas = [
                 # SQIROM0
                 {
@@ -1173,7 +1173,7 @@ class HbootImage:
             sizOffsetCurrent += 64
         sizOffsetCurrent += len(self.__atChunks) * 4
         # Add the size of the SKIP chunk itself to the current position.
-        if self.__strNetxType == 'NETX4000_RELAXED':
+        if (self.__strNetxType == 'NETX4000_RELAXED') or (self.__strNetxType == 'NETX4000') or (self.__strNetxType == 'NETX4100'):
             sizOffsetCurrent += (1 + 1 + self.__sizHashDw) * 4
         elif self.__strNetxType == 'NETX90_MPW':
             sizOffsetCurrent += (1 + 1 + self.__sizHashDw) * 4
