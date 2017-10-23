@@ -99,7 +99,10 @@ atDefaultPatchTables = {
     'NETX4100': 'hboot_netx4000_patch_table.xml'
 }
 if tArgs.strPatchTablePath is None:
-    tArgs.strPatchTablePath = os.path.join(os.path.dirname(os.path.dirname(os.path.realpath(__file__))), atDefaultPatchTables[tArgs.strNetxType])
+    tArgs.strPatchTablePath = os.path.join(
+        os.path.dirname(os.path.dirname(os.path.realpath(__file__))),
+        atDefaultPatchTables[tArgs.strNetxType]
+    )
 
 # Parse all alias definitions.
 atKnownFiles = {}
