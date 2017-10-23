@@ -1327,7 +1327,7 @@ class HbootImage:
 
         return strKeyDER
 
-    def __get_cert_mod_exp(self, tNodeParent, strKeyDER):
+    def __get_cert_mod_exp(self, tNodeParent, strKeyDER, fIsPublicKey):
         __atKnownRsaSizes = {
             0: {'mod': 256, 'exp': 3, 'rsa': 2048},
             1: {'mod': 384, 'exp': 3, 'rsa': 3072},
@@ -1335,13 +1335,22 @@ class HbootImage:
         }
 
         # Extract all information from the key.
-        tProcess = subprocess.Popen([self.__cfg_openssl, 'rsa', '-inform', 'DER', '-text', '-noout'], stdin=subprocess.PIPE, stdout=subprocess.PIPE)
+        astrCmd = [self.__cfg_openssl, 'rsa', '-inform', 'DER', '-text', '-noout']
+        if fIsPublicKey is True:
+            astrCmd.append('-pubin')
+        tProcess = subprocess.Popen(astrCmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE)
         (strStdout, strStdErr) = tProcess.communicate(strKeyDER)
         if tProcess.returncode != 0:
             raise Exception('OpenSSL failed with return code %d.' % tProcess.returncode)
 
+        strMatchExponent = 'publicExponent:'
+        strMatchModulus = 'modulus:'
+        if fIsPublicKey is True:
+            strMatchExponent = 'Exponent:'
+            strMatchModulus = 'Modulus:'
+
         # Extract the public exponent.
-        tReExp = re.compile('^publicExponent:\s+(\d+)\s+\(0x([0-9a-fA-F]+)\)$', re.MULTILINE)
+        tReExp = re.compile('^%s\s+(\d+)\s+\(0x([0-9a-fA-F]+)\)$' % strMatchExponent, re.MULTILINE)
         tMatch = tReExp.search(strStdout)
         if tMatch is None:
             raise Exception('Can not find public exponent!')
@@ -1356,7 +1365,7 @@ class HbootImage:
         sizExp = len(aucExp)
 
         # Extract the modulus "N".
-        strData = self.__openssl_get_data_block(strStdout, 'modulus:')
+        strData = self.__openssl_get_data_block(strStdout, strMatchModulus)
         aucMod = array.array('B', strData)
         sizMod = len(aucMod)
 
@@ -1397,7 +1406,7 @@ class HbootImage:
 
         return aucBinding
 
-    def __root_cert_parse_root_public_key(self, tNodeParent, atData):
+    def __root_cert_parse_root_key(self, tNodeParent, atData):
         strKeyDER = None
         # Get the index.
         strIdx = tNodeParent.getAttribute('idx')
@@ -1430,7 +1439,7 @@ class HbootImage:
         if strKeyDER is None:
             raise Exception('No "idx" attribute and no child "File" found!')
 
-        (uiId, aucMod, aucExp) = self.__get_cert_mod_exp(tNodeParent, strKeyDER)
+        (uiId, aucMod, aucExp) = self.__get_cert_mod_exp(tNodeParent, strKeyDER, False)
 
         atData['id'] = uiId
         atData['mod'] = aucMod
@@ -1566,7 +1575,7 @@ class HbootImage:
         if strKeyDER is None:
             raise Exception('No "idx" attribute and no child "File" found!')
 
-        (uiId, aucMod, aucExp) = self.__get_cert_mod_exp(tNodeParent, strKeyDER)
+        (uiId, aucMod, aucExp) = self.__get_cert_mod_exp(tNodeParent, strKeyDER, True)
 
         aucMask = self.__cert_parse_binding(tNodeParent, 'Mask')
 
@@ -1683,7 +1692,7 @@ class HbootImage:
             for tNode in tChunkNode.childNodes:
                 if tNode.nodeType == tNode.ELEMENT_NODE:
                     if tNode.localName == 'RootPublicKey':
-                        self.__root_cert_parse_root_public_key(tNode, __atRootCert['RootPublicKey'])
+                        self.__root_cert_parse_root_key(tNode, __atRootCert['RootPublicKey'])
                     elif tNode.localName == 'Binding':
                         self.__root_cert_parse_binding(tNode, __atRootCert['Binding'])
                     elif tNode.localName == 'NewRegisterValues':
