@@ -81,6 +81,12 @@ tParser.add_argument('-S', '--sniplib',
                      action='append',
                      metavar='PATH',
                      help='Add PATH to the list of sniplib paths.')
+tParser.add_argument('--openssl-options',
+                     dest='astrOpensslOptions',
+                     required=False,
+                     action='append',
+                     metavar='SSLOPT',
+                     help='Add SSLOPT to the arguments for OpenSSL.')
 tParser.add_argument('strInputFile',
                      metavar='FILE',
                      help='Read the HBoot definition from FILE.')
@@ -154,7 +160,8 @@ tCompiler = hboot_image.HbootImage(
     patch_definition=tArgs.strPatchTablePath,
     verbose=tArgs.fVerbose,
     sniplibs=tArgs.astrSnipLib,
-    keyrom=tArgs.strKeyRomPath
+    keyrom=tArgs.strKeyRomPath,
+    openssloptions=tArgs.astrOpensslOptions
 )
 tCompiler.parse_image(tArgs.strInputFile)
 tCompiler.write(tArgs.strOutputFile)

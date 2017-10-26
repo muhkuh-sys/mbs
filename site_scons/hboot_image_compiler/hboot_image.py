@@ -85,6 +85,7 @@ class HbootImage:
 
     __XmlKeyromContents = None
     __cfg_openssl = 'openssl'
+    __cfg_openssloptions = None
 
     # This is the revision for the netX10, netX51 and netX52 Secmem zone.
     __SECMEM_ZONE2_REV1_0 = 0x81
@@ -108,6 +109,7 @@ class HbootImage:
         astrSnippetSearchPaths = []
         atKnownFiles = {}
         atGlobalDefines = {}
+        atOpensslOptions = []
         fVerbose = False
 
         # Parse the kwargs.
@@ -146,6 +148,9 @@ class HbootImage:
             elif strKey == 'defines':
                 atGlobalDefines = dict(tValue)
 
+            elif strKey == 'openssloptions':
+                atOpensslOptions = tValue
+
         # Set the default search path if nothing was specified.
         if len(astrSnippetSearchPaths) == 0:
             astrSnippetSearchPaths = ['sniplib']
@@ -166,6 +171,9 @@ class HbootImage:
 
         # Set the defines.
         self.__atGlobalDefines = atGlobalDefines
+
+        # Set the OpenSSL options.
+        self.__cfg_openssloptions = atOpensslOptions
 
         if self.__fVerbose:
             print('[HBootImage] Configuration: netX type = %s' % strNetxType)
@@ -1944,7 +1952,18 @@ class HbootImage:
             tFile.write(atData.tostring())
             tFile.close()
 
-            strSignature = subprocess.check_output([self.__cfg_openssl, 'dgst', '-sign', strPathKeypair, '-keyform', 'DER', '-sigopt', 'rsa_padding_mode:pss', '-sigopt', 'rsa_pss_saltlen:-1', '-sha384', strPathSignatureInputData])
+            astrCmd = [
+                self.__cfg_openssl,
+                'dgst',
+                '-sign', strPathKeypair,
+                '-keyform', 'DER',
+                '-sigopt', 'rsa_padding_mode:pss',
+                '-sigopt', 'rsa_pss_saltlen:-1',
+                '-sha384'
+            ]
+            astrCmd.extend(self.__cfg_openssloptions)
+            astrCmd.append(strPathSignatureInputData)
+            strSignature = subprocess.check_output(astrCmd)
 
             # Remove the temp files.
             os.remove(strPathKeypair)
@@ -2075,7 +2094,18 @@ class HbootImage:
             tFile.write(atData.tostring())
             tFile.close()
 
-            strSignature = subprocess.check_output([self.__cfg_openssl, 'dgst', '-sign', strPathKeypair, '-keyform', 'DER', '-sigopt', 'rsa_padding_mode:pss', '-sigopt', 'rsa_pss_saltlen:-1', '-sha384', strPathSignatureInputData])
+            astrCmd = [
+                self.__cfg_openssl,
+                'dgst',
+                '-sign', strPathKeypair,
+                '-keyform', 'DER',
+                '-sigopt', 'rsa_padding_mode:pss',
+                '-sigopt', 'rsa_pss_saltlen:-1',
+                '-sha384'
+            ]
+            astrCmd.extend(self.__cfg_openssloptions)
+            astrCmd.append(strPathSignatureInputData)
+            strSignature = subprocess.check_output(astrCmd)
 
             # Remove the temp files.
             os.remove(strPathKeypair)
@@ -2234,7 +2264,18 @@ class HbootImage:
             tFile.write(atData.tostring())
             tFile.close()
 
-            strSignature = subprocess.check_output([self.__cfg_openssl, 'dgst', '-sign', strPathKeypair, '-keyform', 'DER', '-sigopt', 'rsa_padding_mode:pss', '-sigopt', 'rsa_pss_saltlen:-1', '-sha384', strPathSignatureInputData])
+            astrCmd = [
+                self.__cfg_openssl,
+                'dgst',
+                '-sign', strPathKeypair,
+                '-keyform', 'DER',
+                '-sigopt', 'rsa_padding_mode:pss',
+                '-sigopt', 'rsa_pss_saltlen:-1',
+                '-sha384'
+            ]
+            astrCmd.extend(self.__cfg_openssloptions)
+            astrCmd.append(strPathSignatureInputData)
+            strSignature = subprocess.check_output(astrCmd)
 
             # Remove the temp files.
             os.remove(strPathKeypair)
@@ -2420,7 +2461,18 @@ class HbootImage:
             tFile.write(atData.tostring())
             tFile.close()
 
-            strSignature = subprocess.check_output([self.__cfg_openssl, 'dgst', '-sign', strPathKeypair, '-keyform', 'DER', '-sigopt', 'rsa_padding_mode:pss', '-sigopt', 'rsa_pss_saltlen:-1', '-sha384', strPathSignatureInputData])
+            astrCmd = [
+                self.__cfg_openssl,
+                'dgst',
+                '-sign', strPathKeypair,
+                '-keyform', 'DER',
+                '-sigopt', 'rsa_padding_mode:pss',
+                '-sigopt', 'rsa_pss_saltlen:-1',
+                '-sha384'
+            ]
+            astrCmd.extend(self.__cfg_openssloptions)
+            astrCmd.append(strPathSignatureInputData)
+            strSignature = subprocess.check_output(astrCmd)
 
             # Remove the temp files.
             os.remove(strPathKeypair)
