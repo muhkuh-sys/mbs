@@ -747,6 +747,142 @@ class HbootImage:
 
                     strDataHex = self.__remove_all_whitespace(strDataHex)
                     strData = binascii.unhexlify(strDataHex)
+
+                elif tNode.localName == 'UInt32':
+                    # Get the address.
+                    strAddress = tNode.getAttribute('address')
+                    if len(strAddress) == 0:
+                        raise Exception("The file node has no address attribute!")
+
+                    pulLoadAddress = self.__parse_numeric_expression(strAddress)
+
+                    # Get the text in this node and split it by whitespace.
+                    strDataUint = self.__xml_get_all_text(tNode)
+                    if strDataUint is None:
+                        raise Exception('No text in node "UInt32" found!')
+
+                    astrNumbers = string.split(strDataUint)
+                    aulNumbers = array.array('I')
+                    for strNumber in astrNumbers:
+                        ulNumber = int(strNumber, 0)
+                        aulNumbers.append(ulNumber)
+
+                    strData = aulNumbers.tostring()
+
+                elif tNode.localName == 'UInt16':
+                    # Get the address.
+                    strAddress = tNode.getAttribute('address')
+                    if len(strAddress) == 0:
+                        raise Exception("The file node has no address attribute!")
+
+                    pulLoadAddress = self.__parse_numeric_expression(strAddress)
+
+                    # Get the text in this node and split it by whitespace.
+                    strDataUint = self.__xml_get_all_text(tNode)
+                    if strDataUint is None:
+                        raise Exception('No text in node "UInt16" found!')
+
+                    astrNumbers = string.split(strDataUint)
+                    ausNumbers = array.array('H')
+                    for strNumber in astrNumbers:
+                        usNumber = int(strNumber, 0)
+                        ausNumbers.append(usNumber)
+
+                    strData = ausNumbers.tostring()
+
+                elif tNode.localName == 'UInt8':
+                    # Get the address.
+                    strAddress = tNode.getAttribute('address')
+                    if len(strAddress) == 0:
+                        raise Exception("The file node has no address attribute!")
+
+                    pulLoadAddress = self.__parse_numeric_expression(strAddress)
+
+                    # Get the text in this node and split it by whitespace.
+                    strDataUint = self.__xml_get_all_text(tNode)
+                    if strDataUint is None:
+                        raise Exception('No text in node "UInt8" found!')
+
+                    astrNumbers = string.split(strDataUint)
+                    aucNumbers = array.array('B')
+                    for strNumber in astrNumbers:
+                        ucNumber = int(strNumber, 0)
+                        aucNumbers.append(ucNumber)
+
+                    strData = aucNumbers.tostring()
+
+                elif tNode.localName == 'Concat':
+                    # Get the address.
+                    strAddress = tNode.getAttribute('address')
+                    if len(strAddress) == 0:
+                        raise Exception("The Concat node has no address attribute!")
+
+                    pulLoadAddress = self.__parse_numeric_expression(strAddress)
+
+                    astrData = []
+
+                    # Loop over all sub-nodes.
+                    for tConcatNode in tNode.childNodes:
+                        # Is this a node element?
+                        if tConcatNode.nodeType == tConcatNode.ELEMENT_NODE:
+                            # Is this a node element with the name 'Hex'?
+                            if tConcatNode.localName == 'Hex':
+                                # Get the text in this node and parse it as hex data.
+                                strDataHex = self.__xml_get_all_text(tConcatNode)
+                                if strDataHex is None:
+                                    raise Exception('No text in node "Hex" found!')
+
+                                strDataHex = self.__remove_all_whitespace(strDataHex)
+                                strDataChunk = binascii.unhexlify(strDataHex)
+                                astrData.append(strDataChunk)
+
+                            elif tConcatNode.localName == 'UInt32':
+                                # Get the text in this node and split it by whitespace.
+                                strDataUint = self.__xml_get_all_text(tConcatNode)
+                                if strDataUint is None:
+                                    raise Exception('No text in node "UInt32" found!')
+
+                                astrNumbers = string.split(strDataUint)
+                                aulNumbers = array.array('I')
+                                for strNumber in astrNumbers:
+                                    ulNumber = int(strNumber, 0)
+                                    aulNumbers.append(ulNumber)
+
+                                strDataChunk = aulNumbers.tostring()
+                                astrData.append(strDataChunk)
+
+                            elif tConcatNode.localName == 'UInt16':
+                                # Get the text in this node and split it by whitespace.
+                                strDataUint = self.__xml_get_all_text(tConcatNode)
+                                if strDataUint is None:
+                                    raise Exception('No text in node "UInt16" found!')
+
+                                astrNumbers = string.split(strDataUint)
+                                ausNumbers = array.array('H')
+                                for strNumber in astrNumbers:
+                                    usNumber = int(strNumber, 0)
+                                    ausNumbers.append(usNumber)
+
+                                strDataChunk = ausNumbers.tostring()
+                                astrData.append(strDataChunk)
+
+                            elif tConcatNode.localName == 'UInt8':
+                                # Get the text in this node and split it by whitespace.
+                                strDataUint = self.__xml_get_all_text(tConcatNode)
+                                if strDataUint is None:
+                                    raise Exception('No text in node "UInt8" found!')
+
+                                astrNumbers = string.split(strDataUint)
+                                aucNumbers = array.array('B')
+                                for strNumber in astrNumbers:
+                                    ucNumber = int(strNumber, 0)
+                                    aucNumbers.append(ucNumber)
+
+                                strDataChunk = aucNumbers.tostring()
+                                astrData.append(strDataChunk)
+
+                    strData = ''.join(astrData)
+
                 else:
                     raise Exception('Unexpected node: %s' % tNode.localName)
 
