@@ -268,14 +268,29 @@ def get_estimated_bin_size(atSegments):
 
 def get_exec_address(env, strElfFileName):
     # Get the start address.
-    aCmd = [env['READELF'], '--file-header', strElfFileName]
-    proc = subprocess.Popen(aCmd, stdout=subprocess.PIPE)
-    strOutput = proc.communicate()[0]
-    match_obj = re.search('Entry point address:\s+0x([0-9a-fA-F]+)', strOutput)
-    if not match_obj:
-        print('Failed to extract start address.')
-        print('Command:', aCmd)
-        print('Output:', strOutput)
-        raise Exception('Failed to extract start address.')
+    # Try the global symbol first, then fall back to the file header.
+    # The global symbol is better, as it holds not only the plain address, but also thumb information.
+    # The address from the file header does not have any thumb information.
+    tResult = None
+    aCmd0 = [env['READELF'], '--syms', strElfFileName]
+    proc = subprocess.Popen(aCmd0, stdout=subprocess.PIPE)
+    strOutput0 = proc.communicate()[0]
+    match_obj = re.search('\s+\d+:\s+([0-9a-fA-F]+)\s+\d+\s+\w+\s+GLOBAL\s+DEFAULT\s+\d+\s+start', strOutput0)
+    if match_obj is not None:
+        tResult = int(match_obj.group(1), 16)
+    else:
+        aCmd1 = [env['READELF'], '--file-header', strElfFileName]
+        proc = subprocess.Popen(aCmd1, stdout=subprocess.PIPE)
+        strOutput1 = proc.communicate()[0]
+        match_obj = re.search('Entry point address:\s+0x([0-9a-fA-F]+)', strOutput1)
+        if match_obj is not None:
+            tResult = int(match_obj.group(1), 16)
+        else:
+            print('Failed to extract start address.')
+            print('Command0:', aCmd0)
+            print('Output0:', strOutput0)
+            print('Command1:', aCmd1)
+            print('Output1:', strOutput1)
+            raise Exception('Failed to extract start address.')
 
-    return int(match_obj.group(1), 16)
+    return tResult
