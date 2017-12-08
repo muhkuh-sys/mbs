@@ -151,7 +151,7 @@ def get_debug_structure(env, strFileName):
 s_reLocation = re.compile('\d+ byte block: \d+ ([0-9a-f]+)')
 
 
-def __iter_debug_info(tNode, atSymbols):
+def __iter_debug_info(tNode, atDebugInfo, atSymbols):
     strName = tNode['name']
     tAttr = tNode['attributes']
 
@@ -170,28 +170,33 @@ def __iter_debug_info(tNode, atSymbols):
             strStructureName = tAttr['name']
             # Generate a symbol with the size of the structure.
             strMemberName = 'SIZEOF_' + strStructureName
-            atSymbols[strMemberName] = tAttr['byte_size']
-            # Generate symbols for the offset of each member.
-            for tMember in tNode['children']:
-                if tMember['name'] == 'member':
-                    tMemberAttr = tMember['attributes']
-                    strLoc = tMemberAttr['data_member_location']
-                    strName = tMemberAttr['name']
-                    if (strLoc is not None) and (strName is not None):
-                        tObj = s_reLocation.match(strLoc)
-                        if tObj is not None:
-                            strMemberName = 'OFFSETOF_' + strStructureName + '_' + strName
-                            ulOffset = int(tObj.group(1), 16)
-                            atSymbols[strMemberName] = ulOffset
+            if ('declaration' in tAttr) and (tAttr['declaration'] == '1'):
+                # This is just a declaration. Ignore it, there is a complete definition somewhere else.
+                pass
+            else:
+                atSymbols[strMemberName] = tAttr['byte_size']
+
+                # Generate symbols for the offset of each member.
+                for tMember in tNode['children']:
+                    if tMember['name'] == 'member':
+                        tMemberAttr = tMember['attributes']
+                        strLoc = tMemberAttr['data_member_location']
+                        strName = tMemberAttr['name']
+                        if (strLoc is not None) and (strName is not None):
+                            tObj = s_reLocation.match(strLoc)
+                            if tObj is not None:
+                                strMemberName = 'OFFSETOF_' + strStructureName + '_' + strName
+                                ulOffset = int(tObj.group(1), 16)
+                                atSymbols[strMemberName] = ulOffset
     else:
         for tChild in tNode['children']:
-            __iter_debug_info(tChild, atSymbols)
+            __iter_debug_info(tChild, atDebugInfo, atSymbols)
 
 
 def get_debug_symbols(env, strFileName):
     atDebugInfo = get_debug_structure(env, strFileName)
     atAllSymbols = dict({})
-    __iter_debug_info(atDebugInfo, atAllSymbols)
+    __iter_debug_info(atDebugInfo, atDebugInfo, atAllSymbols)
     return atAllSymbols
 
 
