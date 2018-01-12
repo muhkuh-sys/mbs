@@ -182,8 +182,23 @@ def set_build_path(env, build_path, source_path, sources):
     # Convert the sources to a list.
     if isinstance(sources, str):
         sources = SCons.Script.Split(sources)
+
+    # Build the files in a separate directory.
     env.VariantDir(build_path, source_path, duplicate=0)
-    return [src.replace(source_path, build_path) for src in sources]
+
+    # Replace the source path at the beginning of each entry in sources.
+    astrSourcesInBuiltdir = []
+    for strPath in sources:
+        # Does the path start with the source path?
+        if strPath[:len(source_path)]==source_path:
+            # Yes -> replace it with the build path.
+            strBuildPath = build_path + strPath[len(source_path):]
+        else:
+            # No -> do not replace anything.
+            strBuildPath = strPath
+        astrSourcesInBuiltdir.append(strBuildPath)
+
+    return astrSourcesInBuiltdir
 
 
 def create_compiler_environment(
