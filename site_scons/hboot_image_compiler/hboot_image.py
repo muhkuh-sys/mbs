@@ -107,6 +107,8 @@ class HbootImage:
 
     __strDevice = None
 
+    __fMoreChunksAllowed = None
+
     def __init__(self, tEnv, strNetxType, **kwargs):
         strPatchDefinition = None
         strKeyromFile = None
@@ -1508,7 +1510,7 @@ class HbootImage:
 
         return aulChunk
 
-    def __build_chunk_skip(self, tChunkNode):
+    def __build_chunk_skip_header(self, tChunkNode):
         # Get the device.
         strAbsolute = tChunkNode.getAttribute('absolute')
         sizAbsolute = len(strAbsolute)
@@ -1644,6 +1646,12 @@ class HbootImage:
         aulHash = array.array('I', strHash[:self.__sizHashDw * 4])
         aulChunk.extend(aulHash)
 
+        return aulChunk, ucFill, sizSkip, strFile, sizFile
+
+    def __build_chunk_skip(self, tChunkNode):
+        aulChunk, ucFill, sizSkip, strFile, sizFile =\
+            self.__build_chunk_skip_header(tChunkNode)
+
         # Append the placeholder for the skip area.
         if sizFile != 0:
             # sizSkip is the numbers of DWORDS to skip. Convert it to bytes.
@@ -1663,8 +1671,24 @@ class HbootImage:
             aulChunk.fromstring(strFillData)
 
         else:
+            # Repeat the fill byte in all 4 bytes of a 32 bit value.
             ulFill = ucFill + 256 * ucFill + 65536 * ucFill + 16777216 * ucFill
             aulChunk.extend([ulFill] * sizSkip)
+
+        return aulChunk
+
+    def __build_chunk_skip_incomplete(self, tChunkNode):
+        # This chunk is not allowed for images with an end marker.
+        if self.__fHasEndMarker is not False:
+            raise Exception(
+                'A "SkipIncomplete" chunk can not be combined with an end '
+                'marker. Set "has_end" to "False".'
+            )
+        aulChunk, ucFill, sizSkip, strFile, sizFile =\
+            self.__build_chunk_skip_header(tChunkNode)
+
+        # Do not add any data here. The image has to end after this chunk.
+        self.__fMoreChunksAllowed = False
 
         return aulChunk
 
@@ -2990,10 +3014,14 @@ class HbootImage:
                 strChunkName = tChunkNode.localName
                 if strChunkName == 'Options':
                     # Found an option node.
+                    if self.__fMoreChunksAllowed is not True:
+                        raise Exception('No more chunks allowed.')
                     atChunk = self.__build_chunk_options(tChunkNode)
                     self.__atChunks.extend(atChunk)
                 elif strChunkName == 'Data':
                     # Found a data node.
+                    if self.__fMoreChunksAllowed is not True:
+                        raise Exception('No more chunks allowed.')
                     if self.__tImageType == self.__IMAGE_TYPE_SECMEM:
                         raise Exception('Data chunks are not allowed '
                                         'in SECMEM images.')
@@ -3001,6 +3029,8 @@ class HbootImage:
                     self.__atChunks.extend(atChunk)
                 elif strChunkName == 'Text':
                     # Found a text node.
+                    if self.__fMoreChunksAllowed is not True:
+                        raise Exception('No more chunks allowed.')
                     if self.__tImageType == self.__IMAGE_TYPE_SECMEM:
                         raise Exception('Text chunks are not allowed '
                                         'in SECMEM images.')
@@ -3008,6 +3038,8 @@ class HbootImage:
                     self.__atChunks.extend(atChunk)
                 elif strChunkName == 'XIP':
                     # Found an XIP node.
+                    if self.__fMoreChunksAllowed is not True:
+                        raise Exception('No more chunks allowed.')
                     if self.__tImageType == self.__IMAGE_TYPE_SECMEM:
                         raise Exception('XIP chunks are not allowed '
                                         'in SECMEM images.')
@@ -3015,6 +3047,8 @@ class HbootImage:
                     self.__atChunks.extend(atChunk)
                 elif strChunkName == 'Execute':
                     # Found an execute node.
+                    if self.__fMoreChunksAllowed is not True:
+                        raise Exception('No more chunks allowed.')
                     if self.__tImageType == self.__IMAGE_TYPE_SECMEM:
                         raise Exception('Execute chunks are not allowed '
                                         'in SECMEM images.')
@@ -3022,6 +3056,8 @@ class HbootImage:
                     self.__atChunks.extend(atChunk)
                 elif strChunkName == 'ExecuteCA9':
                     # Found an execute node.
+                    if self.__fMoreChunksAllowed is not True:
+                        raise Exception('No more chunks allowed.')
                     if self.__tImageType == self.__IMAGE_TYPE_SECMEM:
                         raise Exception('ExecuteCA9 chunks are not allowed '
                                         'in SECMEM images.')
@@ -3032,6 +3068,8 @@ class HbootImage:
                     self.__atChunks.extend(atChunk)
                 elif strChunkName == 'SpiMacro':
                     # Found a SPI macro.
+                    if self.__fMoreChunksAllowed is not True:
+                        raise Exception('No more chunks allowed.')
                     if self.__tImageType == self.__IMAGE_TYPE_SECMEM:
                         raise Exception('SpiMacro chunks are not allowed '
                                         'in SECMEM images.')
@@ -3039,13 +3077,26 @@ class HbootImage:
                     self.__atChunks.extend(atChunk)
                 elif strChunkName == 'Skip':
                     # Found a skip node.
+                    if self.__fMoreChunksAllowed is not True:
+                        raise Exception('No more chunks allowed.')
                     if self.__tImageType == self.__IMAGE_TYPE_SECMEM:
                         raise Exception('Skip chunks are not allowed '
                                         'in SECMEM images.')
                     atChunk = self.__build_chunk_skip(tChunkNode)
                     self.__atChunks.extend(atChunk)
+                elif strChunkName == 'SkipIncomplete':
+                    # Found a skip incomplete node.
+                    if self.__fMoreChunksAllowed is not True:
+                        raise Exception('No more chunks allowed.')
+                    if self.__tImageType == self.__IMAGE_TYPE_SECMEM:
+                        raise Exception('SkipIncomplete chunks are not '
+                                        'allowed in SECMEM images.')
+                    atChunk = self.__build_chunk_skip_incomplete(tChunkNode)
+                    self.__atChunks.extend(atChunk)
                 elif strChunkName == 'RootCert':
                     # Found a root certificate node.
+                    if self.__fMoreChunksAllowed is not True:
+                        raise Exception('No more chunks allowed.')
                     if self.__tImageType == self.__IMAGE_TYPE_SECMEM:
                         raise Exception('RootCert chunks are not allowed '
                                         'in SECMEM images.')
@@ -3056,6 +3107,8 @@ class HbootImage:
                     self.__atChunks.extend(atChunk)
                 elif strChunkName == 'LicenseCert':
                     # Found a license certificate node.
+                    if self.__fMoreChunksAllowed is not True:
+                        raise Exception('No more chunks allowed.')
                     if self.__tImageType == self.__IMAGE_TYPE_SECMEM:
                         raise Exception('LicenseCert chunks are not allowed '
                                         'in SECMEM images.')
@@ -3066,6 +3119,8 @@ class HbootImage:
                     self.__atChunks.extend(atChunk)
                 elif strChunkName == 'CR7Software':
                     # Found a CR7 software node.
+                    if self.__fMoreChunksAllowed is not True:
+                        raise Exception('No more chunks allowed.')
                     if self.__tImageType == self.__IMAGE_TYPE_SECMEM:
                         raise Exception('CR7Software chunks are not allowed '
                                         'in SECMEM images.')
@@ -3076,6 +3131,8 @@ class HbootImage:
                     self.__atChunks.extend(atChunk)
                 elif strChunkName == 'CA9Software':
                     # Found a CA9 software node.
+                    if self.__fMoreChunksAllowed is not True:
+                        raise Exception('No more chunks allowed.')
                     if self.__tImageType == self.__IMAGE_TYPE_SECMEM:
                         raise Exception(
                             'CA9Software chunks are not allowed '
@@ -3090,6 +3147,8 @@ class HbootImage:
                     self.__atChunks.extend(atChunk)
                 elif strChunkName == 'MemoryDeviceUp':
                     # Found a memory device up node.
+                    if self.__fMoreChunksAllowed is not True:
+                        raise Exception('No more chunks allowed.')
                     if self.__tImageType == self.__IMAGE_TYPE_SECMEM:
                         raise Exception(
                             'MemoryDeviceUp chunks are not '
@@ -3206,6 +3265,10 @@ class HbootImage:
                     )
                 )
         self.__strDevice = strDevice
+
+        # The image accepts chunks.
+        # This can change after special chunks like "SkipIncomplete".
+        self.__fMoreChunksAllowed = True
 
         # Loop over all children.
         for tImageNode in tXmlRootNode.childNodes:
