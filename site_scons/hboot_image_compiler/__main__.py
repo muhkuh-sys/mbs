@@ -117,11 +117,21 @@ if tArgs.astrAliases is not None:
     for strAliasDefinition in tArgs.astrAliases:
         tMatch = re.match(tPattern, strAliasDefinition)
         if tMatch is None:
-            raise Exception('Invalid alias definition: "%s". It must be "ALIAS=FILE" instead.' % strAliasDefinition)
+            raise Exception(
+                'Invalid alias definition: "%s". '
+                'It must be "ALIAS=FILE" instead.' % strAliasDefinition
+            )
         strAlias = tMatch.group(1)
         strFile = tMatch.group(2)
         if strAlias in atKnownFiles:
-            raise Exception('Double defined alias "%s". The old value "%s" should be overwritten with "%s".' % (strAlias, atKnownFiles[strAlias], strFile))
+            raise Exception(
+                'Double defined alias "%s". The old value "%s" should be '
+                'overwritten with "%s".' % (
+                    strAlias,
+                    atKnownFiles[strAlias],
+                    strFile
+                )
+            )
         atKnownFiles[strAlias] = strFile
 
 # Parse all defines.
@@ -131,11 +141,19 @@ if tArgs.astrDefines is not None:
     for strDefine in tArgs.astrDefines:
         tMatch = re.match(tPattern, strDefine)
         if tMatch is None:
-            raise Exception('Invalid define: "%s". It must be "NAME=VALUE" instead.' % strDefine)
+            raise Exception('Invalid define: "%s". '
+                            'It must be "NAME=VALUE" instead.' % strDefine)
         strName = tMatch.group(1)
         strValue = tMatch.group(2)
         if strName in atDefinitions:
-            raise Exception('Double defined name "%s". The old value "%s" should be overwritten with "%s".' % (strName, atKnownFiles[strName], strValue))
+            raise Exception(
+                'Double defined name "%s". '
+                'The old value "%s" should be overwritten with "%s".' % (
+                    strName,
+                    atKnownFiles[strName],
+                    strValue
+                )
+            )
         atDefinitions[strName] = strValue
 
 # Set an empty list of include paths if nothing was specified.

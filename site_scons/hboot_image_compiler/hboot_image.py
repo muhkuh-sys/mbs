@@ -39,7 +39,12 @@ class ResolveDefines(ast.NodeTransformer):
             elif type(tValue) is str:
                 tValueNode = ast.Str(s=tValue)
             else:
-                raise Exception('Not implemented type for "%s": %s' % (strName, str(type(tValue))))
+                raise Exception(
+                    'Not implemented type for "%s": %s' % (
+                        strName,
+                        str(type(tValue))
+                    )
+                )
             tNode = ast.copy_location(tValueNode, node)
         else:
             raise Exception('Unknown constant "%s".' % node.id)
@@ -177,32 +182,46 @@ class HbootImage:
 
         if self.__fVerbose:
             print('[HBootImage] Configuration: netX type = %s' % strNetxType)
-            print('[HBootImage] Configuration: patch definitions = "%s"' % strPatchDefinition)
-            print('[HBootImage] Configuration: Keyrom = "%s"' % str(strKeyromFile))
+            print('[HBootImage] Configuration: patch definitions = "%s"' %
+                  strPatchDefinition)
+            print('[HBootImage] Configuration: Keyrom = "%s"' %
+                  str(strKeyromFile))
 
             if len(astrSnippetSearchPaths) == 0:
                 print('[HBootImage] Configuration: No Sniplibs.')
             else:
                 for strPath in astrSnippetSearchPaths:
-                    print('[HBootImage] Configuration: Sniplib at "%s"' % strPath)
+                    print('[HBootImage] Configuration: Sniplib at "%s"' %
+                          strPath)
 
             if len(astrIncludePaths) == 0:
                 print('[HBootImage] Configuration: No include paths.')
             else:
                 for strPath in astrIncludePaths:
-                    print('[HBootImage] Configuration: Include path "%s"' % strPath)
+                    print('[HBootImage] Configuration: Include path "%s"' %
+                          strPath)
 
             if len(atKnownFiles) == 0:
                 print('[HBootImage] Configuration: No known files.')
             else:
                 for strKey, strPath in atKnownFiles.iteritems():
-                    print('[HBootImage] Configuration: Known file "%s" at "%s".' % (strKey, strPath))
+                    print(
+                        '[HBootImage] Configuration: '
+                        'Known file "%s" at "%s".' % (
+                            strKey,
+                            strPath
+                        )
+                    )
 
         if strPatchDefinition is not None:
             self.__cPatchDefinitions = patch_definitions.PatchDefinitions()
             self.__cPatchDefinitions.read_patch_definition(strPatchDefinition)
 
-        self.__cSnippetLibrary = snippet_library.SnippetLibrary('.sniplib.dblite', astrSnippetSearchPaths, debug=self.__fVerbose)
+        self.__cSnippetLibrary = snippet_library.SnippetLibrary(
+            '.sniplib.dblite',
+            astrSnippetSearchPaths,
+            debug=self.__fVerbose
+        )
 
         self.__strNetxType = strNetxType
         self.__tImageType = None
@@ -220,7 +239,8 @@ class HbootImage:
         # Read the keyrom file if specified.
         if strKeyromFile is not None:
             if self.__fVerbose:
-                print('[HBootImage] Init: Reading key ROM file "%s".' % strKeyromFile)
+                print('[HBootImage] Init: Reading key ROM file "%s".' %
+                      strKeyromFile)
             # Parse the XML file.
             print(repr(strKeyromFile))
             tFile = open(strKeyromFile, 'rt')
@@ -232,13 +252,21 @@ class HbootImage:
 
     def __get_tag_id(self, cId0, cId1, cId2, cId3):
         # Combine the 4 ID characters to a 32 bit value.
-        ulId = ord(cId0) | (ord(cId1) << 8) | (ord(cId2) << 16) | (ord(cId3) << 24)
+        ulId = (
+            ord(cId0) |
+            (ord(cId1) << 8) |
+            (ord(cId2) << 16) |
+            (ord(cId3) << 24)
+        )
         return ulId
 
     def __xml_get_all_text(self, tNode):
         astrText = []
         for tChild in tNode.childNodes:
-            if (tChild.nodeType == tChild.TEXT_NODE) or (tChild.nodeType == tChild.CDATA_SECTION_NODE):
+            if(
+                (tChild.nodeType == tChild.TEXT_NODE) or
+                (tChild.nodeType == tChild.CDATA_SECTION_NODE)
+            ):
                 astrText.append(str(tChild.data))
         return ''.join(astrText)
 
@@ -251,7 +279,12 @@ class HbootImage:
             raise Exception('Invalid expression: "%s"' % strExpression)
         return tResult
 
-    def __plaintext_to_xml_with_replace(self, strPlaintext, atReplace, fIsStandalone):
+    def __plaintext_to_xml_with_replace(
+        self,
+        strPlaintext,
+        atReplace,
+        fIsStandalone
+    ):
         # Set all key/value pairs in the local resolver.
         self.__resolver.setDefines(atReplace)
 
@@ -264,7 +297,10 @@ class HbootImage:
             tXml = xml.dom.minidom.parseString(strText)
             tResult = tXml
         else:
-            tXml = xml.dom.minidom.parseString('<?xml version="1.0" encoding="utf-8"?><Root>%s</Root>' % strText)
+            tXml = xml.dom.minidom.parseString(
+                '<?xml version="1.0" encoding="utf-8"?><Root>%s</Root>' %
+                strText
+            )
             tResult = tXml.documentElement
         return tResult
 
@@ -272,16 +308,26 @@ class HbootImage:
         # Get the group, artifact and optional revision.
         strGroup = tSnipNode.getAttribute('group')
         if len(strGroup) == 0:
-            raise Exception('The "group" attribute of a "Snip" node must not be empty.')
+            raise Exception(
+                'The "group" attribute of a "Snip" node must not be empty.'
+            )
         strArtifact = tSnipNode.getAttribute('artifact')
         if len(strArtifact) == 0:
-            raise Exception('The "artifact" attribute of a "Snip" node must not be empty.')
+            raise Exception(
+                'The "artifact" attribute of a "Snip" node must not be empty.'
+            )
         strVersion = tSnipNode.getAttribute('version')
         if len(strVersion) == 0:
-            raise Exception('The "version" attribute of a "Snip" node must not be empty.')
+            raise Exception(
+                'The "version" attribute of a "Snip" node must not be empty.'
+            )
 
         # Get the name of the snippets for messages.
-        strSnipName = 'G="%s",A="%s",V="%s"' % (strGroup, strArtifact, strVersion)
+        strSnipName = 'G="%s",A="%s",V="%s"' % (
+            strGroup,
+            strArtifact,
+            strVersion
+        )
 
         # Get the parameter.
         atParameter = {}
@@ -292,19 +338,40 @@ class HbootImage:
                     # Get the "name" attribute.
                     strName = tChildNode.getAttribute('name')
                     if len(strName) == 0:
-                        raise Exception('Snippet %s instanciation failed: a parameter node is missing the "name" attribute!' % strSnipName)
+                        raise Exception(
+                            'Snippet %s instanciation failed: a parameter '
+                            'node is missing the "name" attribute!' %
+                            strSnipName
+                        )
                     # Get the value.
                     strValue = self.__xml_get_all_text(tChildNode)
                     # Was the parameter already defined?
                     if strName in atParameter:
-                        raise Exception('Snippet %s instanciation failed: parameter "%s" is defined more than once!' % (strSnipName, strName))
+                        raise Exception(
+                            'Snippet %s instanciation failed: parameter "%s" '
+                            'is defined more than once!' % (
+                                strSnipName,
+                                strName
+                            )
+                        )
                     else:
                         atParameter[strName] = strValue
                 else:
-                    raise Exception('Snippet %s instanciation failed: unknown tag "%s" found!' % (strSnipName, strTag))
+                    raise Exception(
+                        'Snippet %s instanciation failed: unknown tag "%s" '
+                        'found!' % (
+                            strSnipName,
+                            strTag
+                        )
+                    )
 
         # Search the snippet.
-        tSnippetAttr = self.__cSnippetLibrary.find(strGroup, strArtifact, strVersion, atParameter)
+        tSnippetAttr = self.__cSnippetLibrary.find(
+            strGroup,
+            strArtifact,
+            strVersion,
+            atParameter
+        )
         strSnippetText = tSnippetAttr[0]
         if strSnippetText is None:
             raise Exception('Snippet not found!')
@@ -315,7 +382,11 @@ class HbootImage:
         atReplace.update(tSnippetAttr[1])
 
         # Replace and convert to XML.
-        tSnippetNode = self.__plaintext_to_xml_with_replace(strSnippetText, atReplace, False)
+        tSnippetNode = self.__plaintext_to_xml_with_replace(
+            strSnippetText,
+            atReplace,
+            False
+        )
 
         # Add the snippet file to the dependencies.
         strSnippetAbsFile = tSnippetAttr[2]
@@ -339,7 +410,8 @@ class HbootImage:
         if strIncludeName is None:
             raise Exception('The "Include" node has no "name" attribute.')
         if len(strIncludeName) == 0:
-            raise Exception('The "name" attribute of an "Include" node must not be empty.')
+            raise Exception('The "name" attribute of an "Include" node must '
+                            'not be empty.')
 
         # Get the parameter.
         atParameter = {}
@@ -350,21 +422,26 @@ class HbootImage:
                     # Get the "name" attribute.
                     strName = tChildNode.getAttribute('name')
                     if len(strName) == 0:
-                        raise Exception('Include failed: a parameter node is missing the "name" attribute!')
+                        raise Exception('Include failed: a parameter node is '
+                                        'missing the "name" attribute!')
                     # Get the value.
                     strValue = self.__xml_get_all_text(tChildNode)
                     # Was the parameter already defined?
                     if strName in atParameter:
-                        raise Exception('Include failed: parameter "%s" is defined more than once!' % strIncludeName)
+                        raise Exception('Include failed: parameter "%s" is '
+                                        'defined more than once!' %
+                                        strIncludeName)
                     else:
                         atParameter[strName] = strValue
                 else:
-                    raise Exception('Include failed: unknown tag "%s" found!' % strTag)
+                    raise Exception('Include failed: unknown tag "%s" '
+                                    'found!' % strTag)
 
         # Search the file in the current path and all include paths.
         strAbsIncludeName = self.__find_file(strIncludeName)
         if strAbsIncludeName is None:
-            raise Exception('Failed to include file "%s": file not found.' % strIncludeName)
+            raise Exception('Failed to include file "%s": file not found.' %
+                            strIncludeName)
 
         # Read the complete file as text.
         tFile = open(strAbsIncludeName, 'rt')
@@ -375,7 +452,11 @@ class HbootImage:
         atReplace = {}
         atReplace.update(self.__atGlobalDefines)
         atReplace.update(atParameter)
-        tNewNode = self.__plaintext_to_xml_with_replace(strFileContents, atReplace, False)
+        tNewNode = self.__plaintext_to_xml_with_replace(
+            strFileContents,
+            atReplace,
+            False
+        )
 
         # Add the include file to the dependencies.
         if strAbsIncludeName not in self.__astrDependencies:
@@ -398,8 +479,15 @@ class HbootImage:
             # Replace it with a snippet.
             atNodes = tXmlDocument.getElementsByTagName('StartAPP')
             for tReplaceNode in atNodes:
-                strNewText = '<Snip artifact="start_app_cpu_netx90_mpw" group="org.muhkuh.hboot.sniplib" version="1.0.0"/>'
-                tNewXml = xml.dom.minidom.parseString('<?xml version="1.0" encoding="utf-8"?><Root>%s</Root>' % strNewText)
+                strNewText = (
+                    '<Snip artifact="start_app_cpu_netx90_mpw" '
+                    'group="org.muhkuh.hboot.sniplib" '
+                    'version="1.0.0"/>'
+                )
+                tNewXml = xml.dom.minidom.parseString(
+                    '<?xml version="1.0" encoding="utf-8"?><Root>%s</Root>' %
+                    strNewText
+                )
                 tParentNode = tReplaceNode.parentNode
                 for tChildNode in tNewXml.documentElement.childNodes:
                     tClonedNode = tChildNode.cloneNode(True)
@@ -418,7 +506,10 @@ class HbootImage:
             if (len(atSnipNodes) == 0) and (len(atIncludeNodes) == 0):
                 fFoundPreproc = False
             elif uiDepth >= uiMaximumDepth:
-                raise Exception('Too many nested preprocessor directives found! The maximum nesting depth is %d.' % uiMaximumDepth)
+                raise Exception(
+                    'Too many nested preprocessor directives found! '
+                    'The maximum nesting depth is %d.' % uiMaximumDepth
+                )
             else:
                 uiDepth += 1
                 for tNode in atSnipNodes:
@@ -433,7 +524,11 @@ class HbootImage:
         if self.__strNetxType == 'NETX56':
             ulMagicCookie = self.__MAGIC_COOKIE_NETX56
             ulSignature = self.__get_tag_id('M', 'O', 'O', 'H')
-        elif (self.__strNetxType == 'NETX4000_RELAXED') or (self.__strNetxType == 'NETX4000') or (self.__strNetxType == 'NETX4100'):
+        elif(
+            (self.__strNetxType == 'NETX4000_RELAXED') or
+            (self.__strNetxType == 'NETX4000') or
+            (self.__strNetxType == 'NETX4100')
+        ):
             ulMagicCookie = self.__MAGIC_COOKIE_NETX4000
             ulSignature = self.__get_tag_id('M', 'O', 'O', 'H')
         elif self.__strNetxType == 'NETX90_MPW':
@@ -443,7 +538,10 @@ class HbootImage:
             ulMagicCookie = self.__MAGIC_COOKIE_NETX90_MPW_APP
             ulSignature = self.__get_tag_id('M', 'A', 'P', 'P')
         else:
-            raise Exception('Missing platform configuration: no standard header configured, please update the HBOOT image compiler.')
+            raise Exception(
+                'Missing platform configuration: no standard header '
+                'configured, please update the HBOOT image compiler.'
+            )
 
         # Get the hash for the image.
         tHash = hashlib.sha224()
@@ -516,7 +614,9 @@ class HbootImage:
             else:
                 # Loop over all include folders.
                 for strIncludePath in self.__astrIncludePaths:
-                    strPath = os.path.abspath(os.path.join(strIncludePath, strFilePath))
+                    strPath = os.path.abspath(
+                        os.path.join(strIncludePath, strFilePath)
+                    )
                     if os.access(strPath, os.R_OK) is True:
                         strAbsFilePath = strPath
                         break
@@ -542,12 +642,17 @@ class HbootImage:
                     # evaluates to a number between 0 and 15.
                     strIndex = tValueNode.getAttribute('index')
                     if len(strIndex) == 0:
-                        raise Exception('The Value node has no index attribute!')
+                        raise Exception(
+                            'The Value node has no index attribute!'
+                        )
                     ulIndex = self.__parse_numeric_expression(strIndex)
 
                     # The index must be >=0 and <16.
                     if (ulIndex < 0) or (ulIndex > 15):
-                        raise Exception('The index exceeds the valid range of [0..15]: %d' % ulIndex)
+                        raise Exception(
+                            'The index exceeds the valid range '
+                            'of [0..15]: %d' % ulIndex
+                        )
 
                     # Get the data.
                     strData = self.__xml_get_all_text(tValueNode)
@@ -557,16 +662,23 @@ class HbootImage:
                     ulData = self.__parse_numeric_expression(strData)
                     # The data must be an unsigned 32bit number.
                     if (ulData < 0) or (ulIndex > 0xffffffff):
-                        raise Exception('The data exceeds the valid range of an unsigned 32bit number: %d' % ulData)
+                        raise Exception(
+                            'The data exceeds the valid range of an '
+                            'unsigned 32bit number: %d' % ulData
+                        )
 
                     # Is the index already modified?
                     if not self.__atHeaderOverride[ulIndex] is None:
-                        raise Exception('The value at index %d is already set to 0x%08x!' % (ulIndex, ulData))
+                        raise Exception(
+                            'The value at index %d is already '
+                            'set to 0x%08x!' % (ulIndex, ulData)
+                        )
 
                     # Set the value.
                     self.__atHeaderOverride[ulIndex] = ulData
                 else:
-                    raise Exception('Unexpected node: %s' % tValueNode.localName)
+                    raise Exception('Unexpected node: %s' %
+                                    tValueNode.localName)
 
     def __append_32bit(self, atData, ulValue):
         atData.append(ulValue & 0xff)
@@ -589,7 +701,9 @@ class HbootImage:
         atChunk = None
 
         # Compile the options definition to a string of bytes.
-        tOptionCompiler = option_compiler.OptionCompiler(self.__cPatchDefinitions)
+        tOptionCompiler = option_compiler.OptionCompiler(
+            self.__cPatchDefinitions
+        )
         tOptionCompiler.process(tChunkNode)
         strData = tOptionCompiler.tostring()
 
@@ -617,7 +731,11 @@ class HbootImage:
                 atChunk.append(len(aulData))
                 atChunk.extend(aulData)
 
-            elif (self.__strNetxType == 'NETX4000_RELAXED') or (self.__strNetxType == 'NETX4000') or (self.__strNetxType == 'NETX4100'):
+            elif(
+                (self.__strNetxType == 'NETX4000_RELAXED') or
+                (self.__strNetxType == 'NETX4000') or
+                (self.__strNetxType == 'NETX4100')
+            ):
                 # Pad the option chunk to 32 bit size.
                 strPadding = chr(0x00) * ((4 - (len(strData) % 4)) & 3)
                 strChunk = strData + strPadding
@@ -658,9 +776,67 @@ class HbootImage:
                 atChunk.extend(aulHash)
 
             else:
-                raise Exception('"Opts" chunk is not supported for chip type "%s".' % (self.__strNetxType))
+                raise Exception(
+                    '"Opts" chunk is not supported for chip type "%s".' %
+                    (self.__strNetxType)
+                )
 
         return atChunk
+
+    def __get_data_contents_elf(self, tNode, strAbsFilePath):
+        # Get the segment names to dump. It is a comma separated string.
+        # This is optional. If no segment names are specified, all sections
+        # with PROGBITS are dumped.
+        strSegmentsToDump = tNode.getAttribute('segments').strip()
+        astrSegmentsToDump = None
+        if len(strSegmentsToDump) != 0:
+            astrSegmentsToDump = [
+                strSegment.strip() for strSegment in
+                string.split(strSegmentsToDump, ',')
+            ]
+
+        # Extract the segments.
+        atSegments = elf_support.get_segment_table(
+            self.__tEnv,
+            strAbsFilePath,
+            astrSegmentsToDump
+        )
+        # Get the estimated binary size from the segments.
+        ulEstimatedBinSize = elf_support.get_estimated_bin_size(atSegments)
+        # Do not create files larger than 512MB.
+        if ulEstimatedBinSize >= 0x20000000:
+            raise Exception('The resulting file seems to extend '
+                            '512MBytes. Too scared to continue!')
+
+        strOverwriteAddress = tNode.getAttribute('overwrite_address').strip()
+        if len(strOverwriteAddress) == 0:
+            pulLoadAddress = elf_support.get_load_address(atSegments)
+        else:
+            pulLoadAddress = int(strOverwriteAddress, 0)
+
+        # Extract the binary.
+        tBinFile, strBinFileName = tempfile.mkstemp()
+        os.close(tBinFile)
+        astrCmd = [
+            self.__tEnv['OBJCOPY'],
+            '--output-target=binary'
+        ]
+        if astrSegmentsToDump is not None:
+            for strSegment in astrSegmentsToDump:
+                astrCmd.append('--only-section=%s' % strSegment)
+        astrCmd.append(strAbsFilePath)
+        astrCmd.append(strBinFileName)
+        subprocess.check_call(astrCmd)
+
+        # Get the application data.
+        tBinFile = open(strBinFileName, 'rb')
+        strData = tBinFile.read()
+        tBinFile.close()
+
+        # Remove the temp file.
+        os.remove(strBinFileName)
+
+        return strData, pulLoadAddress
 
     def __get_data_contents(self, tDataNode, atData):
         strData = None
@@ -675,7 +851,9 @@ class HbootImage:
                     # Get the file name.
                     strFileName = tNode.getAttribute('name')
                     if len(strFileName) == 0:
-                        raise Exception("The file node has no name attribute!")
+                        raise Exception(
+                            "The file node has no name attribute!"
+                        )
 
                     # Search the file in the current working folder and all
                     # include paths.
@@ -686,67 +864,42 @@ class HbootImage:
                     # Is this an ELF file?
                     strRoot, strExtension = os.path.splitext(strAbsFilePath)
                     if strExtension == '.elf':
-                        # Get the segment names to dump. It is a comma separated string.
-                        # This is optional. If no segment names are specified, all sections with PROGBITS are dumped.
-                        strSegmentsToDump = tNode.getAttribute('segments').strip()
-                        astrSegmentsToDump = None
-                        if len(strSegmentsToDump) != 0:
-                            astrSegmentsToDump = [strSegment.strip() for strSegment in string.split(strSegmentsToDump, ',')]
-
-                        # Extract the segments.
-                        atSegments = elf_support.get_segment_table(self.__tEnv, strAbsFilePath, astrSegmentsToDump)
-                        # Get the estimated binary size from the segments.
-                        ulEstimatedBinSize = elf_support.get_estimated_bin_size(atSegments)
-                        # Do not create files larger than 512MB.
-                        if ulEstimatedBinSize >= 0x20000000:
-                            raise Exception("The resulting file seems to extend 512MBytes. Too scared to continue!")
-
-                        strOverwriteAddress = tNode.getAttribute('overwrite_address').strip()
-                        if len(strOverwriteAddress) == 0:
-                            pulLoadAddress = elf_support.get_load_address(atSegments)
-                        else:
-                            pulLoadAddress = int(strOverwriteAddress, 0)
-
-                        # Extract the binary.
-                        tBinFile, strBinFileName = tempfile.mkstemp()
-                        os.close(tBinFile)
-                        astrCmd = [self.__tEnv['OBJCOPY'], '--output-target=binary']
-                        if astrSegmentsToDump is not None:
-                            for strSegment in astrSegmentsToDump:
-                                astrCmd.append('--only-section=%s' % strSegment)
-                        astrCmd.append(strAbsFilePath)
-                        astrCmd.append(strBinFileName)
-                        subprocess.check_call(astrCmd)
-
-                        # Get the application data.
-                        tBinFile = open(strBinFileName, 'rb')
-                        strData = tBinFile.read()
-                        tBinFile.close()
-
-                        # Remove the temp file.
-                        os.remove(strBinFileName)
+                        strData, pulLoadAddress = self.__get_data_contents_elf(
+                            tNode,
+                            strAbsFilePath
+                        )
 
                     elif strExtension == '.bin':
                         strLoadAddress = tNode.getAttribute('load_address')
                         if len(strLoadAddress) == 0:
-                            raise Exception('The File node points to a binary file and has no load_address attribute!')
+                            raise Exception(
+                                'The File node points to a binary file and '
+                                'has no load_address attribute!'
+                            )
 
-                        pulLoadAddress = self.__parse_numeric_expression(strLoadAddress)
+                        pulLoadAddress = self.__parse_numeric_expression(
+                            strLoadAddress
+                        )
 
                         tBinFile = open(strAbsFilePath, 'rb')
                         strData = tBinFile.read()
                         tBinFile.close()
 
                     else:
-                        raise Exception('The File node points to a file with an unknown extension: %s' % strExtension)
+                        raise Exception('The File node points to a file with '
+                                        'an unknown extension: %s' %
+                                        strExtension)
                 # Is this a node element with the name 'Hex'?
                 elif tNode.localName == 'Hex':
                     # Get the address.
                     strAddress = tNode.getAttribute('address')
                     if len(strAddress) == 0:
-                        raise Exception("The file node has no address attribute!")
+                        raise Exception('The file node has no '
+                                        'address attribute!')
 
-                    pulLoadAddress = self.__parse_numeric_expression(strAddress)
+                    pulLoadAddress = self.__parse_numeric_expression(
+                        strAddress
+                    )
 
                     # Get the text in this node and parse it as hex data.
                     strDataHex = self.__xml_get_all_text(tNode)
@@ -760,9 +913,12 @@ class HbootImage:
                     # Get the address.
                     strAddress = tNode.getAttribute('address')
                     if len(strAddress) == 0:
-                        raise Exception("The file node has no address attribute!")
+                        raise Exception('The file node has no '
+                                        'address attribute!')
 
-                    pulLoadAddress = self.__parse_numeric_expression(strAddress)
+                    pulLoadAddress = self.__parse_numeric_expression(
+                        strAddress
+                    )
 
                     # Get the text in this node and split it by whitespace.
                     strDataUint = self.__xml_get_all_text(tNode)
@@ -781,9 +937,12 @@ class HbootImage:
                     # Get the address.
                     strAddress = tNode.getAttribute('address')
                     if len(strAddress) == 0:
-                        raise Exception("The file node has no address attribute!")
+                        raise Exception('The file node has no '
+                                        'address attribute!')
 
-                    pulLoadAddress = self.__parse_numeric_expression(strAddress)
+                    pulLoadAddress = self.__parse_numeric_expression(
+                        strAddress
+                    )
 
                     # Get the text in this node and split it by whitespace.
                     strDataUint = self.__xml_get_all_text(tNode)
@@ -802,9 +961,12 @@ class HbootImage:
                     # Get the address.
                     strAddress = tNode.getAttribute('address')
                     if len(strAddress) == 0:
-                        raise Exception("The file node has no address attribute!")
+                        raise Exception('The file node has no '
+                                        'address attribute!')
 
-                    pulLoadAddress = self.__parse_numeric_expression(strAddress)
+                    pulLoadAddress = self.__parse_numeric_expression(
+                        strAddress
+                    )
 
                     # Get the text in this node and split it by whitespace.
                     strDataUint = self.__xml_get_all_text(tNode)
@@ -823,9 +985,12 @@ class HbootImage:
                     # Get the address.
                     strAddress = tNode.getAttribute('address')
                     if len(strAddress) == 0:
-                        raise Exception("The Concat node has no address attribute!")
+                        raise Exception('The Concat node has no '
+                                        'address attribute!')
 
-                    pulLoadAddress = self.__parse_numeric_expression(strAddress)
+                    pulLoadAddress = self.__parse_numeric_expression(
+                        strAddress
+                    )
 
                     astrData = []
 
@@ -835,20 +1000,30 @@ class HbootImage:
                         if tConcatNode.nodeType == tConcatNode.ELEMENT_NODE:
                             # Is this a node element with the name 'Hex'?
                             if tConcatNode.localName == 'Hex':
-                                # Get the text in this node and parse it as hex data.
-                                strDataHex = self.__xml_get_all_text(tConcatNode)
+                                # Get the text in this node and parse it
+                                # as hex data.
+                                strDataHex = self.__xml_get_all_text(
+                                    tConcatNode
+                                )
                                 if strDataHex is None:
-                                    raise Exception('No text in node "Hex" found!')
+                                    raise Exception('No text in node '
+                                                    '"Hex" found!')
 
-                                strDataHex = self.__remove_all_whitespace(strDataHex)
+                                strDataHex = self.__remove_all_whitespace(
+                                    strDataHex
+                                )
                                 strDataChunk = binascii.unhexlify(strDataHex)
                                 astrData.append(strDataChunk)
 
                             elif tConcatNode.localName == 'UInt32':
-                                # Get the text in this node and split it by whitespace.
-                                strDataUint = self.__xml_get_all_text(tConcatNode)
+                                # Get the text in this node and split it
+                                # by whitespace.
+                                strDataUint = self.__xml_get_all_text(
+                                    tConcatNode
+                                )
                                 if strDataUint is None:
-                                    raise Exception('No text in node "UInt32" found!')
+                                    raise Exception('No text in node '
+                                                    '"UInt32" found!')
 
                                 astrNumbers = string.split(strDataUint)
                                 aulNumbers = array.array('I')
@@ -860,10 +1035,14 @@ class HbootImage:
                                 astrData.append(strDataChunk)
 
                             elif tConcatNode.localName == 'UInt16':
-                                # Get the text in this node and split it by whitespace.
-                                strDataUint = self.__xml_get_all_text(tConcatNode)
+                                # Get the text in this node and split it
+                                # by whitespace.
+                                strDataUint = self.__xml_get_all_text(
+                                    tConcatNode
+                                )
                                 if strDataUint is None:
-                                    raise Exception('No text in node "UInt16" found!')
+                                    raise Exception('No text in node '
+                                                    '"UInt16" found!')
 
                                 astrNumbers = string.split(strDataUint)
                                 ausNumbers = array.array('H')
@@ -875,10 +1054,14 @@ class HbootImage:
                                 astrData.append(strDataChunk)
 
                             elif tConcatNode.localName == 'UInt8':
-                                # Get the text in this node and split it by whitespace.
-                                strDataUint = self.__xml_get_all_text(tConcatNode)
+                                # Get the text in this node and split it
+                                # by whitespace.
+                                strDataUint = self.__xml_get_all_text(
+                                    tConcatNode
+                                )
                                 if strDataUint is None:
-                                    raise Exception('No text in node "UInt8" found!')
+                                    raise Exception('No text in node "UInt8" '
+                                                    ' found!')
 
                                 astrNumbers = string.split(strDataUint)
                                 aucNumbers = array.array('B')
@@ -970,7 +1153,11 @@ class HbootImage:
         atXIPAreas = None
         if self.__strNetxType == 'NETX56':
             raise Exception('Continue here!')
-        elif (self.__strNetxType == 'NETX4000_RELAXED') or (self.__strNetxType == 'NETX4000') or (self.__strNetxType == 'NETX4100'):
+        elif(
+            (self.__strNetxType == 'NETX4000_RELAXED') or
+            (self.__strNetxType == 'NETX4000') or
+            (self.__strNetxType == 'NETX4100')
+        ):
             atXIPAreas = [
                 # SQIROM0
                 {
@@ -1021,23 +1208,37 @@ class HbootImage:
 
         pulXipStartAddress = None
         for tXipArea in atXIPAreas:
-            if (pulLoadAddress >= tXipArea['start']) and (pulLoadAddress < tXipArea['end']):
+            if(
+                (pulLoadAddress >= tXipArea['start']) and
+                (pulLoadAddress < tXipArea['end'])
+            ):
                 if tXipArea['device'] != self.__strDevice:
-                    raise Exception('The XIP load address matches the %s device, but the image specifies %s' % (tXipArea['device'], self.__strDevice))
+                    raise Exception(
+                        'The XIP load address matches the %s device, but the '
+                        'image specifies %s' % (
+                            tXipArea['device'],
+                            self.__strDevice
+                        )
+                    )
                 pulXipStartAddress = tXipArea['start']
                 break
         if pulXipStartAddress is None:
-            raise Exception('The load address 0x%08x of the XIP block is outside the available XIP regions of the platform.' % pulLoadAddress)
+            raise Exception(
+                'The load address 0x%08x of the XIP block is outside the '
+                'available XIP regions of the platform.' % pulLoadAddress
+            )
 
         # Get the requested offset of the data in the XIP area.
         ulOffsetRequested = pulLoadAddress - pulXipStartAddress
 
-        # The requested offset must be the current offset + 8 (4 for the ID and 4 for the length).
+        # The requested offset must be the current offset + 8 (4 for the ID
+        # and 4 for the length).
         ulOffsetRequestedData = 8
 
         # Get the current offset in bytes.
         # It is 64 bytes for the header and the size of all chunks.
-        # FIXME: If an image starts not at the beginning of the flash, the offset is different. Get the offset from the XML file?
+        # FIXME: If an image starts not at the beginning of the flash, the
+        #        offset is different. Get the offset from the XML file?
         ulOffsetCurrent = self.__ulStartOffset
         if self.__fHasHeader is True:
             ulOffsetCurrent += 64
@@ -1046,7 +1247,13 @@ class HbootImage:
         # The requested offset must be the current offset + the data offset
         ulOffsetCurrentData = ulOffsetCurrent + ulOffsetRequestedData
         if ulOffsetRequested != ulOffsetCurrentData:
-            raise Exception('The current offset 0x%08x does not match the requested offset 0x%08x of the XIP data.' % (ulOffsetCurrentData, ulOffsetRequested))
+            raise Exception(
+                'The current offset 0x%08x does not match the requested '
+                'offset 0x%08x of the XIP data.' % (
+                    ulOffsetCurrentData,
+                    ulOffsetRequested
+                )
+            )
 
         # The load address must be exactly the address where the code starts.
         # Pad the application size to a multiple of DWORDs.
@@ -1085,12 +1292,13 @@ class HbootImage:
                 if tNode.localName == 'File':
                     # Is there already an exec function?
                     if pfnExecFunction is not None:
-                        raise Exception('More than one execution address specified!')
+                        raise Exception('More than one execution address '
+                                        'specified!')
 
                     # Get the file name.
                     strFileName = tNode.getAttribute('name')
                     if len(strFileName) == 0:
-                        raise Exception("The file node has no name attribute!")
+                        raise Exception('The file node has no name attribute!')
 
                     # Search the file in the current working folder and all
                     # include paths.
@@ -1101,31 +1309,50 @@ class HbootImage:
                     # Is this an ELF file?
                     strRoot, strExtension = os.path.splitext(strAbsFilePath)
                     if strExtension != '.elf':
-                        raise Exception('The execute chunk has a file child which points to a non-elf file. How to get the execute address from this?')
+                        raise Exception(
+                            'The execute chunk has a file child which points '
+                            'to a non-elf file. How to get the execute '
+                            'address from this?'
+                        )
 
                     strStartSymbol = tNode.getAttribute('start')
                     if len(strStartSymbol) == 0:
                         strStartSymbol = 'start'
 
                     # Get all symbols.
-                    atSymbols = elf_support.get_symbol_table(self.__tEnv, strAbsFilePath)
+                    atSymbols = elf_support.get_symbol_table(self.__tEnv,
+                                                             strAbsFilePath)
                     if strStartSymbol not in atSymbols:
-                        raise Exception('The symbol for the start startaddress "%s" could not be found!' % strStartSymbol)
+                        raise Exception(
+                            'The symbol for the start startaddress "%s" '
+                            'could not be found!' % strStartSymbol
+                        )
                     pfnExecFunction = int(atSymbols[strStartSymbol])
                 elif tNode.localName == 'Address':
                     # Is there already an exec function?
                     if pfnExecFunction is not None:
-                        raise Exception('More than one execution address specified!')
+                        raise Exception('More than one execution address '
+                                        'specified!')
 
-                    pfnExecFunction = self.__parse_numeric_expression(self.__xml_get_all_text(tNode))
+                    pfnExecFunction = self.__parse_numeric_expression(
+                        self.__xml_get_all_text(tNode)
+                    )
                 elif tNode.localName == 'R0':
-                    ulR0 = self.__parse_numeric_expression(self.__xml_get_all_text(tNode))
+                    ulR0 = self.__parse_numeric_expression(
+                        self.__xml_get_all_text(tNode)
+                    )
                 elif tNode.localName == 'R1':
-                    ulR1 = self.__parse_numeric_expression(self.__xml_get_all_text(tNode))
+                    ulR1 = self.__parse_numeric_expression(
+                        self.__xml_get_all_text(tNode)
+                    )
                 elif tNode.localName == 'R2':
-                    ulR2 = self.__parse_numeric_expression(self.__xml_get_all_text(tNode))
+                    ulR2 = self.__parse_numeric_expression(
+                        self.__xml_get_all_text(tNode)
+                    )
                 elif tNode.localName == 'R3':
-                    ulR3 = self.__parse_numeric_expression(self.__xml_get_all_text(tNode))
+                    ulR3 = self.__parse_numeric_expression(
+                        self.__xml_get_all_text(tNode)
+                    )
                 else:
                     raise Exception('Unexpected node: %s' % tNode.localName)
 
@@ -1206,9 +1433,13 @@ class HbootImage:
                     self.__get_execute_data(tCoreNode, __atCore1)
 
                 else:
-                    raise Exception('Unexpected node: %s' % tCoreNode.localName)
+                    raise Exception('Unexpected node: %s' %
+                                    tCoreNode.localName)
 
-        if (__atCore0['pfnExecFunction'] == 0) and (__atCore1['pfnExecFunction'] == 0):
+        if(
+            (__atCore0['pfnExecFunction'] == 0) and
+            (__atCore1['pfnExecFunction'] == 0)
+        ):
             raise Exception('No core is started with the ExecuteCA9 chunk!')
 
         aulChunk = array.array('I')
@@ -1243,13 +1474,16 @@ class HbootImage:
         # Parse the data.
         ulDevice = self.__parse_numeric_expression(strDeviceName)
 
-        tOptionCompiler = option_compiler.OptionCompiler(self.__cPatchDefinitions)
+        tOptionCompiler = option_compiler.OptionCompiler(
+            self.__cPatchDefinitions
+        )
         strMacroData = tOptionCompiler.get_spi_macro_data(tChunkNode)
 
         # Prepend the device and the size.
         sizMacro = len(strMacroData)
         if sizMacro > 255:
-            raise Exception('The SPI macro is too long. The header can only indicate up to 255 bytes.')
+            raise Exception('The SPI macro is too long. The header can only '
+                            'indicate up to 255 bytes.')
         strData = chr(ulDevice) + chr(sizMacro) + strMacroData
 
         # Pad the macro to a multiple of dwords.
@@ -1293,7 +1527,8 @@ class HbootImage:
                     # Get the file name.
                     strFile = tChildNode.getAttribute('name')
                     if len(strFile) == 0:
-                        raise Exception("The file node has no name attribute!")
+                        raise Exception('The file node has no '
+                                        'name attribute!')
         sizFile = len(strFile)
 
         sizSkip = 0
@@ -1301,23 +1536,31 @@ class HbootImage:
 
         if sizFile != 0:
             if os.path.exists(strFile) is not True:
-                raise Exception('The file "%s" for the skip command does not exist.' % strFile)
+                raise Exception('The file "%s" for the skip command does '
+                                'not exist.' % strFile)
 
         ucFill = 0xff
         if sizFill != 0:
             ucFill = self.__parse_numeric_expression(strFill)
             if ucFill < 0:
-                raise Exception('Skip does not accept a negative fill value:' % ucFill)
+                raise Exception('Skip does not accept a negative fill '
+                                'value:' % ucFill)
             if ucFill > 0xff:
-                raise Exception('Skip does not accept a fill value larger than 8 bit:' % ucFill)
+                raise Exception('Skip does not accept a fill value larger '
+                                'than 8 bit:' % ucFill)
 
-        # Get the current offset in bytes. Add the size of the ID, the length and the hash.
+        # Get the current offset in bytes.
+        # Add the size of the ID, the length and the hash.
         sizOffsetCurrent = self.__ulStartOffset
         if self.__fHasHeader is True:
             sizOffsetCurrent += 64
         sizOffsetCurrent += len(self.__atChunks) * 4
         # Add the size of the SKIP chunk itself to the current position.
-        if (self.__strNetxType == 'NETX4000_RELAXED') or (self.__strNetxType == 'NETX4000') or (self.__strNetxType == 'NETX4100'):
+        if(
+            (self.__strNetxType == 'NETX4000_RELAXED') or
+            (self.__strNetxType == 'NETX4000') or
+            (self.__strNetxType == 'NETX4100')
+        ):
             sizOffsetCurrent += (1 + 1 + self.__sizHashDw) * 4
         elif self.__strNetxType == 'NETX90_MPW':
             sizOffsetCurrent += (1 + 1 + self.__sizHashDw) * 4
@@ -1328,9 +1571,11 @@ class HbootImage:
         sizOffsetNew = sizOffsetCurrent
 
         if (sizAbsolute == 0) and (sizRelative == 0) and (sizFile == 0):
-            raise Exception('The skip node has no "absolute", "relative" or "file" attribute!')
+            raise Exception('The skip node has no "absolute", "relative" '
+                            'or "file" attribute!')
         elif (sizAbsolute != 0) and (sizRelative != 0):
-            raise Exception('The skip node has an "absolute" and a "relative" attribute!')
+            raise Exception('The skip node has an "absolute" and a '
+                            '"relative" attribute!')
         elif sizAbsolute != 0:
             # Get the new absolute offset in bytes.
             sizOffsetNew = self.__parse_numeric_expression(strAbsolute)
@@ -1339,7 +1584,8 @@ class HbootImage:
             # Parse the data.
             sizSkip = self.__parse_numeric_expression(strRelative)
             if sizSkip < 0:
-                raise Exception('Skip does not accept a negative value for the relative attribute:' % sizSkip)
+                raise Exception('Skip does not accept a negative value for '
+                                'the relative attribute:' % sizSkip)
             sizOffsetNew = sizOffsetCurrent + sizSkip
 
         elif sizFile != 0:
@@ -1352,7 +1598,8 @@ class HbootImage:
             raise Exception('Internal error!')
 
         if sizOffsetNew < sizOffsetCurrent:
-            raise Exception('Skip tries to set the offset back from %d to %d.' % (sizOffsetCurrent, sizOffsetNew))
+            raise Exception('Skip tries to set the offset back from %d '
+                            'to %d.' % (sizOffsetCurrent, sizOffsetNew))
 
         if self.__strNetxType == 'NETX90_MPW':
             # The netX90 MPW ROM has a bug in the ROM code.
@@ -1360,7 +1607,9 @@ class HbootImage:
             # argument - 1.
             if self.__strDevice == 'SQIROM':
                 sizSkip = (sizOffsetNew - sizOffsetCurrent) / 4
-                sizSkipParameter = sizOffsetNew - sizOffsetCurrent + 1 - self.__sizHashDw
+                sizSkipParameter = (
+                    sizOffsetNew - sizOffsetCurrent + 1 - self.__sizHashDw
+                )
             else:
                 sizSkip = (sizOffsetNew - sizOffsetCurrent) / 4
                 sizSkipParameter = sizSkip
@@ -1376,7 +1625,9 @@ class HbootImage:
             # That's why we can safely default to SQIROM here and ignore
             # the rest.
             sizSkip = (sizOffsetNew - sizOffsetCurrent) / 4
-            sizSkipParameter = sizOffsetNew - sizOffsetCurrent + 1 - self.__sizHashDw
+            sizSkipParameter = (
+                sizOffsetNew - sizOffsetCurrent + 1 - self.__sizHashDw
+            )
 
         else:
             sizSkip = (sizOffsetNew - sizOffsetCurrent) / 4
@@ -1479,13 +1730,25 @@ class HbootImage:
         }
 
         # Extract all information from the key.
-        astrCmd = [self.__cfg_openssl, 'rsa', '-inform', 'DER', '-text', '-noout']
+        astrCmd = [
+            self.__cfg_openssl,
+            'rsa',
+            '-inform',
+            'DER',
+            '-text',
+            '-noout'
+        ]
         if fIsPublicKey is True:
             astrCmd.append('-pubin')
-        tProcess = subprocess.Popen(astrCmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE)
+        tProcess = subprocess.Popen(
+            astrCmd,
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE
+        )
         (strStdout, strStdErr) = tProcess.communicate(strKeyDER)
         if tProcess.returncode != 0:
-            raise Exception('OpenSSL failed with return code %d.' % tProcess.returncode)
+            raise Exception('OpenSSL failed with return code %d.' %
+                            tProcess.returncode)
 
         strMatchExponent = 'publicExponent:'
         strMatchModulus = 'modulus:'
@@ -1494,7 +1757,10 @@ class HbootImage:
             strMatchModulus = 'Modulus:'
 
         # Extract the public exponent.
-        tReExp = re.compile('^%s\s+(\d+)\s+\(0x([0-9a-fA-F]+)\)$' % strMatchExponent, re.MULTILINE)
+        tReExp = re.compile(
+            '^%s\s+(\d+)\s+\(0x([0-9a-fA-F]+)\)$' % strMatchExponent,
+            re.MULTILINE
+        )
         tMatch = tReExp.search(strStdout)
         if tMatch is None:
             raise Exception('Can not find public exponent!')
@@ -1503,8 +1769,13 @@ class HbootImage:
         if ulExp != ulExpHex:
             raise Exception('Decimal version differs from hex version!')
         if (ulExp < 0) or (ulExp > 0xffffff):
-            raise Exception('The exponent exceeds the allowed range of a 24bit unsigned integer!')
-        strData = chr(ulExp & 0xff) + chr((ulExp >> 8) & 0xff) + chr((ulExp >> 16) & 0xff)
+            raise Exception('The exponent exceeds the allowed range of a '
+                            '24bit unsigned integer!')
+        strData = (
+            chr(ulExp & 0xff) +
+            chr((ulExp >> 8) & 0xff) +
+            chr((ulExp >> 16) & 0xff)
+        )
         aucExp = array.array('B', strData)
         sizExp = len(aucExp)
 
@@ -1521,10 +1792,20 @@ class HbootImage:
                 break
 
         if uiId is None:
-            strErr = 'The modulo has a size of %d bytes. The public exponent has a size of %d bytes.\n' % (sizMod, sizExp)
-            strErr += 'These values can not be mapped to a RSA bit size. Known sizes are:\n'
+            strErr = (
+                'The modulo has a size of %d bytes. '
+                'The public exponent has a size of %d bytes.\n'
+                'These values can not be mapped to a RSA bit size. '
+                'Known sizes are:\n' % (
+                    sizMod,
+                    sizExp
+                )
+            )
             for uiElementId, atAttr in __atKnownRsaSizes.iteritems():
-                strErr += '  RSA%d: %d bytes modulo, %d bytes public exponent\n' % (atAttr['rsa'], atAttr['mod'], atAttr['exp'])
+                strErr += (
+                    '  RSA%d: %d bytes modulo, %d bytes public exponent\n' %
+                    (atAttr['rsa'], atAttr['mod'], atAttr['exp'])
+                )
             raise Exception(strErr)
 
         return (uiId, aucMod, aucExp)
@@ -1535,7 +1816,10 @@ class HbootImage:
 
         # Loop over all child nodes.
         for tNode in tNodeParent.childNodes:
-            if (tNode.nodeType == tNode.ELEMENT_NODE) and (tNode.localName == strName):
+            if(
+                (tNode.nodeType == tNode.ELEMENT_NODE) and
+                (tNode.localName == strName)
+            ):
                 strBinding = self.__xml_get_all_text(tNode)
 
         if strBinding is None:
@@ -1546,7 +1830,8 @@ class HbootImage:
         sizBinding = len(aucBinding)
 
         if sizBinding != 64:
-            raise Exception('The binding in node "%s" has an invalid size of %d bytes.' % (strName, sizBinding))
+            raise Exception('The binding in node "%s" has an invalid size '
+                            'of %d bytes.' % (strName, sizBinding))
 
         return aucBinding
 
@@ -1564,7 +1849,10 @@ class HbootImage:
             # Search for a "File" child node.
             tFileNode = None
             for tNode in tNodeParent.childNodes:
-                if (tNode.nodeType == tNode.ELEMENT_NODE) and (tNode.localName == 'File'):
+                if(
+                    (tNode.nodeType == tNode.ELEMENT_NODE) and
+                    (tNode.localName == 'File')
+                ):
                     tFileNode = tNode
                     break
             if tFileNode is not None:
@@ -1573,7 +1861,8 @@ class HbootImage:
                 # Search the file in the current path and all include paths.
                 strAbsName = self.__find_file(strFileName)
                 if strAbsName is None:
-                    raise Exception('Failed to read file "%s": file not found.' % strFileName)
+                    raise Exception('Failed to read file "%s": '
+                                    'file not found.' % strFileName)
 
                 # Read the complete key.
                 tFile = open(strAbsName, 'rb')
@@ -1583,7 +1872,11 @@ class HbootImage:
         if strKeyDER is None:
             raise Exception('No "idx" attribute and no child "File" found!')
 
-        (uiId, aucMod, aucExp) = self.__get_cert_mod_exp(tNodeParent, strKeyDER, False)
+        (uiId, aucMod, aucExp) = self.__get_cert_mod_exp(
+            tNodeParent,
+            strKeyDER,
+            False
+        )
 
         atData['id'] = uiId
         atData['mod'] = aucMod
@@ -1604,7 +1897,10 @@ class HbootImage:
             # Search for a "File" child node.
             tFileNode = None
             for tNode in tNodeParent.childNodes:
-                if (tNode.nodeType == tNode.ELEMENT_NODE) and (tNode.localName == 'File'):
+                if(
+                    (tNode.nodeType == tNode.ELEMENT_NODE) and
+                    (tNode.localName == 'File')
+                ):
                     tFileNode = tNode
                     break
             if tFileNode is not None:
@@ -1613,7 +1909,8 @@ class HbootImage:
                 # Search the file in the current path and all include paths.
                 strAbsName = self.__find_file(strFileName)
                 if strAbsName is None:
-                    raise Exception('Failed to read file "%s": file not found.' % strFileName)
+                    raise Exception('Failed to read file "%s": '
+                                    'file not found.' % strFileName)
 
                 # Read the complete key.
                 tFile = open(strAbsName, 'rb')
@@ -1640,18 +1937,25 @@ class HbootImage:
                     strBitOffset = tNode.getAttribute('offset')
                     if len(strBitOffset) == 0:
                         raise Exception('No "offset" attribute found!')
-                    ulBitOffset = self.__parse_numeric_expression(strBitOffset)
+                    ulBitOffset = self.__parse_numeric_expression(
+                        strBitOffset
+                    )
                     if (ulBitOffset < 0) or (ulBitOffset > 511):
-                        raise Exception('The offset is out of range: %d' % ulBitOffset)
+                        raise Exception('The offset is out of range: %d' %
+                                        ulBitOffset)
 
                     strBitSize = tNode.getAttribute('size')
                     if len(strBitSize) == 0:
                         raise Exception('No "size" attribute found!')
                     ulBitSize = self.__parse_numeric_expression(strBitSize)
                     if (ulBitSize < 1) or (ulBitSize > 128):
-                        raise Exception('The size is out of range: %d' % ulBitSize)
+                        raise Exception('The size is out of range: %d' %
+                                        ulBitSize)
                     if (ulBitOffset + ulBitSize) > 512:
-                        raise Exception('The area specified by offset %d and size %d exceeds the array.' % (ulBitOffset. ulBitSize))
+                        raise Exception(
+                            'The area specified by offset %d and size %d '
+                            'exceeds the array.' % (ulBitOffset. ulBitSize)
+                        )
 
                     # Get the text in this node and parse it as hex data.
                     strData = self.__xml_get_all_text(tNode)
@@ -1665,10 +1969,15 @@ class HbootImage:
                     # The bit size must fit into the data.
                     sizReqBytes = int(math.ceil(ulBitSize / 8.0))
                     if sizReqBytes != sizData:
-                        strErr = 'The size of the data does not match the requested size in bits.\n'
-                        strErr += 'Data size: %d bytes\n' % sizData
-                        strErr += 'Requested size: %d bits' % sizReqBytes
-                        raise Exception(strErr)
+                        raise Exception(
+                            'The size of the data does not match the '
+                            'requested size in bits.\n'
+                            'Data size: %d bytes\n'
+                            'Requested size: %d bits' % (
+                                sizData,
+                                sizReqBytes
+                            )
+                        )
 
                     # Combine the offset and size.
                     ulBnv = ulBitOffset | ((ulBitSize - 1) * 512)
@@ -1700,7 +2009,10 @@ class HbootImage:
             # Search for a "File" child node.
             tFileNode = None
             for tNode in tNodeParent.childNodes:
-                if (tNode.nodeType == tNode.ELEMENT_NODE) and (tNode.localName == 'File'):
+                if(
+                    (tNode.nodeType == tNode.ELEMENT_NODE) and
+                    (tNode.localName == 'File')
+                ):
                     tFileNode = tNode
                     break
             if tFileNode is not None:
@@ -1709,7 +2021,10 @@ class HbootImage:
                 # Search the file in the current path and all include paths.
                 strAbsName = self.__find_file(strFileName)
                 if strAbsName is None:
-                    raise Exception('Failed to read file "%s": file not found.' % strFileName)
+                    raise Exception(
+                        'Failed to read file "%s": file not found.' %
+                        strFileName
+                    )
 
                 # Read the complete key.
                 tFile = open(strAbsName, 'rb')
@@ -1719,7 +2034,11 @@ class HbootImage:
         if strKeyDER is None:
             raise Exception('No "idx" attribute and no child "File" found!')
 
-        (uiId, aucMod, aucExp) = self.__get_cert_mod_exp(tNodeParent, strKeyDER, True)
+        (uiId, aucMod, aucExp) = self.__get_cert_mod_exp(
+            tNodeParent,
+            strKeyDER,
+            True
+        )
 
         aucMask = self.__cert_parse_binding(tNodeParent, 'Mask')
 
@@ -1739,7 +2058,9 @@ class HbootImage:
                     atValues.extend(array.array('B', strData))
                 elif tNode.localName == 'Hex':
                     strData = self.__xml_get_all_text(tNode)
-                    strData = binascii.unhexlify(self.__remove_all_whitespace(strData))
+                    strData = binascii.unhexlify(
+                        self.__remove_all_whitespace(strData)
+                    )
                     atValues.extend(array.array('B', strData))
                 else:
                     raise Exception('Unexpected node: %s' % tNode.localName)
@@ -1755,7 +2076,10 @@ class HbootImage:
         # The file size must be a multiple of 32 bit.
         sizData = len(strData)
         if (sizData % 4) != 0:
-            raise Exception('The file "%s" has a size which is no multiple of 4 bytes (32 bit).' % strFile)
+            raise Exception(
+                'The file "%s" has a size which is no multiple of '
+                '4 bytes (32 bit).' % strFile
+            )
 
         # Convert the data to an array of 32bit values.
         aulChunk = array.array('I')
@@ -1767,7 +2091,10 @@ class HbootImage:
         aulChunk = None
         tFileNode = None
         for tNode in tChunkNode.childNodes:
-            if (tNode.nodeType == tNode.ELEMENT_NODE) and (tNode.localName == 'File'):
+            if(
+                (tNode.nodeType == tNode.ELEMENT_NODE) and
+                (tNode.localName == 'File')
+            ):
                 tFileNode = tNode
                 break
         if tFileNode is not None:
@@ -1776,7 +2103,8 @@ class HbootImage:
             # Search the file in the current path and all include paths.
             strAbsName = self.__find_file(strFileName)
             if strAbsName is None:
-                raise Exception('Failed to read file "%s": file not found.' % strFileName)
+                raise Exception('Failed to read file "%s": file not found.' %
+                                strFileName)
 
             aulChunk = self.__get_chunk_from_file(strAbsName)
 
@@ -1836,21 +2164,42 @@ class HbootImage:
             for tNode in tChunkNode.childNodes:
                 if tNode.nodeType == tNode.ELEMENT_NODE:
                     if tNode.localName == 'RootPublicKey':
-                        self.__root_cert_parse_root_key(tNode, __atRootCert['RootPublicKey'])
+                        self.__root_cert_parse_root_key(
+                            tNode,
+                            __atRootCert['RootPublicKey'])
                     elif tNode.localName == 'Binding':
-                        self.__root_cert_parse_binding(tNode, __atRootCert['Binding'])
+                        self.__root_cert_parse_binding(
+                            tNode,
+                            __atRootCert['Binding']
+                        )
                     elif tNode.localName == 'NewRegisterValues':
-                        self.__root_cert_parse_new_register_values(tNode, __atRootCert['NewRegisterValues'])
+                        self.__root_cert_parse_new_register_values(
+                            tNode,
+                            __atRootCert['NewRegisterValues']
+                        )
                     elif tNode.localName == 'TrustedPathLicense':
-                        self.__root_cert_parse_trusted_path(tNode, __atRootCert['TrustedPathLicense'])
+                        self.__root_cert_parse_trusted_path(
+                            tNode,
+                            __atRootCert['TrustedPathLicense']
+                        )
                     elif tNode.localName == 'TrustedPathCr7Sw':
-                        self.__root_cert_parse_trusted_path(tNode, __atRootCert['TrustedPathCr7Sw'])
+                        self.__root_cert_parse_trusted_path(
+                            tNode,
+                            __atRootCert['TrustedPathCr7Sw']
+                        )
                     elif tNode.localName == 'TrustedPathCa9Sw':
-                        self.__root_cert_parse_trusted_path(tNode, __atRootCert['TrustedPathCa9Sw'])
+                        self.__root_cert_parse_trusted_path(
+                            tNode,
+                            __atRootCert['TrustedPathCa9Sw']
+                        )
                     elif tNode.localName == 'UserContent':
-                        self.__root_cert_parse_user_content(tNode, __atRootCert['UserContent'])
+                        self.__root_cert_parse_user_content(
+                            tNode,
+                            __atRootCert['UserContent']
+                        )
                     else:
-                        raise Exception('Unexpected node: %s' % tNode.localName)
+                        raise Exception('Unexpected node: %s' %
+                                        tNode.localName)
 
             # Check if all required data was set.
             astrErr = []
@@ -1900,7 +2249,9 @@ class HbootImage:
             atData.extend(__atRootCert['RootPublicKey']['mod'])
             atData.extend(__atRootCert['RootPublicKey']['exp'])
             atData.append((__atRootCert['RootPublicKey']['idx']) & 0xff)
-            atData.append(((__atRootCert['RootPublicKey']['idx']) >> 8) & 0xff)
+            atData.append(
+                ((__atRootCert['RootPublicKey']['idx']) >> 8) & 0xff
+            )
 
             atData.extend(__atRootCert['Binding']['mask'])
             atData.extend(__atRootCert['Binding']['ref'])
@@ -1932,14 +2283,26 @@ class HbootImage:
             atData.extend(__atRootCert['UserContent']['data'])
 
             # Get the key in DER encoded format.
-            strKeyDER = self.__keyrom_get_key(__atRootCert['RootPublicKey']['idx'])
+            strKeyDER = self.__keyrom_get_key(
+                __atRootCert['RootPublicKey']['idx']
+            )
 
             # Create a temporary file for the keypair.
-            iFile, strPathKeypair = tempfile.mkstemp(suffix='der', prefix='tmp_hboot_image', dir=None, text=False)
+            iFile, strPathKeypair = tempfile.mkstemp(
+                suffix='der',
+                prefix='tmp_hboot_image',
+                dir=None,
+                text=False
+            )
             os.close(iFile)
 
             # Create a temporary file for the data to sign.
-            iFile, strPathSignatureInputData = tempfile.mkstemp(suffix='bin', prefix='tmp_hboot_image', dir=None, text=False)
+            iFile, strPathSignatureInputData = tempfile.mkstemp(
+                suffix='bin',
+                prefix='tmp_hboot_image',
+                dir=None,
+                text=False
+            )
             os.close(iFile)
 
             # Write the DER key to the temporary file.
@@ -1993,7 +2356,10 @@ class HbootImage:
         aulChunk = None
         tFileNode = None
         for tNode in tChunkNode.childNodes:
-            if (tNode.nodeType == tNode.ELEMENT_NODE) and (tNode.localName == 'File'):
+            if(
+                (tNode.nodeType == tNode.ELEMENT_NODE) and
+                (tNode.localName == 'File')
+            ):
                 tFileNode = tNode
                 break
         if tFileNode is not None:
@@ -2002,7 +2368,8 @@ class HbootImage:
             # Search the file in the current path and all include paths.
             strAbsName = self.__find_file(strFileName)
             if strAbsName is None:
-                raise Exception('Failed to read file "%s": file not found.' % strFileName)
+                raise Exception('Failed to read file "%s": file not found.' %
+                                strFileName)
 
             aulChunk = self.__get_chunk_from_file(strAbsName)
 
@@ -2037,13 +2404,22 @@ class HbootImage:
                     if tNode.localName == 'Key':
                         self.__cert_get_key_der(tNode, __atCert['Key'])
                     elif tNode.localName == 'Binding':
-                        self.__root_cert_parse_binding(tNode, __atCert['Binding'])
+                        self.__root_cert_parse_binding(tNode,
+                                                       __atCert['Binding'])
                     elif tNode.localName == 'NewRegisterValues':
-                        self.__root_cert_parse_new_register_values(tNode, __atCert['NewRegisterValues'])
+                        self.__root_cert_parse_new_register_values(
+                            tNode,
+                            __atCert['NewRegisterValues']
+                        )
                     elif tNode.localName == 'UserContent':
-                        self.__root_cert_parse_user_content(tNode, __atCert['UserContent'])
+                        self.__root_cert_parse_user_content(
+                            tNode,
+                            __atCert['UserContent']
+                        )
                     else:
-                        raise Exception('Unexpected node: %s' % tNode.localName)
+                        raise Exception(
+                            'Unexpected node: %s' % tNode.localName
+                        )
 
             # Check if all required data was set.
             astrErr = []
@@ -2077,11 +2453,21 @@ class HbootImage:
             strKeyDER = __atCert['Key']['der']
 
             # Create a temporary file for the keypair.
-            iFile, strPathKeypair = tempfile.mkstemp(suffix='der', prefix='tmp_hboot_image', dir=None, text=False)
+            iFile, strPathKeypair = tempfile.mkstemp(
+                suffix='der',
+                prefix='tmp_hboot_image',
+                dir=None,
+                text=False
+            )
             os.close(iFile)
 
             # Create a temporary file for the data to sign.
-            iFile, strPathSignatureInputData = tempfile.mkstemp(suffix='bin', prefix='tmp_hboot_image', dir=None, text=False)
+            iFile, strPathSignatureInputData = tempfile.mkstemp(
+                suffix='bin',
+                prefix='tmp_hboot_image',
+                dir=None,
+                text=False
+            )
             os.close(iFile)
 
             # Write the DER key to the temporary file.
@@ -2135,7 +2521,10 @@ class HbootImage:
         aulChunk = None
         tFileNode = None
         for tNode in tChunkNode.childNodes:
-            if (tNode.nodeType == tNode.ELEMENT_NODE) and (tNode.localName == 'File'):
+            if(
+                (tNode.nodeType == tNode.ELEMENT_NODE) and
+                (tNode.localName == 'File')
+            ):
                 tFileNode = tNode
                 break
         if tFileNode is not None:
@@ -2144,7 +2533,9 @@ class HbootImage:
             # Search the file in the current path and all include paths.
             strAbsName = self.__find_file(strFileName)
             if strAbsName is None:
-                raise Exception('Failed to read file "%s": file not found.' % strFileName)
+                raise Exception(
+                    'Failed to read file "%s": file not found.' % strFileName
+                )
 
             aulChunk = self.__get_chunk_from_file(strAbsName)
 
@@ -2189,15 +2580,20 @@ class HbootImage:
                     if tNode.localName == 'Key':
                         self.__cert_get_key_der(tNode, __atCert['Key'])
                     elif tNode.localName == 'Binding':
-                        self.__root_cert_parse_binding(tNode, __atCert['Binding'])
+                        self.__root_cert_parse_binding(tNode,
+                                                       __atCert['Binding'])
                     elif tNode.localName == 'Data':
                         self.__get_data_contents(tNode, __atCert['Data'])
                     elif tNode.localName == 'Execute':
                         self.__get_execute_data(tNode, __atCert['Execute'])
                     elif tNode.localName == 'UserContent':
-                        self.__root_cert_parse_user_content(tNode, __atCert['UserContent'])
+                        self.__root_cert_parse_user_content(
+                            tNode,
+                            __atCert['UserContent']
+                        )
                     else:
-                        raise Exception('Unexpected node: %s' % tNode.localName)
+                        raise Exception('Unexpected node: %s' %
+                                        tNode.localName)
 
             # Check if all required data was set.
             astrErr = []
@@ -2234,7 +2630,8 @@ class HbootImage:
             self.__append_32bit(atData, __atCert['Data']['load_address'])
             atData.extend(array.array('B', __atCert['Data']['data']))
 
-            self.__append_32bit(atData, __atCert['Execute']['pfnExecFunction'])
+            self.__append_32bit(atData,
+                                __atCert['Execute']['pfnExecFunction'])
             self.__append_32bit(atData, __atCert['Execute']['ulR0'])
             self.__append_32bit(atData, __atCert['Execute']['ulR1'])
             self.__append_32bit(atData, __atCert['Execute']['ulR2'])
@@ -2247,11 +2644,21 @@ class HbootImage:
             strKeyDER = __atCert['Key']['der']
 
             # Create a temporary file for the keypair.
-            iFile, strPathKeypair = tempfile.mkstemp(suffix='der', prefix='tmp_hboot_image', dir=None, text=False)
+            iFile, strPathKeypair = tempfile.mkstemp(
+                suffix='der',
+                prefix='tmp_hboot_image',
+                dir=None,
+                text=False
+            )
             os.close(iFile)
 
             # Create a temporary file for the data to sign.
-            iFile, strPathSignatureInputData = tempfile.mkstemp(suffix='bin', prefix='tmp_hboot_image', dir=None, text=False)
+            iFile, strPathSignatureInputData = tempfile.mkstemp(
+                suffix='bin',
+                prefix='tmp_hboot_image',
+                dir=None,
+                text=False
+            )
             os.close(iFile)
 
             # Write the DER key to the temporary file.
@@ -2305,7 +2712,10 @@ class HbootImage:
         aulChunk = None
         tFileNode = None
         for tNode in tChunkNode.childNodes:
-            if (tNode.nodeType == tNode.ELEMENT_NODE) and (tNode.localName == 'File'):
+            if(
+                (tNode.nodeType == tNode.ELEMENT_NODE) and
+                (tNode.localName == 'File')
+            ):
                 tFileNode = tNode
                 break
         if tFileNode is not None:
@@ -2314,7 +2724,8 @@ class HbootImage:
             # Search the file in the current path and all include paths.
             strAbsName = self.__find_file(strFileName)
             if strAbsName is None:
-                raise Exception('Failed to read file "%s": file not found.' % strFileName)
+                raise Exception('Failed to read file "%s": file not found.' %
+                                strFileName)
 
             aulChunk = self.__get_chunk_from_file(strAbsName)
 
@@ -2366,20 +2777,33 @@ class HbootImage:
                     if tNode.localName == 'Key':
                         self.__cert_get_key_der(tNode, __atCert['Key'])
                     elif tNode.localName == 'Binding':
-                        self.__root_cert_parse_binding(tNode, __atCert['Binding'])
+                        self.__root_cert_parse_binding(
+                            tNode,
+                            __atCert['Binding']
+                        )
                     elif tNode.localName == 'Data':
                         self.__get_data_contents(tNode, __atCert['Data'])
                     elif tNode.localName == 'Execute':
                         for tRegistersNode in tNode.childNodes:
                             if tRegistersNode.nodeType == tNode.ELEMENT_NODE:
                                 if tRegistersNode.localName == 'Core0':
-                                    self.__get_execute_data(tRegistersNode, __atCert['Execute_Core0'])
+                                    self.__get_execute_data(
+                                        tRegistersNode,
+                                        __atCert['Execute_Core0']
+                                    )
                                 elif tRegistersNode.localName == 'Core1':
-                                    self.__get_execute_data(tRegistersNode, __atCert['Execute_Core1'])
+                                    self.__get_execute_data(
+                                        tRegistersNode,
+                                        __atCert['Execute_Core1']
+                                    )
                     elif tNode.localName == 'UserContent':
-                        self.__root_cert_parse_user_content(tNode, __atCert['UserContent'])
+                        self.__root_cert_parse_user_content(
+                            tNode,
+                            __atCert['UserContent']
+                        )
                     else:
-                        raise Exception('Unexpected node: %s' % tNode.localName)
+                        raise Exception('Unexpected node: %s' %
+                                        tNode.localName)
 
             # Check if all required data was set.
             astrErr = []
@@ -2426,12 +2850,14 @@ class HbootImage:
             self.__append_32bit(atData, __atCert['Data']['load_address'])
             atData.extend(array.array('B', __atCert['Data']['data']))
 
-            self.__append_32bit(atData, __atCert['Execute_Core0']['pfnExecFunction'])
+            self.__append_32bit(atData,
+                                __atCert['Execute_Core0']['pfnExecFunction'])
             self.__append_32bit(atData, __atCert['Execute_Core0']['ulR0'])
             self.__append_32bit(atData, __atCert['Execute_Core0']['ulR1'])
             self.__append_32bit(atData, __atCert['Execute_Core0']['ulR2'])
             self.__append_32bit(atData, __atCert['Execute_Core0']['ulR3'])
-            self.__append_32bit(atData, __atCert['Execute_Core1']['pfnExecFunction'])
+            self.__append_32bit(atData,
+                                __atCert['Execute_Core1']['pfnExecFunction'])
             self.__append_32bit(atData, __atCert['Execute_Core1']['ulR0'])
             self.__append_32bit(atData, __atCert['Execute_Core1']['ulR1'])
             self.__append_32bit(atData, __atCert['Execute_Core1']['ulR2'])
@@ -2444,11 +2870,21 @@ class HbootImage:
             strKeyDER = __atCert['Key']['der']
 
             # Create a temporary file for the keypair.
-            iFile, strPathKeypair = tempfile.mkstemp(suffix='der', prefix='tmp_hboot_image', dir=None, text=False)
+            iFile, strPathKeypair = tempfile.mkstemp(
+                suffix='der',
+                prefix='tmp_hboot_image',
+                dir=None,
+                text=False
+            )
             os.close(iFile)
 
             # Create a temporary file for the data to sign.
-            iFile, strPathSignatureInputData = tempfile.mkstemp(suffix='bin', prefix='tmp_hboot_image', dir=None, text=False)
+            iFile, strPathSignatureInputData = tempfile.mkstemp(
+                suffix='bin',
+                prefix='tmp_hboot_image',
+                dir=None,
+                text=False
+            )
             os.close(iFile)
 
             # Write the DER key to the temporary file.
@@ -2505,9 +2941,11 @@ class HbootImage:
         # Parse the data.
         ulDevice = self.__parse_numeric_expression(strDevice)
         if ulDevice < 0:
-            raise Exception('The device attribute does not accept a negative value:' % ulDevice)
+            raise Exception('The device attribute does not accept a '
+                            'negative value:' % ulDevice)
         if ulDevice > 0xff:
-            raise Exception('The device attribute must not be larger than 0xff:' % ulDevice)
+            raise Exception('The device attribute must not be larger '
+                            'than 0xff:' % ulDevice)
 
         aulChunk = array.array('I')
         aulChunk.append(self.__get_tag_id('M', 'D', 'U', 'P'))
@@ -2525,18 +2963,150 @@ class HbootImage:
 
     def __string_to_bool(self, strBool):
         strBool = string.upper(strBool)
-        if (strBool == 'TRUE') or (strBool == 'T') or (strBool == 'YES') or (strBool == 'Y') or (strBool == '1'):
+        if(
+            (strBool == 'TRUE') or
+            (strBool == 'T') or
+            (strBool == 'YES') or
+            (strBool == 'Y') or
+            (strBool == '1')
+        ):
             fBool = True
-        elif (strBool == 'FALSE') or (strBool == 'F') or (strBool == 'NO') or (strBool == 'N') or (strBool == '0'):
+        elif(
+            (strBool == 'FALSE') or
+            (strBool == 'F') or
+            (strBool == 'NO') or
+            (strBool == 'N') or
+            (strBool == '0')
+        ):
             fBool = False
         else:
             fBool = None
         return fBool
 
+    def __parse_chunks(self, tImageNode):
+        # Loop over all nodes, these are the chunks.
+        for tChunkNode in tImageNode.childNodes:
+            if tChunkNode.nodeType == tChunkNode.ELEMENT_NODE:
+                strChunkName = tChunkNode.localName
+                if strChunkName == 'Options':
+                    # Found an option node.
+                    atChunk = self.__build_chunk_options(tChunkNode)
+                    self.__atChunks.extend(atChunk)
+                elif strChunkName == 'Data':
+                    # Found a data node.
+                    if self.__tImageType == self.__IMAGE_TYPE_SECMEM:
+                        raise Exception('Data chunks are not allowed '
+                                        'in SECMEM images.')
+                    atChunk = self.__build_chunk_data(tChunkNode)
+                    self.__atChunks.extend(atChunk)
+                elif strChunkName == 'Text':
+                    # Found a text node.
+                    if self.__tImageType == self.__IMAGE_TYPE_SECMEM:
+                        raise Exception('Text chunks are not allowed '
+                                        'in SECMEM images.')
+                    atChunk = self.__build_chunk_text(tChunkNode)
+                    self.__atChunks.extend(atChunk)
+                elif strChunkName == 'XIP':
+                    # Found an XIP node.
+                    if self.__tImageType == self.__IMAGE_TYPE_SECMEM:
+                        raise Exception('XIP chunks are not allowed '
+                                        'in SECMEM images.')
+                    atChunk = self.__build_chunk_xip(tChunkNode)
+                    self.__atChunks.extend(atChunk)
+                elif strChunkName == 'Execute':
+                    # Found an execute node.
+                    if self.__tImageType == self.__IMAGE_TYPE_SECMEM:
+                        raise Exception('Execute chunks are not allowed '
+                                        'in SECMEM images.')
+                    atChunk = self.__build_chunk_execute(tChunkNode)
+                    self.__atChunks.extend(atChunk)
+                elif strChunkName == 'ExecuteCA9':
+                    # Found an execute node.
+                    if self.__tImageType == self.__IMAGE_TYPE_SECMEM:
+                        raise Exception('ExecuteCA9 chunks are not allowed '
+                                        'in SECMEM images.')
+                    if self.__strNetxType == 'NETX56':
+                        raise Exception('ExecuteCA9 chunks are not allowed '
+                                        'on netx56.')
+                    atChunk = self.__build_chunk_execute_ca9(tChunkNode)
+                    self.__atChunks.extend(atChunk)
+                elif strChunkName == 'SpiMacro':
+                    # Found a SPI macro.
+                    if self.__tImageType == self.__IMAGE_TYPE_SECMEM:
+                        raise Exception('SpiMacro chunks are not allowed '
+                                        'in SECMEM images.')
+                    atChunk = self.__build_chunk_spi_macro(tChunkNode)
+                    self.__atChunks.extend(atChunk)
+                elif strChunkName == 'Skip':
+                    # Found a skip node.
+                    if self.__tImageType == self.__IMAGE_TYPE_SECMEM:
+                        raise Exception('Skip chunks are not allowed '
+                                        'in SECMEM images.')
+                    atChunk = self.__build_chunk_skip(tChunkNode)
+                    self.__atChunks.extend(atChunk)
+                elif strChunkName == 'RootCert':
+                    # Found a root certificate node.
+                    if self.__tImageType == self.__IMAGE_TYPE_SECMEM:
+                        raise Exception('RootCert chunks are not allowed '
+                                        'in SECMEM images.')
+                    if self.__strNetxType == 'NETX56':
+                        raise Exception('RootCert chunks are not allowed '
+                                        'on netx56.')
+                    atChunk = self.__build_chunk_root_cert(tChunkNode)
+                    self.__atChunks.extend(atChunk)
+                elif strChunkName == 'LicenseCert':
+                    # Found a license certificate node.
+                    if self.__tImageType == self.__IMAGE_TYPE_SECMEM:
+                        raise Exception('LicenseCert chunks are not allowed '
+                                        'in SECMEM images.')
+                    if self.__strNetxType == 'NETX56':
+                        raise Exception('LicenseCert chunks are not allowed '
+                                        'on netx56.')
+                    atChunk = self.__build_chunk_license_cert(tChunkNode)
+                    self.__atChunks.extend(atChunk)
+                elif strChunkName == 'CR7Software':
+                    # Found a CR7 software node.
+                    if self.__tImageType == self.__IMAGE_TYPE_SECMEM:
+                        raise Exception('CR7Software chunks are not allowed '
+                                        'in SECMEM images.')
+                    if self.__strNetxType == 'NETX56':
+                        raise Exception('CR7Software chunks are not allowed '
+                                        'on netx56.')
+                    atChunk = self.__build_chunk_cr7sw(tChunkNode)
+                    self.__atChunks.extend(atChunk)
+                elif strChunkName == 'CA9Software':
+                    # Found a CA9 software node.
+                    if self.__tImageType == self.__IMAGE_TYPE_SECMEM:
+                        raise Exception(
+                            'CA9Software chunks are not allowed '
+                            'in SECMEM images.'
+                        )
+                    if self.__strNetxType == 'NETX56':
+                        raise Exception(
+                            'CA9Software chunks are not allowed '
+                            'on netx56.'
+                        )
+                    atChunk = self.__build_chunk_ca9sw(tChunkNode)
+                    self.__atChunks.extend(atChunk)
+                elif strChunkName == 'MemoryDeviceUp':
+                    # Found a memory device up node.
+                    if self.__tImageType == self.__IMAGE_TYPE_SECMEM:
+                        raise Exception(
+                            'MemoryDeviceUp chunks are not '
+                            'allowed in SECMEM images.'
+                        )
+                    atChunk = self.__build_chunk_memory_device_up(tChunkNode)
+                    self.__atChunks.extend(atChunk)
+                else:
+                    raise Exception('Unknown chunk ID: %s' % strChunkName)
+
     def parse_image(self, tInput):
         # Parsing an image requires the patch definition.
         if self.__cPatchDefinitions is None:
-            raise Exception('A patch definition is required for the "parse_image" function, but none was specified!')
+            raise Exception(
+                'A patch definition is required for the "parse_image" '
+                'function, but none was specified!'
+            )
 
         # Initialize the list of dependencies.
         self.__astrDependencies = []
@@ -2547,7 +3117,11 @@ class HbootImage:
         tFile.close()
 
         # Replace and convert to XML.
-        tXml = self.__plaintext_to_xml_with_replace(strFileContents, self.__atGlobalDefines, True)
+        tXml = self.__plaintext_to_xml_with_replace(
+            strFileContents,
+            self.__atGlobalDefines,
+            True
+        )
         tXmlRootNode = tXml.documentElement
 
         # Preprocess the image.
@@ -2605,7 +3179,9 @@ class HbootImage:
         if len(strStartOffset) != 0:
             ulStartOffset = int(strStartOffset, 0)
             if ulStartOffset < 0:
-                raise Exception('The start offset is invalid: %d' % ulStartOffset)
+                raise Exception(
+                    'The start offset is invalid: %d' % ulStartOffset
+                )
         self.__ulStartOffset = ulStartOffset
 
         # Get the device. Default to "UNSPECIFIED".
@@ -2622,7 +3198,13 @@ class HbootImage:
         else:
             # Check the device name.
             if strDevice not in astrValidDeviceNames:
-                raise Exception('Invalid device name specified: "%s". Valid names are %s.' % (strDevice, ', '.join(astrValidDeviceNames)))
+                raise Exception(
+                    'Invalid device name specified: "%s". '
+                    'Valid names are %s.' % (
+                        strDevice,
+                        ', '.join(astrValidDeviceNames)
+                    )
+                )
         self.__strDevice = strDevice
 
         # Loop over all children.
@@ -2632,104 +3214,18 @@ class HbootImage:
                 # Is this a 'Header' node?
                 if tImageNode.localName == 'Header':
                     if self.__tImageType == self.__IMAGE_TYPE_SECMEM:
-                        raise Exception('Header overrides are not allowed in SECMEM images.')
+                        raise Exception(
+                            'Header overrides are not allowed in '
+                            'SECMEM images.'
+                        )
                     self.__parse_header_options(tImageNode)
 
                 elif tImageNode.localName == 'Chunks':
-                    # Loop over all nodes, these are the chunks.
-                    for tChunkNode in tImageNode.childNodes:
-                        if tChunkNode.nodeType == tChunkNode.ELEMENT_NODE:
-                            strChunkName = tChunkNode.localName
-                            if strChunkName == 'Options':
-                                # Found an option node.
-                                atChunk = self.__build_chunk_options(tChunkNode)
-                                self.__atChunks.extend(atChunk)
-                            elif strChunkName == 'Data':
-                                # Found a data node.
-                                if self.__tImageType == self.__IMAGE_TYPE_SECMEM:
-                                    raise Exception('Data chunks are not allowed in SECMEM images.')
-                                atChunk = self.__build_chunk_data(tChunkNode)
-                                self.__atChunks.extend(atChunk)
-                            elif strChunkName == 'Text':
-                                # Found a text node.
-                                if self.__tImageType == self.__IMAGE_TYPE_SECMEM:
-                                    raise Exception('Text chunks are not allowed in SECMEM images.')
-                                atChunk = self.__build_chunk_text(tChunkNode)
-                                self.__atChunks.extend(atChunk)
-                            elif strChunkName == 'XIP':
-                                # Found an XIP node.
-                                if self.__tImageType == self.__IMAGE_TYPE_SECMEM:
-                                    raise Exception('XIP chunks are not allowed in SECMEM images.')
-                                atChunk = self.__build_chunk_xip(tChunkNode)
-                                self.__atChunks.extend(atChunk)
-                            elif strChunkName == 'Execute':
-                                # Found an execute node.
-                                if self.__tImageType == self.__IMAGE_TYPE_SECMEM:
-                                    raise Exception('Execute chunks are not allowed in SECMEM images.')
-                                atChunk = self.__build_chunk_execute(tChunkNode)
-                                self.__atChunks.extend(atChunk)
-                            elif strChunkName == 'ExecuteCA9':
-                                # Found an execute node.
-                                if self.__tImageType == self.__IMAGE_TYPE_SECMEM:
-                                    raise Exception('ExecuteCA9 chunks are not allowed in SECMEM images.')
-                                if self.__strNetxType == 'NETX56':
-                                    raise Exception('ExecuteCA9 chunks are not allowed on netx56.')
-                                atChunk = self.__build_chunk_execute_ca9(tChunkNode)
-                                self.__atChunks.extend(atChunk)
-                            elif strChunkName == 'SpiMacro':
-                                # Found a SPI macro.
-                                if self.__tImageType == self.__IMAGE_TYPE_SECMEM:
-                                    raise Exception('SpiMacro chunks are not allowed in SECMEM images.')
-                                atChunk = self.__build_chunk_spi_macro(tChunkNode)
-                                self.__atChunks.extend(atChunk)
-                            elif strChunkName == 'Skip':
-                                # Found a skip node.
-                                if self.__tImageType == self.__IMAGE_TYPE_SECMEM:
-                                    raise Exception('Skip chunks are not allowed in SECMEM images.')
-                                atChunk = self.__build_chunk_skip(tChunkNode)
-                                self.__atChunks.extend(atChunk)
-                            elif strChunkName == 'RootCert':
-                                # Found a root certificate node.
-                                if self.__tImageType == self.__IMAGE_TYPE_SECMEM:
-                                    raise Exception('RootCert chunks are not allowed in SECMEM images.')
-                                if self.__strNetxType == 'NETX56':
-                                    raise Exception('RootCert chunks are not allowed on netx56.')
-                                atChunk = self.__build_chunk_root_cert(tChunkNode)
-                                self.__atChunks.extend(atChunk)
-                            elif strChunkName == 'LicenseCert':
-                                # Found a license certificate node.
-                                if self.__tImageType == self.__IMAGE_TYPE_SECMEM:
-                                    raise Exception('LicenseCert chunks are not allowed in SECMEM images.')
-                                if self.__strNetxType == 'NETX56':
-                                    raise Exception('LicenseCert chunks are not allowed on netx56.')
-                                atChunk = self.__build_chunk_license_cert(tChunkNode)
-                                self.__atChunks.extend(atChunk)
-                            elif strChunkName == 'CR7Software':
-                                # Found a CR7 software node.
-                                if self.__tImageType == self.__IMAGE_TYPE_SECMEM:
-                                    raise Exception('CR7Software chunks are not allowed in SECMEM images.')
-                                if self.__strNetxType == 'NETX56':
-                                    raise Exception('CR7Software chunks are not allowed on netx56.')
-                                atChunk = self.__build_chunk_cr7sw(tChunkNode)
-                                self.__atChunks.extend(atChunk)
-                            elif strChunkName == 'CA9Software':
-                                # Found a CA9 software node.
-                                if self.__tImageType == self.__IMAGE_TYPE_SECMEM:
-                                    raise Exception('CA9Software chunks are not allowed in SECMEM images.')
-                                if self.__strNetxType == 'NETX56':
-                                    raise Exception('CA9Software chunks are not allowed on netx56.')
-                                atChunk = self.__build_chunk_ca9sw(tChunkNode)
-                                self.__atChunks.extend(atChunk)
-                            elif strChunkName == 'MemoryDeviceUp':
-                                # Found a memory device up node.
-                                if self.__tImageType == self.__IMAGE_TYPE_SECMEM:
-                                    raise Exception('MemoryDeviceUp chunks are not allowed in SECMEM images.')
-                                atChunk = self.__build_chunk_memory_device_up(tChunkNode)
-                                self.__atChunks.extend(atChunk)
-                            else:
-                                raise Exception('Unknown chunk ID: %s' % strChunkName)
+                    self.__parse_chunks(tImageNode)
                 else:
-                    raise Exception('Unknown element: %s' % tImageNode.localName)
+                    raise Exception(
+                        'Unknown element: %s' % tImageNode.localName
+                    )
 
     def __crc7(self, strData):
         ucCrc = 0
@@ -2814,7 +3310,10 @@ class HbootImage:
                 aucZone3 = aucTmp[30:62]
 
             else:
-                raise Exception('The image is too big for a SECMEM. It must be 61 bytes or less, but it has %d bytes.' % uiImageSize)
+                raise Exception(
+                    'The image is too big for a SECMEM. It must be 61 bytes '
+                    'or less, but it has %d bytes.' % uiImageSize
+                )
 
             # Get a copy of the chunk data.
             atChunks = array.array('B')
@@ -2872,7 +3371,9 @@ class HbootImage:
                 if strFileName[0] == '@':
                     strFileId = strFileName[1:]
                     if strFileId not in self.__atKnownFiles:
-                        raise Exception('Unknown reference to file ID "%s".' % strFileName)
+                        raise Exception(
+                            'Unknown reference to file ID "%s".' % strFileName
+                        )
                     strFileName = self.__atKnownFiles[strFileId]
                 self.__astrDependencies.append(strFileName)
 
