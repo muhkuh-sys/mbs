@@ -100,6 +100,8 @@ class HbootImage:
     __MAGIC_COOKIE_NETX4000 = 0xf3beaf00
     __MAGIC_COOKIE_NETX90_MPW = 0xf3beaf00
     __MAGIC_COOKIE_NETX90_MPW_APP = 0xf3ad9e00
+    __MAGIC_COOKIE_NETX90_FULL = 0xf3beaf00
+    __MAGIC_COOKIE_NETX90_FULL_APP = 0xf3ad9e00
 
     __resolver = None
 
@@ -536,8 +538,14 @@ class HbootImage:
         elif self.__strNetxType == 'NETX90_MPW':
             ulMagicCookie = self.__MAGIC_COOKIE_NETX90_MPW
             ulSignature = self.__get_tag_id('M', 'O', 'O', 'H')
+        elif self.__strNetxType == 'NETX90_FULL':
+            ulMagicCookie = self.__MAGIC_COOKIE_NETX90_FULL
+            ulSignature = self.__get_tag_id('M', 'O', 'O', 'H')
         elif self.__strNetxType == 'NETX90_MPW_APP':
             ulMagicCookie = self.__MAGIC_COOKIE_NETX90_MPW_APP
+            ulSignature = self.__get_tag_id('M', 'A', 'P', 'P')
+        elif self.__strNetxType == 'NETX90_FULL_APP':
+            ulMagicCookie = self.__MAGIC_COOKIE_NETX90_FULL_APP
             ulSignature = self.__get_tag_id('M', 'A', 'P', 'P')
         else:
             raise Exception(
@@ -757,7 +765,10 @@ class HbootImage:
                 aulHash = array.array('I', strHash[:self.__sizHashDw * 4])
                 atChunk.extend(aulHash)
 
-            elif self.__strNetxType == 'NETX90_MPW':
+            elif(
+                (self.__strNetxType == 'NETX90_MPW') or
+                (self.__strNetxType == 'NETX90_FULL')
+            ):
                 # Pad the option chunk to 32 bit size.
                 strPadding = chr(0x00) * ((4 - (len(strData) % 4)) & 3)
                 strChunk = strData + strPadding
@@ -785,7 +796,7 @@ class HbootImage:
 
         return atChunk
 
-    def __get_data_contents_elf(self, tNode, strAbsFilePath):
+    def __get_data_contents_elf(self, tNode, strAbsFilePath, fWantLoadAddress):
         # Get the segment names to dump. It is a comma separated string.
         # This is optional. If no segment names are specified, all sections
         # with PROGBITS are dumped.
@@ -810,11 +821,14 @@ class HbootImage:
             raise Exception('The resulting file seems to extend '
                             '512MBytes. Too scared to continue!')
 
-        strOverwriteAddress = tNode.getAttribute('overwrite_address').strip()
-        if len(strOverwriteAddress) == 0:
-            pulLoadAddress = elf_support.get_load_address(atSegments)
+        if fWantLoadAddress is True:
+            strOverwriteAddress = tNode.getAttribute('overwrite_address').strip()
+            if len(strOverwriteAddress) == 0:
+                pulLoadAddress = elf_support.get_load_address(atSegments)
+            else:
+                pulLoadAddress = int(strOverwriteAddress, 0)
         else:
-            pulLoadAddress = int(strOverwriteAddress, 0)
+            pulLoadAddress = None
 
         # Extract the binary.
         tBinFile, strBinFileName = tempfile.mkstemp()
@@ -840,7 +854,7 @@ class HbootImage:
 
         return strData, pulLoadAddress
 
-    def __get_data_contents(self, tDataNode, atData):
+    def __get_data_contents(self, tDataNode, atData, fWantLoadAddress):
         strData = None
         pulLoadAddress = None
 
@@ -868,20 +882,22 @@ class HbootImage:
                     if strExtension == '.elf':
                         strData, pulLoadAddress = self.__get_data_contents_elf(
                             tNode,
-                            strAbsFilePath
+                            strAbsFilePath,
+                            True
                         )
 
                     elif strExtension == '.bin':
-                        strLoadAddress = tNode.getAttribute('load_address')
-                        if len(strLoadAddress) == 0:
-                            raise Exception(
-                                'The File node points to a binary file and '
-                                'has no load_address attribute!'
-                            )
+                        if fWantLoadAddress is True:
+                            strLoadAddress = tNode.getAttribute('load_address')
+                            if len(strLoadAddress) == 0:
+                                raise Exception(
+                                    'The File node points to a binary file '
+                                    'and has no load_address attribute!'
+                                )
 
-                        pulLoadAddress = self.__parse_numeric_expression(
-                            strLoadAddress
-                        )
+                            pulLoadAddress = self.__parse_numeric_expression(
+                                strLoadAddress
+                            )
 
                         tBinFile = open(strAbsFilePath, 'rb')
                         strData = tBinFile.read()
@@ -893,15 +909,16 @@ class HbootImage:
                                         strExtension)
                 # Is this a node element with the name 'Hex'?
                 elif tNode.localName == 'Hex':
-                    # Get the address.
-                    strAddress = tNode.getAttribute('address')
-                    if len(strAddress) == 0:
-                        raise Exception('The file node has no '
-                                        'address attribute!')
+                    if fWantLoadAddress is True:
+                        # Get the address.
+                        strAddress = tNode.getAttribute('address')
+                        if len(strAddress) == 0:
+                            raise Exception('The Hex node has no '
+                                            'address attribute!')
 
-                    pulLoadAddress = self.__parse_numeric_expression(
-                        strAddress
-                    )
+                        pulLoadAddress = self.__parse_numeric_expression(
+                            strAddress
+                        )
 
                     # Get the text in this node and parse it as hex data.
                     strDataHex = self.__xml_get_all_text(tNode)
@@ -912,15 +929,16 @@ class HbootImage:
                     strData = binascii.unhexlify(strDataHex)
 
                 elif tNode.localName == 'UInt32':
-                    # Get the address.
-                    strAddress = tNode.getAttribute('address')
-                    if len(strAddress) == 0:
-                        raise Exception('The file node has no '
-                                        'address attribute!')
+                    if fWantLoadAddress is True:
+                        # Get the address.
+                        strAddress = tNode.getAttribute('address')
+                        if len(strAddress) == 0:
+                            raise Exception('The file node has no '
+                                            'address attribute!')
 
-                    pulLoadAddress = self.__parse_numeric_expression(
-                        strAddress
-                    )
+                        pulLoadAddress = self.__parse_numeric_expression(
+                            strAddress
+                        )
 
                     # Get the text in this node and split it by whitespace.
                     strDataUint = self.__xml_get_all_text(tNode)
@@ -936,15 +954,16 @@ class HbootImage:
                     strData = aulNumbers.tostring()
 
                 elif tNode.localName == 'UInt16':
-                    # Get the address.
-                    strAddress = tNode.getAttribute('address')
-                    if len(strAddress) == 0:
-                        raise Exception('The file node has no '
-                                        'address attribute!')
+                    if fWantLoadAddress is True:
+                        # Get the address.
+                        strAddress = tNode.getAttribute('address')
+                        if len(strAddress) == 0:
+                            raise Exception('The file node has no '
+                                            'address attribute!')
 
-                    pulLoadAddress = self.__parse_numeric_expression(
-                        strAddress
-                    )
+                        pulLoadAddress = self.__parse_numeric_expression(
+                            strAddress
+                        )
 
                     # Get the text in this node and split it by whitespace.
                     strDataUint = self.__xml_get_all_text(tNode)
@@ -960,15 +979,16 @@ class HbootImage:
                     strData = ausNumbers.tostring()
 
                 elif tNode.localName == 'UInt8':
-                    # Get the address.
-                    strAddress = tNode.getAttribute('address')
-                    if len(strAddress) == 0:
-                        raise Exception('The file node has no '
-                                        'address attribute!')
+                    if fWantLoadAddress is True:
+                        # Get the address.
+                        strAddress = tNode.getAttribute('address')
+                        if len(strAddress) == 0:
+                            raise Exception('The file node has no '
+                                            'address attribute!')
 
-                    pulLoadAddress = self.__parse_numeric_expression(
-                        strAddress
-                    )
+                        pulLoadAddress = self.__parse_numeric_expression(
+                            strAddress
+                        )
 
                     # Get the text in this node and split it by whitespace.
                     strDataUint = self.__xml_get_all_text(tNode)
@@ -984,15 +1004,16 @@ class HbootImage:
                     strData = aucNumbers.tostring()
 
                 elif tNode.localName == 'Concat':
-                    # Get the address.
-                    strAddress = tNode.getAttribute('address')
-                    if len(strAddress) == 0:
-                        raise Exception('The Concat node has no '
-                                        'address attribute!')
+                    if fWantLoadAddress is True:
+                        # Get the address.
+                        strAddress = tNode.getAttribute('address')
+                        if len(strAddress) == 0:
+                            raise Exception('The Concat node has no '
+                                            'address attribute!')
 
-                    pulLoadAddress = self.__parse_numeric_expression(
-                        strAddress
-                    )
+                        pulLoadAddress = self.__parse_numeric_expression(
+                            strAddress
+                        )
 
                     astrData = []
 
@@ -1082,16 +1103,17 @@ class HbootImage:
         # Check if all parameters are there.
         if strData is None:
             raise Exception('No data specified!')
-        if pulLoadAddress is None:
+        if (fWantLoadAddress is True) and (pulLoadAddress is None):
             raise Exception('No load address specified!')
 
         atData['data'] = strData
-        atData['load_address'] = pulLoadAddress
+        if fWantLoadAddress is True:
+            atData['load_address'] = pulLoadAddress
 
     def __build_chunk_data(self, tChunkNode):
         # Get the data block.
         atData = {}
-        self.__get_data_contents(tChunkNode, atData)
+        self.__get_data_contents(tChunkNode, atData, True)
         strData = atData['data']
         pulLoadAddress = atData['load_address']
 
@@ -1147,7 +1169,7 @@ class HbootImage:
     def __build_chunk_xip(self, tChunkNode):
         # Get the data block.
         atData = {}
-        self.__get_data_contents(tChunkNode, atData)
+        self.__get_data_contents(tChunkNode, atData, True)
         strData = atData['data']
         pulLoadAddress = atData['load_address']
 
@@ -1175,7 +1197,10 @@ class HbootImage:
                     'end': 0x18000000
                 }
             ]
-        elif self.__strNetxType == 'NETX90_MPW':
+        elif(
+            (self.__strNetxType == 'NETX90_MPW') or
+            (self.__strNetxType == 'NETX90_FULL')
+        ):
             atXIPAreas = [
                 # SQI flash
                 {
@@ -1191,7 +1216,10 @@ class HbootImage:
                     'end': 0x00200000
                 }
             ]
-        elif self.__strNetxType == 'NETX90_MPW_APP':
+        elif(
+            (self.__strNetxType == 'NETX90_MPW_APP') or
+            (self.__strNetxType == 'NETX90_FULL_APP')
+        ):
             atXIPAreas = [
                 # SQI flash
                 {
@@ -1564,9 +1592,15 @@ class HbootImage:
             (self.__strNetxType == 'NETX4100')
         ):
             sizOffsetCurrent += (1 + 1 + self.__sizHashDw) * 4
-        elif self.__strNetxType == 'NETX90_MPW':
+        elif(
+            (self.__strNetxType == 'NETX90_MPW') or
+            (self.__strNetxType == 'NETX90_FULL')
+        ):
             sizOffsetCurrent += (1 + 1 + self.__sizHashDw) * 4
-        elif self.__strNetxType == 'NETX90_MPW_APP':
+        elif(
+            (self.__strNetxType == 'NETX90_MPW_APP') or
+            (self.__strNetxType == 'NETX90_FULL_APP')
+        ):
             sizOffsetCurrent += (1 + 1 + self.__sizHashDw) * 4
         else:
             raise Exception('Continue here!')
@@ -1853,11 +1887,30 @@ class HbootImage:
         aucBinding = array.array('B', binascii.unhexlify(strBinding))
         sizBinding = len(aucBinding)
 
-        if sizBinding != 64:
+        # A binding block has a size of...
+        #   64 bytes on the netX4000
+        #   28 bytes on the netX90
+        sizBindingExpected = 28
+        if(
+            (self.__strNetxType == 'NETX4000_RELAXED') or
+            (self.__strNetxType == 'NETX4000') or
+            (self.__strNetxType == 'NETX4100')
+        ):
+            sizBindingExpected = 64
+        elif(
+            (self.__strNetxType == 'NETX90_MPW') or
+            (self.__strNetxType == 'NETX90_FULL') or
+            (self.__strNetxType == 'NETX90_MPW_APP') or
+            (self.__strNetxType == 'NETX90_FULL_APP')
+        ):
+            sizBindingExpected = 28
+
+        if sizBinding != sizBindingExpected:
             raise Exception('The binding in node "%s" has an invalid size '
                             'of %d bytes.' % (strName, sizBinding))
 
         return aucBinding
+
 
     def __root_cert_parse_root_key(self, tNodeParent, atData):
         strKeyDER = None
@@ -2607,7 +2660,7 @@ class HbootImage:
                         self.__root_cert_parse_binding(tNode,
                                                        __atCert['Binding'])
                     elif tNode.localName == 'Data':
-                        self.__get_data_contents(tNode, __atCert['Data'])
+                        self.__get_data_contents(tNode, __atCert['Data'], True)
                     elif tNode.localName == 'Execute':
                         self.__get_execute_data(tNode, __atCert['Execute'])
                     elif tNode.localName == 'UserContent':
@@ -2806,7 +2859,7 @@ class HbootImage:
                             __atCert['Binding']
                         )
                     elif tNode.localName == 'Data':
-                        self.__get_data_contents(tNode, __atCert['Data'])
+                        self.__get_data_contents(tNode, __atCert['Data'], True)
                     elif tNode.localName == 'Execute':
                         for tRegistersNode in tNode.childNodes:
                             if tRegistersNode.nodeType == tNode.ELEMENT_NODE:
@@ -2975,6 +3028,244 @@ class HbootImage:
         aulChunk.append(self.__get_tag_id('M', 'D', 'U', 'P'))
         aulChunk.append(1 + self.__sizHashDw)
         aulChunk.append(ulDevice)
+
+        # Get the hash for the chunk.
+        tHash = hashlib.sha384()
+        tHash.update(aulChunk.tostring())
+        strHash = tHash.digest()
+        aulHash = array.array('I', strHash[:self.__sizHashDw * 4])
+        aulChunk.extend(aulHash)
+
+        return aulChunk
+
+    def __usip_parse_trusted_path(self, tNodeParent, atData):
+        strKeyDER = None
+        # Get the index.
+        strIdx = tNodeParent.getAttribute('idx')
+        if len(strIdx) != 0:
+            ulIdx = self.__parse_numeric_expression(strIdx)
+
+            # Get the key in DER encoded format.
+            strKeyDER = self.__keyrom_get_key(ulIdx)
+
+        else:
+            # Search for a "File" child node.
+            tFileNode = None
+            for tNode in tNodeParent.childNodes:
+                if(
+                    (tNode.nodeType == tNode.ELEMENT_NODE) and
+                    (tNode.localName == 'File')
+                ):
+                    tFileNode = tNode
+                    break
+            if tFileNode is not None:
+                strFileName = tFileNode.getAttribute('name')
+
+                # Search the file in the current path and all include paths.
+                strAbsName = self.__find_file(strFileName)
+                if strAbsName is None:
+                    raise Exception(
+                        'Failed to read file "%s": file not found.' %
+                        strFileName
+                    )
+
+                # Read the complete key.
+                tFile = open(strAbsName, 'rb')
+                strKeyDER = tFile.read()
+                tFile.close()
+
+        if strKeyDER is None:
+            raise Exception('No "idx" attribute and no child "File" found!')
+
+        (uiId, aucMod, aucExp) = self.__get_cert_mod_exp(
+            tNodeParent,
+            strKeyDER,
+            False
+        )
+
+        atData['id'] = uiId
+        atData['mod'] = aucMod
+        atData['exp'] = aucExp
+        atData['der'] = strKeyDER
+
+
+    def __build_chunk_update_secure_info_page(self, tChunkNode):
+        aulChunk = None
+
+        # Generate an array with default values where possible.
+        __atCert = {
+            # The target info page defines which page to modify.
+            'TargetInfoPage': None,
+
+            # The RootPublicKey must be set by the user.
+            'Key': {
+                'id': None,
+                'mod': None,
+                'exp': None,
+                'der': None
+            },
+            'RootKeyIndex': 16,
+
+            # The Binding must be set by the user.
+            'Binding': {
+                'mask': None,
+                'ref': None
+            },
+
+            # The data must be set by the user.
+            'Data': {
+                'data': None
+            }
+        }
+
+        # Loop over all children.
+        for tNode in tChunkNode.childNodes:
+            if tNode.nodeType == tNode.ELEMENT_NODE:
+                if tNode.localName == 'TargetInfoPage':
+                    atVal = {'CAL': 0, 'COM': 1, 'APP':2 }
+                    strTarget = self.__xml_get_all_text(tNode)
+                    if strTarget in atVal:
+                        uiTarget = atVal[strTarget]
+                    else:
+                        raise Exception(
+                            'Invalid target: "%s". Valid targets: %s' % (
+                                strTarget,
+                                ', '.join(atVal.keys())
+                            )
+                        )
+                    __atCert['TargetInfoPage'] = uiTarget
+
+                elif tNode.localName == 'Key':
+                    self.__usip_parse_trusted_path(tNode, __atCert['Key'])
+
+                elif tNode.localName == 'RootKeyIndex':
+                    # Get the root key index
+                    strIndex = self.__xml_get_all_text(tNode)
+                    if len(strIndex) == 0:
+                        raise Exception('"RootKeyIndex" has no data!')
+                    ulRootKeyIndex = self.__parse_numeric_expression(
+                        strIndex
+                    )
+                    if (ulRootKeyIndex < 0) or (ulRootKeyIndex > 31):
+                        raise Exception('The root key index is out of range: %d' %
+                                        ulRootKeyIndex)
+                    __atCert['RootKeyIndex'] = ulRootKeyIndex
+
+                elif tNode.localName == 'Binding':
+                    __atCert['Binding']['value'] = self.__cert_parse_binding(tNode, 'Value')
+                    __atCert['Binding']['mask'] = self.__cert_parse_binding(tNode, 'Mask')
+
+                elif tNode.localName == 'Data':
+                    self.__get_data_contents(tNode, __atCert['Data'], False)
+
+                else:
+                    raise Exception('Unexpected node: %s' %
+                                    tNode.localName)
+
+        # Check if all required data was set.
+        astrErr = []
+        if __atCert['TargetInfoPage'] is None:
+            astrErr.append('No target set in USIP.')
+        if __atCert['Key']['der'] is None:
+            astrErr.append('No key set in USIP.')
+        if __atCert['Binding']['mask'] is None:
+            astrErr.append('No "mask" set in the Binding.')
+        if __atCert['Binding']['value'] is None:
+            astrErr.append('No "value" set in the Binding.')
+        if __atCert['Data']['data'] is None:
+            astrErr.append('No "data" set in USIP.')
+        if len(astrErr) != 0:
+            raise Exception('\n'.join(astrErr))
+
+        # Combine all data to the chunk.
+        atData = array.array('B')
+
+        # Info page select
+        atData.append(__atCert['TargetInfoPage'])
+        # root key index
+        atData.append(__atCert['RootKeyIndex'])
+        # 2 padding bytes
+        atData.extend([0, 0])
+        # Add the binding.
+        atData.extend(__atCert['Binding']['value'])
+        atData.extend(__atCert['Binding']['mask'])
+        # Add the padded key.
+        # Add the algorithm (for now fixed to RSA.
+        atData.append(1)
+        # Add the strength.
+        atData.append(__atCert['Key']['id'])
+        # Add the public modulus N.
+        atData.extend(__atCert['Key']['mod'])
+        # Add the exponent E.
+        atData.extend(__atCert['Key']['exp'])
+        # Pad the key with 3 bytes.
+        atData.extend([0, 0, 0])
+
+        # Get the key in DER encoded format.
+        strKeyDER = __atCert['Key']['der']
+
+        # Create a temporary file for the keypair.
+        iFile, strPathKeypair = tempfile.mkstemp(
+            suffix='der',
+            prefix='tmp_hboot_image',
+            dir=None,
+            text=False
+        )
+        os.close(iFile)
+
+        # Create a temporary file for the data to sign.
+        iFile, strPathSignatureInputData = tempfile.mkstemp(
+            suffix='bin',
+            prefix='tmp_hboot_image',
+            dir=None,
+            text=False
+        )
+        os.close(iFile)
+
+        # Write the DER key to the temporary file.
+        tFile = open(strPathKeypair, 'wt')
+        tFile.write(strKeyDER)
+        tFile.close()
+
+        # Write the data to sign to the temporary file.
+        tFile = open(strPathSignatureInputData, 'wb')
+        tFile.write(atData.tostring())
+        tFile.close()
+
+        astrCmd = [
+            self.__cfg_openssl,
+            'dgst',
+            '-sign', strPathKeypair,
+            '-keyform', 'DER',
+            '-sigopt', 'rsa_padding_mode:pss',
+            '-sigopt', 'rsa_pss_saltlen:-1',
+            '-sha384'
+        ]
+        astrCmd.extend(self.__cfg_openssloptions)
+        astrCmd.append(strPathSignatureInputData)
+        strSignature = subprocess.check_output(astrCmd)
+
+        # Remove the temp files.
+        os.remove(strPathKeypair)
+        os.remove(strPathSignatureInputData)
+
+        # Append the signature to the chunk.
+        aulSignature = array.array('B', strSignature)
+        atData.extend(aulSignature)
+
+        # Pad the data to a multiple of dwords.
+        strData = atData.tostring()
+        strPadding = chr(0x00) * ((4 - (len(strData) % 4)) & 3)
+        strChunk = strData + strPadding
+
+        # Convert the padded data to an array.
+        aulData = array.array('I')
+        aulData.fromstring(strChunk)
+
+        aulChunk = array.array('I')
+        aulChunk.append(self.__get_tag_id('U', 'S', 'I', 'P'))
+        aulChunk.append(1 + len(aulData) + self.__sizHashDw)
+        aulChunk.extend(aulData)
 
         # Get the hash for the chunk.
         tHash = hashlib.sha384()
@@ -3155,6 +3446,17 @@ class HbootImage:
                             'allowed in SECMEM images.'
                         )
                     atChunk = self.__build_chunk_memory_device_up(tChunkNode)
+                    self.__atChunks.extend(atChunk)
+                elif strChunkName == 'UpdateSecureInfoPage':
+                    # Found an USIP up node.
+                    if self.__fMoreChunksAllowed is not True:
+                        raise Exception('No more chunks allowed.')
+                    if self.__tImageType == self.__IMAGE_TYPE_SECMEM:
+                        raise Exception(
+                            'UpdateSecureInfoPage chunks are not '
+                            'allowed in SECMEM images.'
+                        )
+                    atChunk = self.__build_chunk_update_secure_info_page(tChunkNode)
                     self.__atChunks.extend(atChunk)
                 else:
                     raise Exception('Unknown chunk ID: %s' % strChunkName)

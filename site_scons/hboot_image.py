@@ -3,6 +3,7 @@
 
 import hboot_image_compiler.hboot_image
 
+from types import ListType
 import os.path
 
 import SCons.Script
@@ -36,6 +37,53 @@ def __get_clean_known_files(atKnownFiles):
         atClean[strKey] = strFile
 
     return atClean
+
+
+def __hboot_get_patch_table(env):
+    strPatchDefinition = None
+    if ('HBOOTIMAGE_PATCH_DEFINITION' in env) and (env['HBOOTIMAGE_PATCH_DEFINITION'] is not None):
+        tPatchDefinition = env['HBOOTIMAGE_PATCH_DEFINITION']
+        if isinstance(tPatchDefinition, ListType) or isinstance(tPatchDefinition, SCons.Node.NodeList)==True:
+            if len(tPatchDefinition)!=1:
+                raise Exception('Too many sources for the patch definition.')
+
+            tPatchDefinition = tPatchDefinition[0]
+
+        if isinstance(tPatchDefinition, SCons.Node.FS.File):
+            strPatchDefinition = tPatchDefinition.get_path()
+
+        else:
+            strPatchDefinition = tPatchDefinition
+
+    else:
+        # Get the chip type.
+        strRelPatchDefinition = None
+        strAsicTyp = env['ASIC_TYP']
+        if strAsicTyp == 'NETX4000_RELAXED':
+            strRelPatchDefinition = 'hboot_netx4000_relaxed_patch_table.xml'
+        elif strAsicTyp == 'NETX4000':
+            strRelPatchDefinition = 'hboot_netx4000_patch_table.xml'
+        elif strAsicTyp == 'NETX4100':
+            strRelPatchDefinition = 'hboot_netx4000_patch_table.xml'
+        elif strAsicTyp == 'NETX90_MPW':
+            strRelPatchDefinition = 'hboot_netx90_mpw_patch_table.xml'
+        elif strAsicTyp == 'NETX90_FULL':
+            strRelPatchDefinition = 'hboot_netx90_full_patch_table.xml'
+        elif strAsicTyp == 'NETX90_MPW_APP':
+            strRelPatchDefinition = 'hboot_netx90_mpw_app_patch_table.xml'
+        elif strAsicTyp == 'NETX90_FULL_APP':
+            strRelPatchDefinition = 'hboot_netx90_full_app_patch_table.xml'
+        elif strAsicTyp == 'NETX56':
+            strRelPatchDefinition = 'hboot_netx56_patch_table.xml'
+        else:
+            raise Exception('Invalid ASIC typ: "%s"' % strAsicTyp)
+
+        strPatchDefinition = os.path.join(
+            os.path.dirname(os.path.abspath(__file__)),
+            strRelPatchDefinition
+        )
+
+    return strPatchDefinition
 
 
 def __hboot_definition_scan(node, env, path):
@@ -131,7 +179,7 @@ def __hboot_image_action(target, source, env):
     if 'HBOOTIMAGE_VERBOSE' in env:
         fVerbose = bool(env['HBOOTIMAGE_VERBOSE'])
 
-    strPatchDefinition = env['HBOOTIMAGE_PATCH_DEFINITION']
+    strPatchDefinition = __hboot_get_patch_table(env)
 
     strAsicTyp = env['ASIC_TYP']
     tCompiler = hboot_image_compiler.hboot_image.HbootImage(
@@ -204,33 +252,7 @@ def __hboot_image_emitter(target, source, env):
                     )
                 )
 
-    strPatchDefinition = None
-    if ('HBOOTIMAGE_PATCH_DEFINITION' in env) and (env['HBOOTIMAGE_PATCH_DEFINITION'] is not None):
-        strPatchDefinition = env['HBOOTIMAGE_PATCH_DEFINITION']
-    else:
-        # Get the chip type.
-        strRelPatchDefinition = None
-        strAsicTyp = env['ASIC_TYP']
-        if strAsicTyp == 'NETX4000_RELAXED':
-            strRelPatchDefinition = 'hboot_netx4000_relaxed_patch_table.xml'
-        elif strAsicTyp == 'NETX4000':
-            strRelPatchDefinition = 'hboot_netx4000_patch_table.xml'
-        elif strAsicTyp == 'NETX4100':
-            strRelPatchDefinition = 'hboot_netx4000_patch_table.xml'
-        elif strAsicTyp == 'NETX90_MPW':
-            strRelPatchDefinition = 'hboot_netx90_mpw_patch_table.xml'
-        elif strAsicTyp == 'NETX90_MPW_APP':
-            strRelPatchDefinition = 'hboot_netx90_mpw_app_patch_table.xml'
-        elif strAsicTyp == 'NETX56':
-            strRelPatchDefinition = 'hboot_netx56_patch_table.xml'
-        else:
-            raise Exception('Invalid ASIC typ: "%s"' % strAsicTyp)
-
-        strPatchDefinition = os.path.join(
-            os.path.dirname(os.path.abspath(__file__)),
-            strRelPatchDefinition
-        )
-        env['HBOOTIMAGE_PATCH_DEFINITION'] = strPatchDefinition
+    strPatchDefinition = __hboot_get_patch_table(env)
     env.Depends(target, strPatchDefinition)
 
     fVerbose = False
