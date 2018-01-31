@@ -1755,6 +1755,7 @@ class HbootImage:
                     for strData in string.split(strLine, ':'):
                         strDataMirror += strData.strip()
 
+        # FIXME: only cut off the first byte if there is a leading "00" and the third digit is >=8.
         # Skip the first byte and mirror the string.
         strDataMirrorBin = binascii.unhexlify(strDataMirror)
         strDataBin = ''
@@ -3189,6 +3190,9 @@ class HbootImage:
         if len(astrErr) != 0:
             raise Exception('\n'.join(astrErr))
 
+        aucPatchData = array.array('B', __atCert['Data']['data'])
+        sizPatchData = len(aucPatchData)
+
         # Combine all data to the chunk.
         atData = array.array('B')
 
@@ -3196,14 +3200,14 @@ class HbootImage:
         atData.append(__atCert['TargetInfoPage'])
         # root key index
         atData.append(__atCert['RootKeyIndex'])
-        # 2 padding bytes
-        atData.extend([0, 0])
+        # Add the size of the patch data in bytes.
+        atData.extend([sizPatchData & 0xff, (sizPatchData >> 8) & 0xff])
         # Add the binding.
         atData.extend(__atCert['Binding']['value'])
         atData.extend(__atCert['Binding']['mask'])
         # Add the padded key.
         # Add the algorithm (for now fixed to RSA.
-        atData.append(1)
+        atData.append(2)
         # Add the strength.
         atData.append(__atCert['Key']['id'])
         # Add the public modulus N.
@@ -3212,6 +3216,11 @@ class HbootImage:
         atData.extend(__atCert['Key']['exp'])
         # Pad the key with 3 bytes.
         atData.extend([0, 0, 0])
+        # Add the patch data.
+        atData.extend(aucPatchData)
+        # Pad the patch data with 0x00.
+        sizPadding = (4 - (sizPatchData % 4)) & 3
+        atData.extend([0] * sizPadding)
 
         # Get the key in DER encoded format.
         strKeyDER = __atCert['Key']['der']
@@ -3241,7 +3250,9 @@ class HbootImage:
 
         # Write the data to sign to the temporary file.
         tFile = open(strPathSignatureInputData, 'wb')
-        tFile.write(atData.tostring())
+#        tFile.write(atData.tostring())
+# FIXME: for debug only
+        tFile.write('1234')
         tFile.close()
 
         astrCmd = [
@@ -3255,14 +3266,16 @@ class HbootImage:
         ]
         astrCmd.extend(self.__cfg_openssloptions)
         astrCmd.append(strPathSignatureInputData)
-        strSignature = subprocess.check_output(astrCmd)
+        strSignatureMirror = subprocess.check_output(astrCmd)
+        aulSignature = array.array('B', strSignatureMirror)
+        # Mirror the signature.
+        aulSignature.reverse()
 
         # Remove the temp files.
         os.remove(strPathKeypair)
         os.remove(strPathSignatureInputData)
 
         # Append the signature to the chunk.
-        aulSignature = array.array('B', strSignature)
         atData.extend(aulSignature)
 
         # Pad the data to a multiple of dwords.
@@ -3276,15 +3289,8 @@ class HbootImage:
 
         aulChunk = array.array('I')
         aulChunk.append(self.__get_tag_id('U', 'S', 'I', 'P'))
-        aulChunk.append(1 + len(aulData) + self.__sizHashDw)
+        aulChunk.append(len(aulData))
         aulChunk.extend(aulData)
-
-        # Get the hash for the chunk.
-        tHash = hashlib.sha384()
-        tHash.update(aulChunk.tostring())
-        strHash = tHash.digest()
-        aulHash = array.array('I', strHash[:self.__sizHashDw * 4])
-        aulChunk.extend(aulHash)
 
         return aulChunk
 
