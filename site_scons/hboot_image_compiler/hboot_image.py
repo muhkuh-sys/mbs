@@ -1547,27 +1547,27 @@ class HbootImage:
         strFill = tChunkNode.getAttribute('fill')
         sizFill = len(strFill)
 
-        strFile = ''
+        strAbsFilePath = None
         # Loop over all children.
         for tChildNode in tChunkNode.childNodes:
             # Is this a node element?
             if tChildNode.nodeType == tChildNode.ELEMENT_NODE:
-                # Is this a 'Header' node?
+                # Is this a 'File' node?
                 if tChildNode.localName == 'File':
                     # Get the file name.
-                    strFile = tChildNode.getAttribute('name')
-                    if len(strFile) == 0:
+                    strFileName = tChildNode.getAttribute('name')
+                    if len(strFileName) == 0:
                         raise Exception('The file node has no '
                                         'name attribute!')
-        sizFile = len(strFile)
+
+                    # Search the file in the current working folder and all
+                    # include paths.
+                    strAbsFilePath = self.__find_file(strFileName)
+                    if strAbsFilePath is None:
+                        raise Exception('File %s not found!' % strFileName)
 
         sizSkip = 0
         sizSkipParameter = 0
-
-        if sizFile != 0:
-            if os.path.exists(strFile) is not True:
-                raise Exception('The file "%s" for the skip command does '
-                                'not exist.' % strFile)
 
         ucFill = 0xff
         if sizFill != 0:
@@ -1606,7 +1606,11 @@ class HbootImage:
             raise Exception('Continue here!')
         sizOffsetNew = sizOffsetCurrent
 
-        if (sizAbsolute == 0) and (sizRelative == 0) and (sizFile == 0):
+        if(
+            (sizAbsolute == 0) and
+            (sizRelative == 0) and
+            (strAbsFilePath is None)
+        ):
             raise Exception('The skip node has no "absolute", "relative" '
                             'or "file" attribute!')
         elif (sizAbsolute != 0) and (sizRelative != 0):
@@ -1624,10 +1628,10 @@ class HbootImage:
                                 'the relative attribute:' % sizSkip)
             sizOffsetNew = sizOffsetCurrent + sizSkip
 
-        elif sizFile != 0:
+        elif strAbsFilePath is not None:
             # No "absolute" or "relative" attribute provided. Use the length
             # of the file as a relative skip.
-            sizSkip = os.path.getsize(strFile)
+            sizSkip = os.path.getsize(strAbsFilePath)
             sizOffsetNew = sizOffsetCurrent + sizSkip
 
         else:
@@ -1680,19 +1684,19 @@ class HbootImage:
         aulHash = array.array('I', strHash[:self.__sizHashDw * 4])
         aulChunk.extend(aulHash)
 
-        return aulChunk, ucFill, sizSkip, strFile, sizFile
+        return aulChunk, ucFill, sizSkip, strAbsFilePath
 
     def __build_chunk_skip(self, tChunkNode):
-        aulChunk, ucFill, sizSkip, strFile, sizFile =\
+        aulChunk, ucFill, sizSkip, strAbsFilePath =\
             self.__build_chunk_skip_header(tChunkNode)
 
         # Append the placeholder for the skip area.
-        if sizFile != 0:
+        if strAbsFilePath is not None:
             # sizSkip is the numbers of DWORDS to skip. Convert it to bytes.
             sizSkipBytes = sizSkip * 4
 
             # Read at mose sizSkipBytes from the file.
-            tFile = open(strFile, 'rb')
+            tFile = open(strAbsFilePath, 'rb')
             strFillData = tFile.read(sizSkipBytes)
             tFile.close()
             sizFillData = len(strFillData)
@@ -1718,7 +1722,7 @@ class HbootImage:
                 'A "SkipIncomplete" chunk can not be combined with an end '
                 'marker. Set "has_end" to "False".'
             )
-        aulChunk, ucFill, sizSkip, strFile, sizFile =\
+        aulChunk, ucFill, sizSkip, strAbsFilePath =\
             self.__build_chunk_skip_header(tChunkNode)
 
         # Do not add any data here. The image has to end after this chunk.
