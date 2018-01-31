@@ -822,7 +822,9 @@ class HbootImage:
                             '512MBytes. Too scared to continue!')
 
         if fWantLoadAddress is True:
-            strOverwriteAddress = tNode.getAttribute('overwrite_address').strip()
+            strOverwriteAddress = tNode.getAttribute(
+                'overwrite_address'
+            ).strip()
             if len(strOverwriteAddress) == 0:
                 pulLoadAddress = elf_support.get_load_address(atSegments)
             else:
@@ -1914,7 +1916,6 @@ class HbootImage:
                             'of %d bytes.' % (strName, sizBinding))
 
         return aucBinding
-
 
     def __root_cert_parse_root_key(self, tNodeParent, atData):
         strKeyDER = None
@@ -3092,7 +3093,6 @@ class HbootImage:
         atData['exp'] = aucExp
         atData['der'] = strKeyDER
 
-
     def __build_chunk_update_secure_info_page(self, tChunkNode):
         aulChunk = None
 
@@ -3126,7 +3126,7 @@ class HbootImage:
         for tNode in tChunkNode.childNodes:
             if tNode.nodeType == tNode.ELEMENT_NODE:
                 if tNode.localName == 'TargetInfoPage':
-                    atVal = {'CAL': 0, 'COM': 1, 'APP':2 }
+                    atVal = {'CAL': 0, 'COM': 1, 'APP': 2}
                     strTarget = self.__xml_get_all_text(tNode)
                     if strTarget in atVal:
                         uiTarget = atVal[strTarget]
@@ -3151,13 +3151,21 @@ class HbootImage:
                         strIndex
                     )
                     if (ulRootKeyIndex < 0) or (ulRootKeyIndex > 31):
-                        raise Exception('The root key index is out of range: %d' %
-                                        ulRootKeyIndex)
+                        raise Exception(
+                            'The root key index is out of range: %d' %
+                            ulRootKeyIndex
+                        )
                     __atCert['RootKeyIndex'] = ulRootKeyIndex
 
                 elif tNode.localName == 'Binding':
-                    __atCert['Binding']['value'] = self.__cert_parse_binding(tNode, 'Value')
-                    __atCert['Binding']['mask'] = self.__cert_parse_binding(tNode, 'Mask')
+                    __atCert['Binding']['value'] = self.__cert_parse_binding(
+                        tNode,
+                        'Value'
+                    )
+                    __atCert['Binding']['mask'] = self.__cert_parse_binding(
+                        tNode,
+                        'Mask'
+                    )
 
                 elif tNode.localName == 'Data':
                     self.__get_data_contents(tNode, __atCert['Data'], False)
@@ -3460,7 +3468,9 @@ class HbootImage:
                             'UpdateSecureInfoPage chunks are not '
                             'allowed in SECMEM images.'
                         )
-                    atChunk = self.__build_chunk_update_secure_info_page(tChunkNode)
+                    atChunk = self.__build_chunk_update_secure_info_page(
+                        tChunkNode
+                    )
                     self.__atChunks.extend(atChunk)
                 else:
                     raise Exception('Unknown chunk ID: %s' % strChunkName)
