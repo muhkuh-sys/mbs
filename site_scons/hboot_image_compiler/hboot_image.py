@@ -3206,7 +3206,8 @@ class HbootImage:
         atData.extend(__atCert['Binding']['value'])
         atData.extend(__atCert['Binding']['mask'])
         # Add the padded key.
-        # Add the algorithm (for now fixed to RSA.
+
+        # Add the algorithm (for now fixed to RSA).
         atData.append(2)
         # Add the strength.
         atData.append(__atCert['Key']['id'])
@@ -3216,6 +3217,7 @@ class HbootImage:
         atData.extend(__atCert['Key']['exp'])
         # Pad the key with 3 bytes.
         atData.extend([0, 0, 0])
+
         # Add the patch data.
         atData.extend(aucPatchData)
         # Pad the patch data with 0x00.
@@ -3248,6 +3250,38 @@ class HbootImage:
         tFile.write(strKeyDER)
         tFile.close()
 
+        astrCmd = [
+            self.__cfg_openssl,
+            'rsa',
+            '-text',
+            '-noout',
+            '-inform', 'DER',
+            '-in', strPathKeypair
+        ]
+        astrCmd.extend(self.__cfg_openssloptions)
+        tProcess = subprocess.Popen(
+            astrCmd,
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE
+        )
+        (strStdout, strStdErr) = tProcess.communicate()
+        if tProcess.returncode!=0:
+            raise Exception('openssl failed with returncode %d.' % tProcess.returncode)
+        tMatch = re.match('Private-Key: \((\d+) bit\)', strStdout)
+        if tMatch is None:
+            raise Exception('Failed to extract the size of the private key.')
+        # Convert the size from bits to DWORDS.
+        sizKeyInDwords = int(tMatch.group(1)) / (8*4)
+
+        # Convert the padded data to an array.
+        aulData = array.array('I')
+        aulData.fromstring(atData.tostring())
+
+        aulChunk = array.array('I')
+        aulChunk.append(self.__get_tag_id('U', 'S', 'I', 'P'))
+        aulChunk.append(len(aulData) + (sizKeyInDwords))
+        aulChunk.extend(aulData)
+
         # Write the data to sign to the temporary file.
         tFile = open(strPathSignatureInputData, 'wb')
 #        tFile.write(atData.tostring())
@@ -3267,30 +3301,16 @@ class HbootImage:
         astrCmd.extend(self.__cfg_openssloptions)
         astrCmd.append(strPathSignatureInputData)
         strSignatureMirror = subprocess.check_output(astrCmd)
-        aulSignature = array.array('B', strSignatureMirror)
+        aucSignature = array.array('B', strSignatureMirror)
         # Mirror the signature.
-        aulSignature.reverse()
+        aucSignature.reverse()
 
         # Remove the temp files.
         os.remove(strPathKeypair)
         os.remove(strPathSignatureInputData)
 
         # Append the signature to the chunk.
-        atData.extend(aulSignature)
-
-        # Pad the data to a multiple of dwords.
-        strData = atData.tostring()
-        strPadding = chr(0x00) * ((4 - (len(strData) % 4)) & 3)
-        strChunk = strData + strPadding
-
-        # Convert the padded data to an array.
-        aulData = array.array('I')
-        aulData.fromstring(strChunk)
-
-        aulChunk = array.array('I')
-        aulChunk.append(self.__get_tag_id('U', 'S', 'I', 'P'))
-        aulChunk.append(len(aulData))
-        aulChunk.extend(aulData)
+        aulChunk.fromstring(aucSignature.tostring())
 
         return aulChunk
 
