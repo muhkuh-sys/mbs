@@ -3279,14 +3279,12 @@ class HbootImage:
 
         aulChunk = array.array('I')
         aulChunk.append(self.__get_tag_id('U', 'S', 'I', 'P'))
-        aulChunk.append(len(aulData) + (sizKeyInDwords))
+        aulChunk.append(len(aulData) + sizKeyInDwords)
         aulChunk.extend(aulData)
 
         # Write the data to sign to the temporary file.
         tFile = open(strPathSignatureInputData, 'wb')
-#        tFile.write(atData.tostring())
-# FIXME: for debug only
-        tFile.write('1234')
+        tFile.write(aulChunk.tostring())
         tFile.close()
 
         astrCmd = [
