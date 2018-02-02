@@ -1746,10 +1746,11 @@ class HbootImage:
 
     # This function gets a data block from the OpenSSL output.
     def __openssl_get_data_block(self, strStdout, strID):
-        strDataMirror = ''
-        tReData = re.compile('^\s+[0-9a-fA-F]{2}(:[0-9a-fA-F]{2})*:?$')
+        aucData = array.array('B')
+        tReData = re.compile('^[0-9a-fA-F]{2}(:[0-9a-fA-F]{2})*:?$')
         iState = 0
         for strLine in iter(strStdout.splitlines()):
+            strLine = string.strip(strLine)
             if iState == 0:
                 if strLine == strID:
                     iState = 1
@@ -1758,17 +1759,36 @@ class HbootImage:
                 if tMatch is None:
                     break
                 else:
-                    for strData in string.split(strLine, ':'):
-                        strDataMirror += strData.strip()
+                    for strDataHex in string.split(strLine, ':'):
+                        strDataHexStrip = string.strip(strDataHex)
+                        if len(strDataHexStrip)!=0:
+                            strDataBin = binascii.unhexlify(strDataHexStrip)
+                            aucData.append(ord(strDataBin))
 
-        # FIXME: only cut off the first byte if there is a leading "00" and the third digit is >=8.
-        # Skip the first byte and mirror the string.
-        strDataMirrorBin = binascii.unhexlify(strDataMirror)
-        strDataBin = ''
-        for iCnt in range(len(strDataMirrorBin) - 1, 0, -1):
-            strDataBin += strDataMirrorBin[iCnt]
+        return aucData
 
-        return strDataBin
+    def __openssl_cut_leading_zero(self, aucData):
+        # Does the number start with "00" and is the third digit >= 8?
+        if aucData[0]==0x00 and aucData[1]>=0x80:
+            # Remove the leading "00".
+            aucData.pop(0)
+
+    def __openssl_convert_to_little_endian(self, aucData):
+        aucData.reverse()
+
+    def __openssl_uncompress_field(self, aucData):
+        # The data must not be compressed.
+        if aucData[0]!=0x04:
+            raise Exception('The data is compressed. This is not supported yet.')
+        # Cut off the first byte.
+        aucData.pop(0)
+
+    def __openssl_cut_in_half(self, aucData):
+        # Cut the public key in equal parts.
+        sizDataHalf = len(aucData) / 2
+        aucData0 = array.array('B', aucData[:sizDataHalf])
+        aucData1 = array.array('B', aucData[sizDataHalf:])
+        return aucData0, aucData1
 
     def __keyrom_get_key(self, uiIndex):
         # This needs the keyrom data.
@@ -1794,16 +1814,10 @@ class HbootImage:
         return strKeyDER
 
     def __get_cert_mod_exp(self, tNodeParent, strKeyDER, fIsPublicKey):
-        __atKnownRsaSizes = {
-            0: {'mod': 256, 'exp': 3, 'rsa': 2048},
-            1: {'mod': 384, 'exp': 3, 'rsa': 3072},
-            2: {'mod': 512, 'exp': 3, 'rsa': 4096}
-        }
-
         # Extract all information from the key.
         astrCmd = [
             self.__cfg_openssl,
-            'rsa',
+            'pkey',
             '-inform',
             'DER',
             '-text',
@@ -1821,65 +1835,186 @@ class HbootImage:
             raise Exception('OpenSSL failed with return code %d.' %
                             tProcess.returncode)
 
-        strMatchExponent = 'publicExponent:'
-        strMatchModulus = 'modulus:'
-        if fIsPublicKey is True:
-            strMatchExponent = 'Exponent:'
-            strMatchModulus = 'Modulus:'
+        # Try to guess if this is an RSA or ECC key.
+        # The text dump of an RSA key has " modulus:", while an ECC key has
+        # "priv:".
+        iKeyTyp_1ECC_2RSA = None
+        atAttr = None
+        if string.find(strStdout, 'modulus:') != -1:
+            # Looks like this is an RSA key.
+            iKeyTyp_1ECC_2RSA = 2
 
-        # Extract the public exponent.
-        tReExp = re.compile(
-            '^%s\s+(\d+)\s+\(0x([0-9a-fA-F]+)\)$' % strMatchExponent,
-            re.MULTILINE
-        )
-        tMatch = tReExp.search(strStdout)
-        if tMatch is None:
-            raise Exception('Can not find public exponent!')
-        ulExp = int(tMatch.group(1))
-        ulExpHex = int(tMatch.group(2), 16)
-        if ulExp != ulExpHex:
-            raise Exception('Decimal version differs from hex version!')
-        if (ulExp < 0) or (ulExp > 0xffffff):
-            raise Exception('The exponent exceeds the allowed range of a '
-                            '24bit unsigned integer!')
-        strData = (
-            chr(ulExp & 0xff) +
-            chr((ulExp >> 8) & 0xff) +
-            chr((ulExp >> 16) & 0xff)
-        )
-        aucExp = array.array('B', strData)
-        sizExp = len(aucExp)
+            strMatchExponent = 'publicExponent:'
+            strMatchModulus = 'modulus:'
+            if fIsPublicKey is True:
+                strMatchExponent = 'Exponent:'
+                strMatchModulus = 'Modulus:'
 
-        # Extract the modulus "N".
-        strData = self.__openssl_get_data_block(strStdout, strMatchModulus)
-        aucMod = array.array('B', strData)
-        sizMod = len(aucMod)
-
-        uiId = None
-        for uiElementId, atAttr in __atKnownRsaSizes.iteritems():
-            if (sizMod == atAttr['mod']) and (sizExp == atAttr['exp']):
-                # Found the RSA type.
-                uiId = uiElementId
-                break
-
-        if uiId is None:
-            strErr = (
-                'The modulo has a size of %d bytes. '
-                'The public exponent has a size of %d bytes.\n'
-                'These values can not be mapped to a RSA bit size. '
-                'Known sizes are:\n' % (
-                    sizMod,
-                    sizExp
-                )
+            # Extract the public exponent.
+            tReExp = re.compile(
+                '^%s\s+(\d+)\s+\(0x([0-9a-fA-F]+)\)$' % strMatchExponent,
+                re.MULTILINE
             )
-            for uiElementId, atAttr in __atKnownRsaSizes.iteritems():
-                strErr += (
-                    '  RSA%d: %d bytes modulo, %d bytes public exponent\n' %
-                    (atAttr['rsa'], atAttr['mod'], atAttr['exp'])
-                )
-            raise Exception(strErr)
+            tMatch = tReExp.search(strStdout)
+            if tMatch is None:
+                raise Exception('Can not find public exponent!')
+            ulExp = int(tMatch.group(1))
+            ulExpHex = int(tMatch.group(2), 16)
+            if ulExp != ulExpHex:
+                raise Exception('Decimal version differs from hex version!')
+            if (ulExp < 0) or (ulExp > 0xffffff):
+                raise Exception('The exponent exceeds the allowed range of a '
+                                '24bit unsigned integer!')
+            strData = (
+                chr(ulExp & 0xff) +
+                chr((ulExp >> 8) & 0xff) +
+                chr((ulExp >> 16) & 0xff)
+            )
+            aucExp = array.array('B', strData)
 
-        return (uiId, aucMod, aucExp)
+            # Extract the modulus "N".
+            aucMod = self.__openssl_get_data_block(strStdout, strMatchModulus)
+            self.__openssl_cut_leading_zero(aucMod)
+            self.__openssl_convert_to_little_endian(aucMod)
+
+            __atKnownRsaSizes = {
+                0: {'mod': 256, 'exp': 3, 'rsa': 2048},
+                1: {'mod': 384, 'exp': 3, 'rsa': 3072},
+                2: {'mod': 512, 'exp': 3, 'rsa': 4096}
+            }
+
+            sizMod = len(aucMod)
+            sizExp = len(aucExp)
+            uiId = None
+            for uiElementId, atAttr in __atKnownRsaSizes.iteritems():
+                if (sizMod == atAttr['mod']) and (sizExp == atAttr['exp']):
+                    # Found the RSA type.
+                    uiId = uiElementId
+                    break
+
+            if uiId is None:
+                strErr = (
+                    'The modulo has a size of %d bytes. '
+                    'The public exponent has a size of %d bytes.\n'
+                    'These values can not be mapped to a RSA bit size. '
+                    'Known sizes are:\n' % (
+                        sizMod,
+                        sizExp
+                    )
+                )
+                for uiElementId, atAttr in __atKnownRsaSizes.iteritems():
+                    strErr += (
+                        '  RSA%d: %d bytes modulo, %d bytes public exponent\n' %
+                        (atAttr['rsa'], atAttr['mod'], atAttr['exp'])
+                    )
+                raise Exception(strErr)
+
+            atAttr = {
+                'id': uiId,
+                'mod': aucMod,
+                'exp': aucExp
+            }
+
+        elif string.find(strStdout, 'priv:') != -1:
+            # Looks like this is an ECC key.
+            iKeyTyp_1ECC_2RSA = 1
+
+            aucPriv = self.__openssl_get_data_block(strStdout, 'priv:')
+            self.__openssl_cut_leading_zero(aucPriv)
+            self.__openssl_convert_to_little_endian(aucPriv)
+
+            aucPub = self.__openssl_get_data_block(strStdout, 'pub:')
+            self.__openssl_uncompress_field(aucPub)
+            aucPubX, aucPubY = self.__openssl_cut_in_half(aucPub)
+            self.__openssl_convert_to_little_endian(aucPubX)
+            self.__openssl_convert_to_little_endian(aucPubY)
+
+            aucPrime = self.__openssl_get_data_block(strStdout, 'Prime:')
+            self.__openssl_cut_leading_zero(aucPrime)
+            self.__openssl_convert_to_little_endian(aucPrime)
+
+            aucA = self.__openssl_get_data_block(strStdout, 'A:')
+            self.__openssl_cut_leading_zero(aucA)
+            self.__openssl_convert_to_little_endian(aucA)
+
+            aucB = self.__openssl_get_data_block(strStdout, 'B:')
+            self.__openssl_cut_leading_zero(aucB)
+            self.__openssl_convert_to_little_endian(aucB)
+
+            strData = self.__openssl_get_data_block(strStdout, 'Generator (uncompressed):')
+            aucGen = array.array('B', strData)
+            self.__openssl_uncompress_field(aucGen)
+            aucGenX, aucGenY = self.__openssl_cut_in_half(aucGen)
+            self.__openssl_convert_to_little_endian(aucGenX)
+            self.__openssl_convert_to_little_endian(aucGenY)
+
+            aucOrder = self.__openssl_get_data_block(strStdout, 'Order:')
+            self.__openssl_cut_leading_zero(aucOrder)
+            self.__openssl_convert_to_little_endian(aucOrder)
+
+            # Extract the cofactor.
+            tReExp = re.compile('^Cofactor:\s+(\d+)\s+\(0x([0-9a-fA-F]+)\)$', re.MULTILINE)
+            tMatch = tReExp.search(strStdout)
+            if tMatch is None:
+                raise Exception('Can not find cofactor!')
+            ulCofactor = long(tMatch.group(1))
+            ulCofactorHex = long(tMatch.group(2), 16)
+            if ulCofactor!=ulCofactorHex:
+                raise Exception('Decimal version differs from hex version!')
+
+            __atKnownEccSizes = {
+                0: 32,
+                1: 48,
+                2: 64
+            }
+
+            sizD = len(aucPriv)
+            sizQx = len(aucPubX)
+            sizQy = len(aucPubY)
+            sizP = len(aucPrime)
+            sizA = len(aucA)
+            sizB = len(aucB)
+            sizGx = len(aucGenX)
+            sizGy = len(aucGenY)
+            sizN = len(aucOrder)
+            uiId = None
+            for uiElementId, sizNumbers in __atKnownEccSizes.iteritems():
+                if(
+                    (sizNumbers == sizD) and
+                    (sizNumbers == sizQx) and
+                    (sizNumbers == sizQy) and
+                    (sizNumbers == sizP) and
+                    (sizNumbers == sizA) and
+                    (sizNumbers == sizB) and
+                    (sizNumbers == sizGx) and
+                    (sizNumbers == sizGy) and
+                    (sizNumbers == sizN)
+                ):
+                    # Found the ECC type.
+                    uiId = uiElementId
+                    break
+
+            if uiId is None:
+                raise Exception('Invalid ECC key.')
+
+            atAttr = {
+                'id': uiId,
+                'd': aucPriv,
+                'Qx': aucPubX,
+                'Qy': aucPubY,
+                'p': aucPrime,
+                'a': aucA,
+                'b': aucB,
+                'Gx': aucGenX,
+                'Gy': aucGenY,
+                'n': aucOrder,
+                'cof': ulCofactor
+            }
+
+        else:
+            raise Exception('Unknown key format.')
+
+        return iKeyTyp_1ECC_2RSA, atAttr
 
     def __cert_parse_binding(self, tNodeParent, strName):
         # The binding is not yet set.
@@ -1961,15 +2096,21 @@ class HbootImage:
         if strKeyDER is None:
             raise Exception('No "idx" attribute and no child "File" found!')
 
-        (uiId, aucMod, aucExp) = self.__get_cert_mod_exp(
+        iKeyTyp_1ECC_2RSA, atAttr = self.__get_cert_mod_exp(
             tNodeParent,
             strKeyDER,
             False
         )
 
-        atData['id'] = uiId
-        atData['mod'] = aucMod
-        atData['exp'] = aucExp
+        # A root cert is for the netX4000, which only knows RSA.
+        if iKeyTyp_1ECC_2RSA != 2:
+            raise Exception(
+                'Trying to use a non-RSA certificate for a root cert.'
+            )
+
+        atData['id'] = atAttr['id']
+        atData['mod'] = atAttr['mod']
+        atData['exp'] = atAttr['exp']
         atData['idx'] = ulIdx
 
     def __cert_get_key_der(self, tNodeParent, atData):
@@ -2123,18 +2264,24 @@ class HbootImage:
         if strKeyDER is None:
             raise Exception('No "idx" attribute and no child "File" found!')
 
-        (uiId, aucMod, aucExp) = self.__get_cert_mod_exp(
+        iKeyTyp_1ECC_2RSA, atAttr = self.__get_cert_mod_exp(
             tNodeParent,
             strKeyDER,
             True
         )
 
+        # A root cert is for the netX4000, which only knows RSA.
+        if iKeyTyp_1ECC_2RSA != 2:
+            raise Exception(
+                'Trying to use a non-RSA certificate for a root cert.'
+            )
+
         aucMask = self.__cert_parse_binding(tNodeParent, 'Mask')
 
         atData['mask'] = aucMask
-        atData['id'] = uiId
-        atData['mod'] = aucMod
-        atData['exp'] = aucExp
+        atData['id'] = atAttr['id']
+        atData['mod'] = atAttr['mod']
+        atData['exp'] = atAttr['exp']
 
     def __root_cert_parse_user_content(self, tNodeParent, atData):
         atValues = array.array('B')
@@ -3089,15 +3236,14 @@ class HbootImage:
         if strKeyDER is None:
             raise Exception('No "idx" attribute and no child "File" found!')
 
-        (uiId, aucMod, aucExp) = self.__get_cert_mod_exp(
+        iKeyTyp_1ECC_2RSA, atAttr = self.__get_cert_mod_exp(
             tNodeParent,
             strKeyDER,
             False
         )
 
-        atData['id'] = uiId
-        atData['mod'] = aucMod
-        atData['exp'] = aucExp
+        atData['iKeyTyp_1ECC_2RSA'] = iKeyTyp_1ECC_2RSA
+        atData['atAttr'] = atAttr
         atData['der'] = strKeyDER
 
     def __build_chunk_update_secure_info_page(self, tChunkNode):
@@ -3110,6 +3256,7 @@ class HbootImage:
 
             # The RootPublicKey must be set by the user.
             'Key': {
+                'type': None,
                 'id': None,
                 'mod': None,
                 'exp': None,
@@ -3211,24 +3358,59 @@ class HbootImage:
         # Add the binding.
         atData.extend(__atCert['Binding']['value'])
         atData.extend(__atCert['Binding']['mask'])
-        # Add the padded key.
 
-        # Add the algorithm (for now fixed to RSA).
-        atData.append(2)
-        # Add the strength.
-        atData.append(__atCert['Key']['id'])
-        # Add the public modulus N and fill up to 64 bytes.
-        self.__add_array_with_fillup(atData, __atCert['Key']['mod'], 512)
-        # Add the exponent E.
-        atData.extend(__atCert['Key']['exp'])
-        # Pad the key with 3 bytes.
-        atData.extend([0, 0, 0])
+        # Add the padded key.
+        iKeyTyp_1ECC_2RSA = __atCert['Key']['iKeyTyp_1ECC_2RSA']
+        atAttr = __atCert['Key']['atAttr']
+        if iKeyTyp_1ECC_2RSA == 2:
+            # Add the algorithm.
+            atData.append(iKeyTyp_1ECC_2RSA)
+            # Add the strength.
+            atData.append(atAttr['id'])
+            # Add the public modulus N and fill up to 64 bytes.
+            self.__add_array_with_fillup(atData, atAttr['mod'], 512)
+            # Add the exponent E.
+            atData.extend(atAttr['exp'])
+            # Pad the key with 3 bytes.
+            atData.extend([0, 0, 0])
+
+        elif iKeyTyp_1ECC_2RSA == 1:
+            # Add the algorithm.
+            atData.append(iKeyTyp_1ECC_2RSA)
+            # Add the strength.
+            atData.append(atAttr['id'])
+            # Write all fields and fill up to 64 bytes.
+            self.__add_array_with_fillup(atData, atAttr['Qx'], 64)
+            self.__add_array_with_fillup(atData, atAttr['Qy'], 64)
+            self.__add_array_with_fillup(atData, atAttr['a'], 64)
+            self.__add_array_with_fillup(atData, atAttr['b'], 64)
+            self.__add_array_with_fillup(atData, atAttr['p'], 64)
+            self.__add_array_with_fillup(atData, atAttr['Gx'], 64)
+            self.__add_array_with_fillup(atData, atAttr['Gy'], 64)
+            self.__add_array_with_fillup(atData, atAttr['n'], 64)
+            atData.extend([0, 0, 0])
+            # Pad the key with 3 bytes.
+            atData.extend([0, 0, 0])
 
         # Add the patch data.
         atData.extend(aucPatchData)
         # Pad the patch data with 0x00.
         sizPadding = (4 - (sizPatchData % 4)) & 3
         atData.extend([0] * sizPadding)
+
+        if iKeyTyp_1ECC_2RSA == 1:
+            sizKeyInDwords = len(atAttr['Qx']) / 4
+        elif iKeyTyp_1ECC_2RSA == 2:
+            sizKeyInDwords = len(atAttr['mod']) / 4
+
+        # Convert the padded data to an array.
+        aulData = array.array('I')
+        aulData.fromstring(atData.tostring())
+
+        aulChunk = array.array('I')
+        aulChunk.append(self.__get_tag_id('U', 'S', 'I', 'P'))
+        aulChunk.append(len(aulData) + sizKeyInDwords)
+        aulChunk.extend(aulData)
 
         # Get the key in DER encoded format.
         strKeyDER = __atCert['Key']['der']
@@ -3256,58 +3438,45 @@ class HbootImage:
         tFile.write(strKeyDER)
         tFile.close()
 
-        astrCmd = [
-            self.__cfg_openssl,
-            'rsa',
-            '-text',
-            '-noout',
-            '-inform', 'DER',
-            '-in', strPathKeypair
-        ]
-        astrCmd.extend(self.__cfg_openssloptions)
-        tProcess = subprocess.Popen(
-            astrCmd,
-            stdin=subprocess.PIPE,
-            stdout=subprocess.PIPE
-        )
-        (strStdout, strStdErr) = tProcess.communicate()
-        if tProcess.returncode!=0:
-            raise Exception('openssl failed with returncode %d.' % tProcess.returncode)
-        tMatch = re.match('Private-Key: \((\d+) bit\)', strStdout)
-        if tMatch is None:
-            raise Exception('Failed to extract the size of the private key.')
-        # Convert the size from bits to DWORDS.
-        sizKeyInDwords = int(tMatch.group(1)) / (8*4)
-
-        # Convert the padded data to an array.
-        aulData = array.array('I')
-        aulData.fromstring(atData.tostring())
-
-        aulChunk = array.array('I')
-        aulChunk.append(self.__get_tag_id('U', 'S', 'I', 'P'))
-        aulChunk.append(len(aulData) + sizKeyInDwords)
-        aulChunk.extend(aulData)
-
         # Write the data to sign to the temporary file.
         tFile = open(strPathSignatureInputData, 'wb')
         tFile.write(aulChunk.tostring())
         tFile.close()
 
-        astrCmd = [
-            self.__cfg_openssl,
-            'dgst',
-            '-sign', strPathKeypair,
-            '-keyform', 'DER',
-            '-sigopt', 'rsa_padding_mode:pss',
-            '-sigopt', 'rsa_pss_saltlen:-1',
-            '-sha384'
-        ]
-        astrCmd.extend(self.__cfg_openssloptions)
-        astrCmd.append(strPathSignatureInputData)
-        strSignatureMirror = subprocess.check_output(astrCmd)
-        aucSignature = array.array('B', strSignatureMirror)
-        # Mirror the signature.
-        aucSignature.reverse()
+        if iKeyTyp_1ECC_2RSA == 1:
+            astrCmd = [
+                self.__cfg_openssl,
+                'dgst',
+                '-sign', strPathKeypair,
+                '-keyform', 'DER',
+                '-sha384'
+            ]
+            astrCmd.extend(self.__cfg_openssloptions)
+            astrCmd.append(strPathSignatureInputData)
+            strEccSignature = subprocess.check_output(astrCmd)
+            aucEccSignature = array.array('B', strEccSignature)
+            print(aucEccSignature)
+
+            # Parse the length field.
+            
+
+            raise Exception('Stop here!')
+        elif iKeyTyp_1ECC_2RSA == 2:
+            astrCmd = [
+                self.__cfg_openssl,
+                'dgst',
+                '-sign', strPathKeypair,
+                '-keyform', 'DER',
+                '-sigopt', 'rsa_padding_mode:pss',
+                '-sigopt', 'rsa_pss_saltlen:-1',
+                '-sha384'
+            ]
+            astrCmd.extend(self.__cfg_openssloptions)
+            astrCmd.append(strPathSignatureInputData)
+            strSignatureMirror = subprocess.check_output(astrCmd)
+            aucSignature = array.array('B', strSignatureMirror)
+            # Mirror the signature.
+            aucSignature.reverse()
 
         # Remove the temp files.
         os.remove(strPathKeypair)
