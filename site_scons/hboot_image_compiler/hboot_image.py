@@ -633,6 +633,12 @@ class HbootImage:
 
         return strAbsFilePath
 
+    def __add_array_with_fillup(self, aucBuffer, aucNewData, sizMinimum):
+        aucBuffer.extend(aucNewData)
+        sizNewData = len(aucNewData)
+        if sizNewData<sizMinimum:
+            aucBuffer.extend([0] * (sizMinimum - sizNewData))
+
     def __parse_numeric_expression(self, strExpression):
         tAstNode = ast.parse(strExpression, mode='eval')
         tAstResolved = self.__cPatchDefinitions.resolve_constants(tAstNode)
@@ -3211,8 +3217,8 @@ class HbootImage:
         atData.append(2)
         # Add the strength.
         atData.append(__atCert['Key']['id'])
-        # Add the public modulus N.
-        atData.extend(__atCert['Key']['mod'])
+        # Add the public modulus N and fill up to 64 bytes.
+        self.__add_array_with_fillup(atData, __atCert['Key']['mod'], 512)
         # Add the exponent E.
         atData.extend(__atCert['Key']['exp'])
         # Pad the key with 3 bytes.
