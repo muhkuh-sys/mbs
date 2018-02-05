@@ -3246,6 +3246,51 @@ class HbootImage:
         atData['atAttr'] = atAttr
         atData['der'] = strKeyDER
 
+    def __openssl_ecc_get_signature(self, aucSignature, sizKeyInBytes):
+        # Get the start of the firt element, which is "r".
+        uiLen = aucSignature[1]
+        if uiLen >= 128:
+            uiLen -= 128
+        else:
+            uiLen = 0
+        uiElementStart = 2 + uiLen
+
+        sizR = aucSignature[uiElementStart + 1]
+        aucR = aucSignature[uiElementStart + 2:uiElementStart + 2 + sizR]
+
+        if sizR > sizKeyInBytes + 1:
+            raise Exception('The R field is too big. Expected %d bytes, '
+                            'but got %d.' % (sizKeyInBytes, sizR))
+        elif sizR == sizKeyInBytes + 1:
+            self.__openssl_cut_leading_zero(aucR)
+        elif sizR < sizKeyInBytes:
+            # The signature data is smaller than expected. Pad it with 0x00.
+            aucR.extend([0] * (sizKeyInBytes - sizR))
+        self.__openssl_convert_to_little_endian(aucR)
+
+        # Get the start of the second element, which is "s".
+        uiElementStart = 2 + uiLen + 2 + sizR
+
+        sizS = aucSignature[uiElementStart + 1]
+        aucS = aucSignature[uiElementStart + 2:uiElementStart + 2 + sizS]
+
+        if sizS > sizKeyInBytes + 1:
+            raise Exception('The S field is too big. Expected %d bytes, '
+                            'but got %d.' % (sizKeyInBytes, sizS))
+        elif sizS == sizKeyInBytes + 1:
+            self.__openssl_cut_leading_zero(aucS)
+        elif sizS < sizKeyInBytes:
+            # The signature data is smaller than expected. Pad it with 0x00.
+            aucS.extend([0] * (sizKeyInBytes - sizS))
+        self.__openssl_convert_to_little_endian(aucS)
+
+        # Combine R and S.
+        aucSignature = array.array('B')
+        aucSignature.extend(aucR)
+        aucSignature.extend(aucS)
+
+        return aucSignature
+
     def __build_chunk_update_secure_info_page(self, tChunkNode):
         aulChunk = None
 
@@ -3400,8 +3445,10 @@ class HbootImage:
 
         if iKeyTyp_1ECC_2RSA == 1:
             sizKeyInDwords = len(atAttr['Qx']) / 4
+            sizSignatureInDwords = 2 * sizKeyInDwords
         elif iKeyTyp_1ECC_2RSA == 2:
             sizKeyInDwords = len(atAttr['mod']) / 4
+            sizSignatureInDwords = sizKeyInDwords
 
         # Convert the padded data to an array.
         aulData = array.array('I')
@@ -3409,7 +3456,7 @@ class HbootImage:
 
         aulChunk = array.array('I')
         aulChunk.append(self.__get_tag_id('U', 'S', 'I', 'P'))
-        aulChunk.append(len(aulData) + sizKeyInDwords)
+        aulChunk.append(len(aulData) + sizSignatureInDwords)
         aulChunk.extend(aulData)
 
         # Get the key in DER encoded format.
@@ -3455,12 +3502,10 @@ class HbootImage:
             astrCmd.append(strPathSignatureInputData)
             strEccSignature = subprocess.check_output(astrCmd)
             aucEccSignature = array.array('B', strEccSignature)
-            print(aucEccSignature)
 
-            # Parse the length field.
-            
+            # Parse the signature.
+            aucSignature = self.__openssl_ecc_get_signature(aucEccSignature, sizKeyInDwords * 4)
 
-            raise Exception('Stop here!')
         elif iKeyTyp_1ECC_2RSA == 2:
             astrCmd = [
                 self.__cfg_openssl,
