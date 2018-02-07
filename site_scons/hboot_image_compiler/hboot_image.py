@@ -3776,11 +3776,15 @@ class HbootImage:
                 raise Exception('The HashTable size has a minimum size of %d bytes, which exceeds the requested size of %d bytes.' % (sizChunkMinimumInBytes, ulRequiredSizeInBytes))
 
             sizFillUpInDwords = (ulRequiredSizeInBytes - sizChunkMinimumInBytes) / 4
+        sizChunkMinimumSizeInDwords = sizChunkMinimumInBytes / 4
 
         uiPass = atParserState['uiPass']
         if uiPass == 0:
             # In pass 0 only reserve space.
-            aulChunk = array.array('I', [0] * sizFillUpInDwords)
+            aulChunk = array.array(
+                'I',
+                [0] * (sizChunkMinimumSizeInDwords + sizFillUpInDwords)
+            )
 
             tChunkAttributes['fIsFinished'] = False
             tChunkAttributes['atData'] = aulChunk
@@ -3829,7 +3833,7 @@ class HbootImage:
                 # Add the ID.
                 aulChunk.append(self.__get_tag_id('H', 'T', 'B', 'L'))
                 # The size field does not include the ID and itself.
-                aulChunk.append(((sizChunkMinimumInBytes * 4) + sizFillUpInDwords) - 2)
+                aulChunk.append(sizChunkMinimumSizeInDwords + sizFillUpInDwords - 2)
                 # Add the binding.
                 aulChunk.fromstring(__atData['Binding']['value'].tostring())
                 aulChunk.fromstring(__atData['Binding']['mask'].tostring())
