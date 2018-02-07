@@ -58,7 +58,7 @@ class HbootImage:
     __atHeaderOverride = None
 
     # This is a list with all chunks.
-    __atChunks = None
+    __atChunkData = None
 
     # This is the environment.
     __tEnv = None
@@ -170,7 +170,7 @@ class HbootImage:
         self.__atHeaderOverride = [None] * 16
 
         # No chunks yet.
-        self.__atChunks = None
+        self.__atChunkData = None
 
         # Set the environment.
         self.__tEnv = tEnv
@@ -713,7 +713,9 @@ class HbootImage:
             usCrc ^= ((usCrc & 0xff) << 4) << 1
         return usCrc
 
-    def __build_chunk_options(self, tChunkNode):
+    def __build_chunk_options(self, tChunkAttributes, atParserState, uiChunkIndex, atAllChunks):
+        tChunkNode = tChunkAttributes['tNode']
+
         atChunk = None
 
         # Compile the options definition to a string of bytes.
@@ -800,7 +802,8 @@ class HbootImage:
                     (self.__strNetxType)
                 )
 
-        return atChunk
+        tChunkAttributes['fIsFinished'] = True
+        tChunkAttributes['aucData'] = atChunk
 
     def __get_data_contents_elf(self, tNode, strAbsFilePath, fWantLoadAddress):
         # Get the segment names to dump. It is a comma separated string.
@@ -1118,7 +1121,9 @@ class HbootImage:
         if fWantLoadAddress is True:
             atData['load_address'] = pulLoadAddress
 
-    def __build_chunk_data(self, tChunkNode):
+    def __build_chunk_data(self, tChunkAttributes, atParserState, uiChunkIndex, atAllChunks):
+        tChunkNode = tChunkAttributes['tNode']
+
         # Get the data block.
         atData = {}
         self.__get_data_contents(tChunkNode, atData, True)
@@ -1146,9 +1151,12 @@ class HbootImage:
         aulHash = array.array('I', strHash[:self.__sizHashDw * 4])
         aulChunk.extend(aulHash)
 
-        return aulChunk
+        tChunkAttributes['fIsFinished'] = True
+        tChunkAttributes['aucData'] = aulChunk
 
-    def __build_chunk_text(self, tChunkNode):
+    def __build_chunk_text(self, tChunkAttributes, atParserState, uiChunkIndex, atAllChunks):
+        tChunkNode = tChunkAttributes['tNode']
+
         # Get the text block.
         strText = self.__xml_get_all_text(tChunkNode)
 
@@ -1172,9 +1180,12 @@ class HbootImage:
         aulHash = array.array('I', strHash[:self.__sizHashDw * 4])
         aulChunk.extend(aulHash)
 
-        return aulChunk
+        tChunkAttributes['fIsFinished'] = True
+        tChunkAttributes['aucData'] = aulChunk
 
-    def __build_chunk_xip(self, tChunkNode):
+    def __build_chunk_xip(self, tChunkAttributes, atParserState, uiChunkIndex, atAllChunks):
+        tChunkNode = tChunkAttributes['tNode']
+
         # Get the data block.
         atData = {}
         self.__get_data_contents(tChunkNode, atData, True)
@@ -1274,13 +1285,7 @@ class HbootImage:
         ulOffsetRequestedData = 8
 
         # Get the current offset in bytes.
-        # It is 64 bytes for the header and the size of all chunks.
-        # FIXME: If an image starts not at the beginning of the flash, the
-        #        offset is different. Get the offset from the XML file?
-        ulOffsetCurrent = self.__ulStartOffset
-        if self.__fHasHeader is True:
-            ulOffsetCurrent += 64
-        ulOffsetCurrent += len(self.__atChunks) * 4
+        ulOffsetCurrent = atParserState['ulCurrentOffset']
 
         # The requested offset must be the current offset + the data offset
         ulOffsetCurrentData = ulOffsetCurrent + ulOffsetRequestedData
@@ -1313,7 +1318,9 @@ class HbootImage:
         strHash = tHash.digest()
         aulHash = array.array('I', strHash[:self.__sizHashDw * 4])
         aulChunk.extend(aulHash)
-        return aulChunk
+
+        tChunkAttributes['fIsFinished'] = True
+        tChunkAttributes['aucData'] = aulChunk
 
     def __get_execute_data(self, tExecuteNode, atData):
         pfnExecFunction = None
@@ -1411,7 +1418,9 @@ class HbootImage:
         atData['ulR2'] = ulR2
         atData['ulR3'] = ulR3
 
-    def __build_chunk_execute(self, tChunkNode):
+    def __build_chunk_execute(self, tChunkAttributes, atParserState, uiChunkIndex, atAllChunks):
+        tChunkNode = tChunkAttributes['tNode']
+
         __atData = {
             # The key index must be set by the user.
             'pfnExecFunction': None,
@@ -1438,9 +1447,12 @@ class HbootImage:
         aulHash = array.array('I', strHash[:self.__sizHashDw * 4])
         aulChunk.extend(aulHash)
 
-        return aulChunk
+        tChunkAttributes['fIsFinished'] = True
+        tChunkAttributes['aucData'] = aulChunk
 
-    def __build_chunk_execute_ca9(self, tChunkNode):
+    def __build_chunk_execute_ca9(self, tChunkAttributes, atParserState, uiChunkIndex, atAllChunks):
+        tChunkNode = tChunkAttributes['tNode']
+
         __atCore0 = {
             # The key index must be set by the user.
             'pfnExecFunction': 0,
@@ -1501,9 +1513,12 @@ class HbootImage:
         aulHash = array.array('I', strHash[:self.__sizHashDw * 4])
         aulChunk.extend(aulHash)
 
-        return aulChunk
+        tChunkAttributes['fIsFinished'] = True
+        tChunkAttributes['aucData'] = aulChunk
 
-    def __build_chunk_spi_macro(self, tChunkNode):
+    def __build_chunk_spi_macro(self, tChunkAttributes, atParserState, uiChunkIndex, atAllChunks):
+        tChunkNode = tChunkAttributes['tNode']
+
         # Get the device.
         strDeviceName = tChunkNode.getAttribute('device')
         if len(strDeviceName) == 0:
@@ -1544,9 +1559,10 @@ class HbootImage:
         aulHash = array.array('I', strHash[:self.__sizHashDw * 4])
         aulChunk.extend(aulHash)
 
-        return aulChunk
+        tChunkAttributes['fIsFinished'] = True
+        tChunkAttributes['aucData'] = aulChunk
 
-    def __build_chunk_skip_header(self, tChunkNode):
+    def __build_chunk_skip_header(self, tChunkNode, atParserState):
         # Get the device.
         strAbsolute = tChunkNode.getAttribute('absolute')
         sizAbsolute = len(strAbsolute)
@@ -1588,11 +1604,7 @@ class HbootImage:
                                 'than 8 bit:' % ucFill)
 
         # Get the current offset in bytes.
-        # Add the size of the ID, the length and the hash.
-        sizOffsetCurrent = self.__ulStartOffset
-        if self.__fHasHeader is True:
-            sizOffsetCurrent += 64
-        sizOffsetCurrent += len(self.__atChunks) * 4
+        sizOffsetCurrent = atParserState['ulCurrentOffset']
         # Add the size of the SKIP chunk itself to the current position.
         if(
             (self.__strNetxType == 'NETX4000_RELAXED') or
@@ -1694,9 +1706,11 @@ class HbootImage:
 
         return aulChunk, ucFill, sizSkip, strAbsFilePath
 
-    def __build_chunk_skip(self, tChunkNode):
+    def __build_chunk_skip(self, tChunkAttributes, atParserState, uiChunkIndex, atAllChunks):
+        tChunkNode = tChunkAttributes['tNode']
+
         aulChunk, ucFill, sizSkip, strAbsFilePath =\
-            self.__build_chunk_skip_header(tChunkNode)
+            self.__build_chunk_skip_header(tChunkNode, atParserState)
 
         # Append the placeholder for the skip area.
         if strAbsFilePath is not None:
@@ -1721,9 +1735,12 @@ class HbootImage:
             ulFill = ucFill + 256 * ucFill + 65536 * ucFill + 16777216 * ucFill
             aulChunk.extend([ulFill] * sizSkip)
 
-        return aulChunk
+        tChunkAttributes['fIsFinished'] = True
+        tChunkAttributes['aucData'] = aulChunk
 
-    def __build_chunk_skip_incomplete(self, tChunkNode):
+    def __build_chunk_skip_incomplete(self, tChunkAttributes, atParserState, uiChunkIndex, atAllChunks):
+        tChunkNode = tChunkAttributes['tNode']
+
         # This chunk is not allowed for images with an end marker.
         if self.__fHasEndMarker is not False:
             raise Exception(
@@ -1731,12 +1748,13 @@ class HbootImage:
                 'marker. Set "has_end" to "False".'
             )
         aulChunk, ucFill, sizSkip, strAbsFilePath =\
-            self.__build_chunk_skip_header(tChunkNode)
+            self.__build_chunk_skip_header(tChunkNode, atParserState)
 
         # Do not add any data here. The image has to end after this chunk.
         self.__fMoreChunksAllowed = False
 
-        return aulChunk
+        tChunkAttributes['fIsFinished'] = True
+        tChunkAttributes['aucData'] = aulChunk
 
     def __remove_all_whitespace(self, strData):
         astrWhitespace = [' ', '\t', '\n', '\r']
@@ -2323,7 +2341,9 @@ class HbootImage:
 
         return aulChunk
 
-    def __build_chunk_root_cert(self, tChunkNode):
+    def __build_chunk_root_cert(self, tChunkAttributes, atParserState, uiChunkIndex, atAllChunks):
+        tChunkNode = tChunkAttributes['tNode']
+
         aulChunk = None
         tFileNode = None
         for tNode in tChunkNode.childNodes:
@@ -2586,9 +2606,12 @@ class HbootImage:
             aulChunk.append(len(aulData))
             aulChunk.extend(aulData)
 
-        return aulChunk
+        tChunkAttributes['fIsFinished'] = True
+        tChunkAttributes['aucData'] = aulChunk
 
-    def __build_chunk_license_cert(self, tChunkNode):
+    def __build_chunk_license_cert(self, tChunkAttributes, atParserState, uiChunkIndex, atAllChunks):
+        tChunkNode = tChunkAttributes['tNode']
+
         aulChunk = None
         tFileNode = None
         for tNode in tChunkNode.childNodes:
@@ -2751,9 +2774,12 @@ class HbootImage:
             aulChunk.append(len(aulData))
             aulChunk.extend(aulData)
 
-        return aulChunk
+        tChunkAttributes['fIsFinished'] = True
+        tChunkAttributes['aucData'] = aulChunk
 
-    def __build_chunk_cr7sw(self, tChunkNode):
+    def __build_chunk_cr7sw(self, tChunkAttributes, atParserState, uiChunkIndex, atAllChunks):
+        tChunkNode = tChunkAttributes['tNode']
+
         aulChunk = None
         tFileNode = None
         for tNode in tChunkNode.childNodes:
@@ -2942,9 +2968,12 @@ class HbootImage:
             aulChunk.append(len(aulData))
             aulChunk.extend(aulData)
 
-        return aulChunk
+        tChunkAttributes['fIsFinished'] = True
+        tChunkAttributes['aucData'] = aulChunk
 
-    def __build_chunk_ca9sw(self, tChunkNode):
+    def __build_chunk_ca9sw(self, tChunkAttributes, atParserState, uiChunkIndex, atAllChunks):
+        tChunkNode = tChunkAttributes['tNode']
+
         aulChunk = None
         tFileNode = None
         for tNode in tChunkNode.childNodes:
@@ -3168,9 +3197,12 @@ class HbootImage:
             aulChunk.append(len(aulData))
             aulChunk.extend(aulData)
 
-        return aulChunk
+        tChunkAttributes['fIsFinished'] = True
+        tChunkAttributes['aucData'] = aulChunk
 
-    def __build_chunk_memory_device_up(self, tChunkNode):
+    def __build_chunk_memory_device_up(self, tChunkAttributes, atParserState, uiChunkIndex, atAllChunks):
+        tChunkNode = tChunkAttributes['tNode']
+
         # Get the device.
         strDevice = tChunkNode.getAttribute('device')
 
@@ -3195,7 +3227,8 @@ class HbootImage:
         aulHash = array.array('I', strHash[:self.__sizHashDw * 4])
         aulChunk.extend(aulHash)
 
-        return aulChunk
+        tChunkAttributes['fIsFinished'] = True
+        tChunkAttributes['aucData'] = aulChunk
 
     def __usip_parse_trusted_path(self, tNodeParent, atData):
         strKeyDER = None
@@ -3291,7 +3324,9 @@ class HbootImage:
 
         return aucSignature
 
-    def __build_chunk_update_secure_info_page(self, tChunkNode):
+    def __build_chunk_update_secure_info_page(self, tChunkAttributes, atParserState, uiChunkIndex, atAllChunks):
+        tChunkNode = tChunkAttributes['tNode']
+
         aulChunk = None
 
         # Generate an array with default values where possible.
@@ -3530,7 +3565,8 @@ class HbootImage:
         # Append the signature to the chunk.
         aulChunk.fromstring(aucSignature.tostring())
 
-        return aulChunk
+        tChunkAttributes['fIsFinished'] = True
+        tChunkAttributes['aucData'] = aulChunk
 
     def __string_to_bool(self, strBool):
         strBool = string.upper(strBool)
@@ -3554,132 +3590,106 @@ class HbootImage:
             fBool = None
         return fBool
 
-    def __parse_chunks(self, tImageNode):
+    def __add_chunk(self, atChunks, strName, tNode, pfnParser):
+        tAttr = {
+            'strName': strName,
+            'pfnParser': pfnParser,
+            'fIsFinished': False,
+            'tNode': tNode,
+            'aucData': None
+        }
+        atChunks.append(tAttr)
+
+    def __collect_chunks(self, tImageNode):
+        atChunks = []
+
         # Loop over all nodes, these are the chunks.
         for tChunkNode in tImageNode.childNodes:
             if tChunkNode.nodeType == tChunkNode.ELEMENT_NODE:
                 strChunkName = tChunkNode.localName
                 if strChunkName == 'Options':
                     # Found an option node.
-                    if self.__fMoreChunksAllowed is not True:
-                        raise Exception('No more chunks allowed.')
-                    atChunk = self.__build_chunk_options(tChunkNode)
-                    self.__atChunks.extend(atChunk)
+                    self.__add_chunk(atChunks, strChunkName, tChunkNode, self.__build_chunk_options)
                 elif strChunkName == 'Data':
                     # Found a data node.
-                    if self.__fMoreChunksAllowed is not True:
-                        raise Exception('No more chunks allowed.')
                     if self.__tImageType == self.__IMAGE_TYPE_SECMEM:
                         raise Exception('Data chunks are not allowed '
                                         'in SECMEM images.')
-                    atChunk = self.__build_chunk_data(tChunkNode)
-                    self.__atChunks.extend(atChunk)
+                    self.__add_chunk(atChunks, strChunkName, tChunkNode, self.__build_chunk_data)
                 elif strChunkName == 'Text':
                     # Found a text node.
-                    if self.__fMoreChunksAllowed is not True:
-                        raise Exception('No more chunks allowed.')
                     if self.__tImageType == self.__IMAGE_TYPE_SECMEM:
                         raise Exception('Text chunks are not allowed '
                                         'in SECMEM images.')
-                    atChunk = self.__build_chunk_text(tChunkNode)
-                    self.__atChunks.extend(atChunk)
+                    self.__add_chunk(atChunks, strChunkName, tChunkNode, self.__build_chunk_text)
                 elif strChunkName == 'XIP':
                     # Found an XIP node.
-                    if self.__fMoreChunksAllowed is not True:
-                        raise Exception('No more chunks allowed.')
                     if self.__tImageType == self.__IMAGE_TYPE_SECMEM:
                         raise Exception('XIP chunks are not allowed '
                                         'in SECMEM images.')
-                    atChunk = self.__build_chunk_xip(tChunkNode)
-                    self.__atChunks.extend(atChunk)
+                    self.__add_chunk(atChunks, strChunkName, tChunkNode, self.__build_chunk_xip)
                 elif strChunkName == 'Execute':
                     # Found an execute node.
-                    if self.__fMoreChunksAllowed is not True:
-                        raise Exception('No more chunks allowed.')
                     if self.__tImageType == self.__IMAGE_TYPE_SECMEM:
                         raise Exception('Execute chunks are not allowed '
                                         'in SECMEM images.')
-                    atChunk = self.__build_chunk_execute(tChunkNode)
-                    self.__atChunks.extend(atChunk)
+                    self.__add_chunk(atChunks, strChunkName, tChunkNode, self.__build_chunk_execute)
                 elif strChunkName == 'ExecuteCA9':
                     # Found an execute node.
-                    if self.__fMoreChunksAllowed is not True:
-                        raise Exception('No more chunks allowed.')
                     if self.__tImageType == self.__IMAGE_TYPE_SECMEM:
                         raise Exception('ExecuteCA9 chunks are not allowed '
                                         'in SECMEM images.')
                     if self.__strNetxType == 'NETX56':
                         raise Exception('ExecuteCA9 chunks are not allowed '
                                         'on netx56.')
-                    atChunk = self.__build_chunk_execute_ca9(tChunkNode)
-                    self.__atChunks.extend(atChunk)
+                    self.__add_chunk(atChunks, strChunkName, tChunkNode, self.__build_chunk_execute_ca9)
                 elif strChunkName == 'SpiMacro':
                     # Found a SPI macro.
-                    if self.__fMoreChunksAllowed is not True:
-                        raise Exception('No more chunks allowed.')
                     if self.__tImageType == self.__IMAGE_TYPE_SECMEM:
                         raise Exception('SpiMacro chunks are not allowed '
                                         'in SECMEM images.')
-                    atChunk = self.__build_chunk_spi_macro(tChunkNode)
-                    self.__atChunks.extend(atChunk)
+                    self.__add_chunk(atChunks, strChunkName, tChunkNode, self.__build_chunk_spi_macro)
                 elif strChunkName == 'Skip':
                     # Found a skip node.
-                    if self.__fMoreChunksAllowed is not True:
-                        raise Exception('No more chunks allowed.')
                     if self.__tImageType == self.__IMAGE_TYPE_SECMEM:
                         raise Exception('Skip chunks are not allowed '
                                         'in SECMEM images.')
-                    atChunk = self.__build_chunk_skip(tChunkNode)
-                    self.__atChunks.extend(atChunk)
+                    self.__add_chunk(atChunks, strChunkName, tChunkNode, self.__build_chunk_skip)
                 elif strChunkName == 'SkipIncomplete':
                     # Found a skip incomplete node.
-                    if self.__fMoreChunksAllowed is not True:
-                        raise Exception('No more chunks allowed.')
                     if self.__tImageType == self.__IMAGE_TYPE_SECMEM:
                         raise Exception('SkipIncomplete chunks are not '
                                         'allowed in SECMEM images.')
-                    atChunk = self.__build_chunk_skip_incomplete(tChunkNode)
-                    self.__atChunks.extend(atChunk)
+                    self.__add_chunk(atChunks, strChunkName, tChunkNode, self.__build_chunk_skip_incomplete)
                 elif strChunkName == 'RootCert':
                     # Found a root certificate node.
-                    if self.__fMoreChunksAllowed is not True:
-                        raise Exception('No more chunks allowed.')
                     if self.__tImageType == self.__IMAGE_TYPE_SECMEM:
                         raise Exception('RootCert chunks are not allowed '
                                         'in SECMEM images.')
                     if self.__strNetxType == 'NETX56':
                         raise Exception('RootCert chunks are not allowed '
                                         'on netx56.')
-                    atChunk = self.__build_chunk_root_cert(tChunkNode)
-                    self.__atChunks.extend(atChunk)
+                    self.__add_chunk(atChunks, strChunkName, tChunkNode, self.__build_chunk_root_cert)
                 elif strChunkName == 'LicenseCert':
                     # Found a license certificate node.
-                    if self.__fMoreChunksAllowed is not True:
-                        raise Exception('No more chunks allowed.')
                     if self.__tImageType == self.__IMAGE_TYPE_SECMEM:
                         raise Exception('LicenseCert chunks are not allowed '
                                         'in SECMEM images.')
                     if self.__strNetxType == 'NETX56':
                         raise Exception('LicenseCert chunks are not allowed '
                                         'on netx56.')
-                    atChunk = self.__build_chunk_license_cert(tChunkNode)
-                    self.__atChunks.extend(atChunk)
+                    self.__add_chunk(atChunks, strChunkName, tChunkNode, self.__build_chunk_license_cert)
                 elif strChunkName == 'CR7Software':
                     # Found a CR7 software node.
-                    if self.__fMoreChunksAllowed is not True:
-                        raise Exception('No more chunks allowed.')
                     if self.__tImageType == self.__IMAGE_TYPE_SECMEM:
                         raise Exception('CR7Software chunks are not allowed '
                                         'in SECMEM images.')
                     if self.__strNetxType == 'NETX56':
                         raise Exception('CR7Software chunks are not allowed '
                                         'on netx56.')
-                    atChunk = self.__build_chunk_cr7sw(tChunkNode)
-                    self.__atChunks.extend(atChunk)
+                    self.__add_chunk(atChunks, strChunkName, tChunkNode, self.__build_chunk_cr7sw)
                 elif strChunkName == 'CA9Software':
                     # Found a CA9 software node.
-                    if self.__fMoreChunksAllowed is not True:
-                        raise Exception('No more chunks allowed.')
                     if self.__tImageType == self.__IMAGE_TYPE_SECMEM:
                         raise Exception(
                             'CA9Software chunks are not allowed '
@@ -3690,34 +3700,82 @@ class HbootImage:
                             'CA9Software chunks are not allowed '
                             'on netx56.'
                         )
-                    atChunk = self.__build_chunk_ca9sw(tChunkNode)
-                    self.__atChunks.extend(atChunk)
+                    self.__add_chunk(atChunks, strChunkName, tChunkNode, self.__build_chunk_ca9sw)
                 elif strChunkName == 'MemoryDeviceUp':
                     # Found a memory device up node.
-                    if self.__fMoreChunksAllowed is not True:
-                        raise Exception('No more chunks allowed.')
                     if self.__tImageType == self.__IMAGE_TYPE_SECMEM:
                         raise Exception(
                             'MemoryDeviceUp chunks are not '
                             'allowed in SECMEM images.'
                         )
-                    atChunk = self.__build_chunk_memory_device_up(tChunkNode)
-                    self.__atChunks.extend(atChunk)
+                    self.__add_chunk(atChunks, strChunkName, tChunkNode, self.__build_chunk_memory_device_up)
                 elif strChunkName == 'UpdateSecureInfoPage':
                     # Found an USIP up node.
-                    if self.__fMoreChunksAllowed is not True:
-                        raise Exception('No more chunks allowed.')
                     if self.__tImageType == self.__IMAGE_TYPE_SECMEM:
                         raise Exception(
                             'UpdateSecureInfoPage chunks are not '
                             'allowed in SECMEM images.'
                         )
-                    atChunk = self.__build_chunk_update_secure_info_page(
-                        tChunkNode
-                    )
-                    self.__atChunks.extend(atChunk)
+                    self.__add_chunk(atChunks, strChunkName, tChunkNode, self.__build_chunk_update_secure_info_page)
                 else:
                     raise Exception('Unknown chunk ID: %s' % strChunkName)
+
+        return atChunks
+
+    def __parse_chunks(self, atChunks):
+        # Get the initial offset.
+        ulOffsetInitial = self.__ulStartOffset
+        if self.__fHasHeader is True:
+            ulOffsetInitial += 64
+
+        # Create a new state.
+        atState = {
+            'uiPass': 0,
+            'atChunks': [],
+            'ulCurrentOffset': ulOffsetInitial,
+            'fMoreChunksAllowed': True
+        }
+
+        # All operations should be finished in 2 passes.
+        fAllChunksAreFinished = None
+        for uiPass in range(0, 2):
+            # Set the current pass.
+            atState['uiPass'] = uiPass
+
+            atState['ulCurrentOffset'] = ulOffsetInitial
+            atState['fMoreChunksAllowed'] = True
+            fAllChunksAreFinished = True
+
+            # Loop over all chunks.
+            sizChunks = len(atChunks)
+            for uiChunkIndex in range(0, sizChunks):
+                tAttr = atChunks[uiChunkIndex]
+
+                if atState['fMoreChunksAllowed'] is not True:
+                    raise Exception('No more chunks allowed.')
+
+                # Call the parser if the chunk is not finished yet.
+                if tAttr['fIsFinished'] is not True:
+                    # Call the parser.
+                    tAttr['pfnParser'](tAttr, atState, uiChunkIndex, atChunks)
+                    # Update the global finish state.
+                    fAllChunksAreFinished &= tAttr['fIsFinished']
+                    # Update the current position.
+                    if self.__tImageType == self.__IMAGE_TYPE_SECMEM:
+                        sizChunkInBytes = len(tAttr['aucData'])
+                    else:
+                        sizChunkInBytes = len(tAttr['aucData']) * 4
+                    atState['ulCurrentOffset'] += sizChunkInBytes
+
+            if fAllChunksAreFinished is True:
+                break
+
+        if fAllChunksAreFinished is False:
+            raise Exception('Some chunks are still not finished.')
+
+        # Collect all data from the chunks.
+        for tAttr in atChunks:
+            self.__atChunkData.extend(tAttr['aucData'])
 
     def parse_image(self, tInput):
         # Parsing an image requires the patch definition.
@@ -3777,9 +3835,9 @@ class HbootImage:
         # INTRAM and REGULAR images are DWORD based, SECMEM images are byte
         # based.
         if self.__tImageType == self.__IMAGE_TYPE_SECMEM:
-            self.__atChunks = array.array('B')
+            self.__atChunkData = array.array('B')
         else:
-            self.__atChunks = array.array('I')
+            self.__atChunkData = array.array('I')
 
         # Get the hash size. Default to 1 DWORD.
         strHashSize = tXmlRootNode.getAttribute('hashsize')
@@ -3831,6 +3889,7 @@ class HbootImage:
         self.__fMoreChunksAllowed = True
 
         # Loop over all children.
+        atChunks = []
         for tImageNode in tXmlRootNode.childNodes:
             # Is this a node element?
             if tImageNode.nodeType == tImageNode.ELEMENT_NODE:
@@ -3844,11 +3903,13 @@ class HbootImage:
                     self.__parse_header_options(tImageNode)
 
                 elif tImageNode.localName == 'Chunks':
-                    self.__parse_chunks(tImageNode)
+                    atChunks.extend(self.__collect_chunks(tImageNode))
                 else:
                     raise Exception(
                         'Unknown element: %s' % tImageNode.localName
                     )
+
+        self.__parse_chunks(atChunks)
 
     def __crc7(self, strData):
         ucCrc = 0
@@ -3873,7 +3934,7 @@ class HbootImage:
             aucZone3 = None
 
             # Get the size of the complete image.
-            uiImageSize = self.__atChunks.buffer_info()[1]
+            uiImageSize = self.__atChunkData.buffer_info()[1]
 
             # Up to 29 bytes fit into zone 2.
             if uiImageSize <= 29:
@@ -3884,7 +3945,7 @@ class HbootImage:
                 aucZone2.append(uiImageSize)
 
                 # Add the options.
-                aucZone2.extend(self.__atChunks)
+                aucZone2.extend(self.__atChunkData)
 
                 # Fill up zone2 to 29 bytes.
                 if uiImageSize < 29:
@@ -3908,7 +3969,7 @@ class HbootImage:
                 aucTmp.append(uiImageSize)
 
                 # Add the options.
-                aucTmp.extend(self.__atChunks)
+                aucTmp.extend(self.__atChunkData)
 
                 # Fill up the data to 61 bytes.
                 if uiImageSize < 61:
@@ -3951,7 +4012,7 @@ class HbootImage:
 
         else:
             # Get a copy of the chunk data.
-            atChunks = array.array('I', self.__atChunks)
+            atChunks = array.array('I', self.__atChunkData)
 
             # Terminate the chunks with a DWORD of 0.
             atChunks.append(0x00000000)
@@ -3963,7 +4024,7 @@ class HbootImage:
             atHeader = self.__combine_headers(atHeaderStandard)
 
             # Get a fresh copy of the chunk data.
-            atChunks = array.array('I', self.__atChunks)
+            atChunks = array.array('I', self.__atChunkData)
 
             # Terminate the chunks with a DWORD of 0.
             atEndMarker = array.array('I', [0x00000000])
