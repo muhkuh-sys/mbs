@@ -866,11 +866,61 @@ class HbootImage:
 
         return strData, pulLoadAddress
 
+    def __get_data_contents_key(self, tKeyNode):
+        strData = None
+
+        if(
+            (self.__strNetxType == 'NETX90_MPW') or
+            (self.__strNetxType == 'NETX90_FULL')
+        ):
+            aucData = array.array('B')
+
+            atKey = {}
+            self.__usip_parse_trusted_path(tKeyNode, atKey)
+
+            iKeyTyp_1ECC_2RSA = atKey['iKeyTyp_1ECC_2RSA']
+            atAttr = atKey['atAttr']
+            if iKeyTyp_1ECC_2RSA == 2:
+                # Add the algorithm.
+                aucData.append(iKeyTyp_1ECC_2RSA)
+                # Add the strength.
+                aucData.append(atAttr['id'])
+                # Add the public modulus N and fill up to 64 bytes.
+                self.__add_array_with_fillup(aucData, atAttr['mod'], 512)
+                # Add the exponent E.
+                aucData.extend(atAttr['exp'])
+
+            elif iKeyTyp_1ECC_2RSA == 1:
+                # Add the algorithm.
+                aucData.append(iKeyTyp_1ECC_2RSA)
+                # Add the strength.
+                aucData.append(atAttr['id'])
+                # Write all fields and fill up to 64 bytes.
+                self.__add_array_with_fillup(aucData, atAttr['Qx'], 64)
+                self.__add_array_with_fillup(aucData, atAttr['Qy'], 64)
+                self.__add_array_with_fillup(aucData, atAttr['a'], 64)
+                self.__add_array_with_fillup(aucData, atAttr['b'], 64)
+                self.__add_array_with_fillup(aucData, atAttr['p'], 64)
+                self.__add_array_with_fillup(aucData, atAttr['Gx'], 64)
+                self.__add_array_with_fillup(aucData, atAttr['Gy'], 64)
+                self.__add_array_with_fillup(aucData, atAttr['n'], 64)
+                aucData.extend([0, 0, 0])
+
+            strData = aucData.tostring()
+
+        else:
+            raise Exception(
+                'Key data is not supported for the netX type "%s".' %
+                self.__strNetxType
+            )
+
+        return strData
+
     def __get_data_contents(self, tDataNode, atData, fWantLoadAddress):
         strData = None
         pulLoadAddress = None
 
-        # Look for a child node named "File".
+        # Loop over all child nodes.
         for tNode in tDataNode.childNodes:
             # Is this a node element?
             if tNode.nodeType == tNode.ELEMENT_NODE:
@@ -1015,6 +1065,19 @@ class HbootImage:
 
                     strData = aucNumbers.tostring()
 
+                elif tNode.localName == 'Key':
+                    if fWantLoadAddress is True:
+                        # Get the address.
+                        strAddress = tNode.getAttribute('address')
+                        if len(strAddress) == 0:
+                            raise Exception('The Key node has no '
+                                            'address attribute!')
+
+                        pulLoadAddress = self.__parse_numeric_expression(
+                            strAddress
+                        )
+                    strData = self.__get_data_contents_key(tNode)
+
                 elif tNode.localName == 'Concat':
                     if fWantLoadAddress is True:
                         # Get the address.
@@ -1105,6 +1168,12 @@ class HbootImage:
                                     aucNumbers.append(ucNumber)
 
                                 strDataChunk = aucNumbers.tostring()
+                                astrData.append(strDataChunk)
+
+                            elif tConcatNode.localName == 'Key':
+                                strDataChunk = self.__get_data_contents_key(
+                                    tConcatNode
+                                )
                                 astrData.append(strDataChunk)
 
                     strData = ''.join(astrData)
