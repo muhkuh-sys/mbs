@@ -803,7 +803,8 @@ class HbootImage:
                 )
 
         tChunkAttributes['fIsFinished'] = True
-        tChunkAttributes['aucData'] = atChunk
+        tChunkAttributes['atData'] = atChunk
+        tChunkAttributes['aulHash'] = array.array('I', strHash)
 
     def __get_data_contents_elf(self, tNode, strAbsFilePath, fWantLoadAddress):
         # Get the segment names to dump. It is a comma separated string.
@@ -1152,7 +1153,8 @@ class HbootImage:
         aulChunk.extend(aulHash)
 
         tChunkAttributes['fIsFinished'] = True
-        tChunkAttributes['aucData'] = aulChunk
+        tChunkAttributes['atData'] = aulChunk
+        tChunkAttributes['aulHash'] = array.array('I', strHash)
 
     def __build_chunk_text(self, tChunkAttributes, atParserState, uiChunkIndex, atAllChunks):
         tChunkNode = tChunkAttributes['tNode']
@@ -1181,7 +1183,8 @@ class HbootImage:
         aulChunk.extend(aulHash)
 
         tChunkAttributes['fIsFinished'] = True
-        tChunkAttributes['aucData'] = aulChunk
+        tChunkAttributes['atData'] = aulChunk
+        tChunkAttributes['aulHash'] = array.array('I', strHash)
 
     def __build_chunk_xip(self, tChunkAttributes, atParserState, uiChunkIndex, atAllChunks):
         tChunkNode = tChunkAttributes['tNode']
@@ -1320,7 +1323,8 @@ class HbootImage:
         aulChunk.extend(aulHash)
 
         tChunkAttributes['fIsFinished'] = True
-        tChunkAttributes['aucData'] = aulChunk
+        tChunkAttributes['atData'] = aulChunk
+        tChunkAttributes['aulHash'] = array.array('I', strHash)
 
     def __get_execute_data(self, tExecuteNode, atData):
         pfnExecFunction = None
@@ -1448,7 +1452,8 @@ class HbootImage:
         aulChunk.extend(aulHash)
 
         tChunkAttributes['fIsFinished'] = True
-        tChunkAttributes['aucData'] = aulChunk
+        tChunkAttributes['atData'] = aulChunk
+        tChunkAttributes['aulHash'] = array.array('I', strHash)
 
     def __build_chunk_execute_ca9(self, tChunkAttributes, atParserState, uiChunkIndex, atAllChunks):
         tChunkNode = tChunkAttributes['tNode']
@@ -1514,7 +1519,8 @@ class HbootImage:
         aulChunk.extend(aulHash)
 
         tChunkAttributes['fIsFinished'] = True
-        tChunkAttributes['aucData'] = aulChunk
+        tChunkAttributes['atData'] = aulChunk
+        tChunkAttributes['aulHash'] = array.array('I', strHash)
 
     def __build_chunk_spi_macro(self, tChunkAttributes, atParserState, uiChunkIndex, atAllChunks):
         tChunkNode = tChunkAttributes['tNode']
@@ -1560,9 +1566,12 @@ class HbootImage:
         aulChunk.extend(aulHash)
 
         tChunkAttributes['fIsFinished'] = True
-        tChunkAttributes['aucData'] = aulChunk
+        tChunkAttributes['atData'] = aulChunk
+        tChunkAttributes['aulHash'] = array.array('I', strHash)
 
-    def __build_chunk_skip_header(self, tChunkNode, atParserState):
+    def __build_chunk_skip_header(self, tChunkAttributes, atParserState):
+        tChunkNode = tChunkAttributes['tNode']
+
         # Get the device.
         strAbsolute = tChunkNode.getAttribute('absolute')
         sizAbsolute = len(strAbsolute)
@@ -1704,13 +1713,13 @@ class HbootImage:
         aulHash = array.array('I', strHash[:self.__sizHashDw * 4])
         aulChunk.extend(aulHash)
 
+        tChunkAttributes['aulHash'] = array.array('I', strHash)
+
         return aulChunk, ucFill, sizSkip, strAbsFilePath
 
     def __build_chunk_skip(self, tChunkAttributes, atParserState, uiChunkIndex, atAllChunks):
-        tChunkNode = tChunkAttributes['tNode']
-
         aulChunk, ucFill, sizSkip, strAbsFilePath =\
-            self.__build_chunk_skip_header(tChunkNode, atParserState)
+            self.__build_chunk_skip_header(tChunkAttributes, atParserState)
 
         # Append the placeholder for the skip area.
         if strAbsFilePath is not None:
@@ -1736,11 +1745,9 @@ class HbootImage:
             aulChunk.extend([ulFill] * sizSkip)
 
         tChunkAttributes['fIsFinished'] = True
-        tChunkAttributes['aucData'] = aulChunk
+        tChunkAttributes['atData'] = aulChunk
 
     def __build_chunk_skip_incomplete(self, tChunkAttributes, atParserState, uiChunkIndex, atAllChunks):
-        tChunkNode = tChunkAttributes['tNode']
-
         # This chunk is not allowed for images with an end marker.
         if self.__fHasEndMarker is not False:
             raise Exception(
@@ -1748,13 +1755,13 @@ class HbootImage:
                 'marker. Set "has_end" to "False".'
             )
         aulChunk, ucFill, sizSkip, strAbsFilePath =\
-            self.__build_chunk_skip_header(tChunkNode, atParserState)
+            self.__build_chunk_skip_header(tChunkAttributes, atParserState)
 
         # Do not add any data here. The image has to end after this chunk.
         self.__fMoreChunksAllowed = False
 
         tChunkAttributes['fIsFinished'] = True
-        tChunkAttributes['aucData'] = aulChunk
+        tChunkAttributes['atData'] = aulChunk
 
     def __remove_all_whitespace(self, strData):
         astrWhitespace = [' ', '\t', '\n', '\r']
@@ -2607,7 +2614,8 @@ class HbootImage:
             aulChunk.extend(aulData)
 
         tChunkAttributes['fIsFinished'] = True
-        tChunkAttributes['aucData'] = aulChunk
+        tChunkAttributes['atData'] = aulChunk
+        tChunkAttributes['aulHash'] = None
 
     def __build_chunk_license_cert(self, tChunkAttributes, atParserState, uiChunkIndex, atAllChunks):
         tChunkNode = tChunkAttributes['tNode']
@@ -2775,7 +2783,8 @@ class HbootImage:
             aulChunk.extend(aulData)
 
         tChunkAttributes['fIsFinished'] = True
-        tChunkAttributes['aucData'] = aulChunk
+        tChunkAttributes['atData'] = aulChunk
+        tChunkAttributes['aulHash'] = None
 
     def __build_chunk_cr7sw(self, tChunkAttributes, atParserState, uiChunkIndex, atAllChunks):
         tChunkNode = tChunkAttributes['tNode']
@@ -2969,7 +2978,8 @@ class HbootImage:
             aulChunk.extend(aulData)
 
         tChunkAttributes['fIsFinished'] = True
-        tChunkAttributes['aucData'] = aulChunk
+        tChunkAttributes['atData'] = aulChunk
+        tChunkAttributes['aulHash'] = None
 
     def __build_chunk_ca9sw(self, tChunkAttributes, atParserState, uiChunkIndex, atAllChunks):
         tChunkNode = tChunkAttributes['tNode']
@@ -3198,7 +3208,8 @@ class HbootImage:
             aulChunk.extend(aulData)
 
         tChunkAttributes['fIsFinished'] = True
-        tChunkAttributes['aucData'] = aulChunk
+        tChunkAttributes['atData'] = aulChunk
+        tChunkAttributes['aulHash'] = None
 
     def __build_chunk_memory_device_up(self, tChunkAttributes, atParserState, uiChunkIndex, atAllChunks):
         tChunkNode = tChunkAttributes['tNode']
@@ -3228,7 +3239,8 @@ class HbootImage:
         aulChunk.extend(aulHash)
 
         tChunkAttributes['fIsFinished'] = True
-        tChunkAttributes['aucData'] = aulChunk
+        tChunkAttributes['atData'] = aulChunk
+        tChunkAttributes['aulHash'] = array.array('I', strHash)
 
     def __usip_parse_trusted_path(self, tNodeParent, atData):
         strKeyDER = None
@@ -3566,7 +3578,8 @@ class HbootImage:
         aulChunk.fromstring(aucSignature.tostring())
 
         tChunkAttributes['fIsFinished'] = True
-        tChunkAttributes['aucData'] = aulChunk
+        tChunkAttributes['atData'] = aulChunk
+        tChunkAttributes['aulHash'] = None
 
     def __string_to_bool(self, strBool):
         strBool = string.upper(strBool)
@@ -3596,7 +3609,8 @@ class HbootImage:
             'pfnParser': pfnParser,
             'fIsFinished': False,
             'tNode': tNode,
-            'aucData': None
+            'atData': None,
+            'aulHash': None
         }
         atChunks.append(tAttr)
 
@@ -3762,9 +3776,9 @@ class HbootImage:
                     fAllChunksAreFinished &= tAttr['fIsFinished']
                     # Update the current position.
                     if self.__tImageType == self.__IMAGE_TYPE_SECMEM:
-                        sizChunkInBytes = len(tAttr['aucData'])
+                        sizChunkInBytes = len(tAttr['atData'])
                     else:
-                        sizChunkInBytes = len(tAttr['aucData']) * 4
+                        sizChunkInBytes = len(tAttr['atData']) * 4
                     atState['ulCurrentOffset'] += sizChunkInBytes
 
             if fAllChunksAreFinished is True:
@@ -3775,7 +3789,7 @@ class HbootImage:
 
         # Collect all data from the chunks.
         for tAttr in atChunks:
-            self.__atChunkData.extend(tAttr['aucData'])
+            self.__atChunkData.extend(tAttr['atData'])
 
     def parse_image(self, tInput):
         # Parsing an image requires the patch definition.
