@@ -3581,6 +3581,272 @@ class HbootImage:
         tChunkAttributes['atData'] = aulChunk
         tChunkAttributes['aulHash'] = None
 
+    def __build_chunk_hash_table(self, tChunkAttributes, atParserState, uiChunkIndex, atAllChunks):
+        # This chunk must be build in multiple passes as it includes the hash
+        # sums of the following chunks.
+        #
+        # In the first pass, a dummy data block is created as a placeholder.
+        # This sets the address to the correct position for the following
+        # chunks.
+        #
+        # In the next passes the hash sum can be collected if the chunks are
+        # finished.
+
+        tChunkNode = tChunkAttributes['tNode']
+
+        # Get the number of chunks to include in the hash table.
+        ulNumberOfHashes = None
+        strNumberOfHashes = tChunkNode.getAttribute('entries')
+        if len(strNumberOfHashes) != 0:
+            ulNumberOfHashes = int(strNumberOfHashes, 0)
+            if (ulNumberOfHashes < 1) or (ulNumberOfHashes > 8):
+                raise Exception(
+                    'The number of hashes is invalid: %d' % ulStartOffset
+                )
+
+        # Get the required size of the chunk. Default to "None" which means
+        # no required size.
+        ulRequiredSizeInBytes = None
+        strRequiredSizeInBytes = tChunkNode.getAttribute('size')
+        if len(strRequiredSizeInBytes) != 0:
+            ulRequiredSizeInBytes = int(strRequiredSizeInBytes, 0)
+            if ulRequiredSizeInBytes < 1:
+                raise Exception(
+                    'The required size must be positive: %d' %
+                    ulRequiredSizeInBytes
+                )
+            if (ulRequiredSizeInBytes & 3) != 0:
+                raise Exception(
+                    'The required size must be a multiple of 4: %d' %
+                    ulRequiredSizeInBytes
+                )
+            # There should be an upper limit or some idiots will generate
+            # 16MB chunks.
+            if ulRequiredSizeInBytes > 65536:
+                raise Exception(
+                    'The required size must be smaller than 65536: %d' %
+                    ulRequiredSizeInBytes
+                )
+
+        __atData = {
+            # The RootPublicKey must be set by the user.
+            'Key': {
+                'type': None,
+                'id': None,
+                'mod': None,
+                'exp': None,
+                'der': None
+            },
+
+            # The Binding must be set by the user.
+            'Binding': {
+                'mask': None,
+                'ref': None
+            }
+        }
+
+        # Loop over all children.
+        for tNode in tChunkNode.childNodes:
+            if tNode.nodeType == tNode.ELEMENT_NODE:
+                if tNode.localName == 'Key':
+                    self.__usip_parse_trusted_path(tNode, __atData['Key'])
+
+                elif tNode.localName == 'Binding':
+                    __atData['Binding']['value'] = self.__cert_parse_binding(
+                        tNode,
+                        'Value'
+                    )
+                    __atData['Binding']['mask'] = self.__cert_parse_binding(
+                        tNode,
+                        'Mask'
+                    )
+
+                else:
+                    raise Exception('Unexpected node: %s' %
+                                    tNode.localName)
+
+        # Check if all required data was set.
+        astrErr = []
+        if __atData['Key']['der'] is None:
+            astrErr.append('No key set in HTBL.')
+        if __atData['Binding']['mask'] is None:
+            astrErr.append('No "mask" set in the Binding.')
+        if __atData['Binding']['value'] is None:
+            astrErr.append('No "value" set in the Binding.')
+        if len(astrErr) != 0:
+            raise Exception('\n'.join(astrErr))
+
+        # Get the size of the signature.
+        iKeyTyp_1ECC_2RSA = __atData['Key']['iKeyTyp_1ECC_2RSA']
+        atAttr = __atData['Key']['atAttr']
+        if iKeyTyp_1ECC_2RSA == 1:
+            sizKeyInDwords = len(atAttr['Qx']) / 4
+            sizSignatureInDwords = 2 * sizKeyInDwords
+        elif iKeyTyp_1ECC_2RSA == 2:
+            sizKeyInDwords = len(atAttr['mod']) / 4
+            sizSignatureInDwords = sizKeyInDwords
+
+        # The minimum size of the HTBL chunk is...
+        #    4 bytes ID
+        sizChunkMinimumInBytes = 4
+        #    4 bytes length
+        sizChunkMinimumInBytes += 4
+        #   56 bytes binding
+        sizChunkMinimumInBytes += 56
+        #    4 bytes number of hashes "n"
+        sizChunkMinimumInBytes += 4
+        #   48 * "n" bytes hash table
+        sizChunkMinimumInBytes += ulNumberOfHashes * 48
+        #  "s" bytes for the signature
+        sizChunkMinimumInBytes += sizSignatureInDwords * 4
+
+        if ulRequiredSizeInBytes is None:
+            sizFillUpInDwords = 0
+        else:
+            if sizChunkMinimumInBytes > ulRequiredSizeInBytes:
+                raise Exception('The HashTable size has a minimum size of %d bytes, which exceeds the requested size of %d bytes.' % (sizChunkMinimumInBytes, ulRequiredSizeInBytes))
+
+            sizFillUpInDwords = (ulRequiredSizeInBytes - sizChunkMinimumInBytes) / 4
+
+        uiPass = atParserState['uiPass']
+        if uiPass == 0:
+            # In pass 0 only reserve space.
+            aulChunk = array.array('I', [0] * sizFillUpInDwords)
+
+            tChunkAttributes['fIsFinished'] = False
+            tChunkAttributes['atData'] = aulChunk
+            tChunkAttributes['aulHash'] = None
+
+        else:
+            # This is the list of chunk names which require a hash table
+            # entry.
+            astrChunksWithEntry = [
+                'Firewall',    # FRWL
+                'Skip',        # SKIP
+                'SecureCopy',  # SCPY
+                'Text',        # TEXT
+                'XIP',         # This is done with a TEXT chunk.
+                'Data',        # DATA
+                'Register',    # REGI
+                'Next',        # NEXT
+                'Execute'      # EXEC
+            ]
+
+            # Collect hash sums of the next chunks.
+            atHashes = []
+            sizAllChunks = len(atAllChunks)
+            for uiChunkIndex in range(uiChunkIndex + 1, sizAllChunks):
+                tAttr = atAllChunks[uiChunkIndex]
+
+                # Is this one of the chunks which needs a hash entry?
+                strChunkName = tAttr['strName']
+                if strChunkName in astrChunksWithEntry:
+                    # Is this chunk already finished?
+                    if tAttr['fIsFinished'] is not True:
+                        # The chunk is not finished. Try again in the next pass.
+                        break
+                    else:
+                        # Add the hash to the list.
+                        atHashes.append(tAttr['aulHash'])
+
+                        # Found all hashes?
+                        if len(atHashes) == ulNumberOfHashes:
+                            break
+
+            # Found all hashes?
+            if len(atHashes) == ulNumberOfHashes:
+                # Yes, all hashes found. Now build the chunk.
+                aulChunk = array.array('I')
+                # Add the ID.
+                aulChunk.append(self.__get_tag_id('H', 'T', 'B', 'L'))
+                # The size field does not include the ID and itself.
+                aulChunk.append(((sizChunkMinimumInBytes * 4) + sizFillUpInDwords) - 2)
+                # Add the binding.
+                aulChunk.fromstring(__atData['Binding']['value'].tostring())
+                aulChunk.fromstring(__atData['Binding']['mask'].tostring())
+                # Append the number of hashes.
+                aulChunk.append(ulNumberOfHashes)
+                # Append all hashes.
+                for aulHash in atHashes:
+                    aulChunk.extend(aulHash)
+                # Append the fill-up.
+                aulChunk.extend([0] * sizFillUpInDwords)
+
+                # Get the key in DER encoded format.
+                strKeyDER = __atData['Key']['der']
+
+                # Create a temporary file for the keypair.
+                iFile, strPathKeypair = tempfile.mkstemp(
+                    suffix='der',
+                    prefix='tmp_hboot_image',
+                    dir=None,
+                    text=False
+                )
+                os.close(iFile)
+
+                # Create a temporary file for the data to sign.
+                iFile, strPathSignatureInputData = tempfile.mkstemp(
+                    suffix='bin',
+                    prefix='tmp_hboot_image',
+                    dir=None,
+                    text=False
+                )
+                os.close(iFile)
+
+                # Write the DER key to the temporary file.
+                tFile = open(strPathKeypair, 'wt')
+                tFile.write(strKeyDER)
+                tFile.close()
+
+                # Write the data to sign to the temporary file.
+                tFile = open(strPathSignatureInputData, 'wb')
+                tFile.write(aulChunk.tostring())
+                tFile.close()
+
+                if iKeyTyp_1ECC_2RSA == 1:
+                    astrCmd = [
+                        self.__cfg_openssl,
+                        'dgst',
+                        '-sign', strPathKeypair,
+                        '-keyform', 'DER',
+                        '-sha384'
+                    ]
+                    astrCmd.extend(self.__cfg_openssloptions)
+                    astrCmd.append(strPathSignatureInputData)
+                    strEccSignature = subprocess.check_output(astrCmd)
+                    aucEccSignature = array.array('B', strEccSignature)
+
+                    # Parse the signature.
+                    aucSignature = self.__openssl_ecc_get_signature(aucEccSignature, sizKeyInDwords * 4)
+
+                elif iKeyTyp_1ECC_2RSA == 2:
+                    astrCmd = [
+                        self.__cfg_openssl,
+                        'dgst',
+                        '-sign', strPathKeypair,
+                        '-keyform', 'DER',
+                        '-sigopt', 'rsa_padding_mode:pss',
+                        '-sigopt', 'rsa_pss_saltlen:-1',
+                        '-sha384'
+                    ]
+                    astrCmd.extend(self.__cfg_openssloptions)
+                    astrCmd.append(strPathSignatureInputData)
+                    strSignatureMirror = subprocess.check_output(astrCmd)
+                    aucSignature = array.array('B', strSignatureMirror)
+                    # Mirror the signature.
+                    aucSignature.reverse()
+
+                # Remove the temp files.
+                os.remove(strPathKeypair)
+                os.remove(strPathSignatureInputData)
+
+                # Append the signature to the chunk.
+                aulChunk.fromstring(aucSignature.tostring())
+
+                tChunkAttributes['fIsFinished'] = True
+                tChunkAttributes['atData'] = aulChunk
+                tChunkAttributes['aulHash'] = None
+
     def __string_to_bool(self, strBool):
         strBool = string.upper(strBool)
         if(
@@ -3724,13 +3990,21 @@ class HbootImage:
                         )
                     self.__add_chunk(atChunks, strChunkName, tChunkNode, self.__build_chunk_memory_device_up)
                 elif strChunkName == 'UpdateSecureInfoPage':
-                    # Found an USIP up node.
+                    # Found an USIP node.
                     if self.__tImageType == self.__IMAGE_TYPE_SECMEM:
                         raise Exception(
                             'UpdateSecureInfoPage chunks are not '
                             'allowed in SECMEM images.'
                         )
                     self.__add_chunk(atChunks, strChunkName, tChunkNode, self.__build_chunk_update_secure_info_page)
+                elif strChunkName == 'HashTable':
+                    # Found a HTBL node.
+                    if self.__tImageType == self.__IMAGE_TYPE_SECMEM:
+                        raise Exception(
+                            'HashTable chunks are not '
+                            'allowed in SECMEM images.'
+                        )
+                    self.__add_chunk(atChunks, strChunkName, tChunkNode, self.__build_chunk_hash_table)
                 else:
                     raise Exception('Unknown chunk ID: %s' % strChunkName)
 
