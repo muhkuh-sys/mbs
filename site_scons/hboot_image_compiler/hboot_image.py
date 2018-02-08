@@ -1504,14 +1504,58 @@ class HbootImage:
         }
         self.__get_execute_data(tChunkNode, __atData)
 
+        # netX90 has some strange additional options.
+        ulFlags = None
+        sizDataInDwords = 5
+        if(
+            (self.__strNetxType == 'NETX90_MPW') or
+            (self.__strNetxType == 'NETX90_FULL')
+        ):
+            sizDataInDwords = 6
+
+            # Check if the APP CPU should be started.
+            fStartAppCpu = False
+            strBool = tChunkNode.getAttribute('start_app')
+            if len(strBool) != 0:
+                fBool = self.__string_to_bool(strBool)
+                if fBool is not None:
+                    fStartAppCpu = fBool
+
+            # Check if the firewall settings should be applied.
+            fApplyFirewallSettings = False
+            strBool = tChunkNode.getAttribute('apply_firewall')
+            if len(strBool) != 0:
+                fBool = self.__string_to_bool(strBool)
+                if fBool is not None:
+                    fApplyFirewallSettings = fBool
+
+            # Check if debugging should be activated.
+            fActivateDebugging = False
+            strBool = tChunkNode.getAttribute('activate_debugging')
+            if len(strBool) != 0:
+                fBool = self.__string_to_bool(strBool)
+                if fBool is not None:
+                    fActivateDebugging = fBool
+
+            # Combine all flags.
+            ulFlags = 0
+            if fStartAppCpu is True:
+                ulFlags |= 1
+            if fApplyFirewallSettings is True:
+                ulFlags |= 2
+            if fActivateDebugging is True:
+                ulFlags |= 4
+
         aulChunk = array.array('I')
         aulChunk.append(self.__get_tag_id('E', 'X', 'E', 'C'))
-        aulChunk.append(5 + self.__sizHashDw)
+        aulChunk.append(sizDataInDwords + self.__sizHashDw)
         aulChunk.append(__atData['pfnExecFunction'])
         aulChunk.append(__atData['ulR0'])
         aulChunk.append(__atData['ulR1'])
         aulChunk.append(__atData['ulR2'])
         aulChunk.append(__atData['ulR3'])
+        if ulFlags is not None:
+            aulChunk.append(ulFlags)
 
         # Get the hash for the chunk.
         tHash = hashlib.sha384()
