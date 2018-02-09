@@ -3835,40 +3835,55 @@ class HbootImage:
             tChunkAttributes['aulHash'] = None
 
         else:
+            sizAllChunks = len(atAllChunks)
+            sizHtblFirstChunk = uiChunkIndex + 1
+            sizHtblLastChunkPlus1 = sizHtblFirstChunk + ulNumberOfHashes
+
+            # Are enough chunks left?
+            if sizHtblLastChunkPlus1 > sizAllChunks:
+                raise Exception(
+                    'The hash table should include the chunks [%d,%d[ '
+                    'but there are only %d chunks.' % (
+                        sizHtblFirstChunk,
+                        sizHtblLastChunkPlus1,
+                        sizAllChunks
+                    )
+                )
+
             # This is the list of chunk names which require a hash table
-            # entry.
-            astrChunksWithEntry = [
-                'Firewall',    # FRWL
-                'Skip',        # SKIP
-                'SecureCopy',  # SCPY
-                'Text',        # TEXT
-                'XIP',         # This is done with a TEXT chunk.
-                'Data',        # DATA
-                'Register',    # REGI
-                'Next',        # NEXT
-                'Execute'      # EXEC
+            # entry. Other chunks are not allowed to prevent confusion.
+            astrAllowedChunks = [
+                'Options',         # OPTS
+                'SpiMacro',        # SPIM
+                'MemoryDeviceUp',  # MDUP
+                'Firewall',        # FRWL
+                'Skip',            # SKIP
+                'SecureCopy',      # SCPY
+                'Text',            # TEXT
+                'XIP',             # This is done with a TEXT chunk.
+                'Data',            # DATA
+                'Register',        # REGI
+                'Next',            # NEXT
+                'Execute'          # EXEC
             ]
 
             # Collect hash sums of the next chunks.
             atHashes = []
-            sizAllChunks = len(atAllChunks)
-            for uiChunkIndex in range(uiChunkIndex + 1, sizAllChunks):
+            for uiChunkIndex in range(sizHtblFirstChunk, sizHtblLastChunkPlus1):
                 tAttr = atAllChunks[uiChunkIndex]
 
                 # Is this one of the chunks which needs a hash entry?
                 strChunkName = tAttr['strName']
-                if strChunkName in astrChunksWithEntry:
-                    # Is this chunk already finished?
-                    if tAttr['fIsFinished'] is not True:
-                        # The chunk is not finished. Try again in the next pass.
-                        break
-                    else:
-                        # Add the hash to the list.
-                        atHashes.append(tAttr['aulHash'])
+                if strChunkName not in astrAllowedChunks:
+                    raise Exception('A "%s" chunk can not be included in a HashTable.' % strChunkName)
 
-                        # Found all hashes?
-                        if len(atHashes) == ulNumberOfHashes:
-                            break
+                # Is this chunk already finished?
+                if tAttr['fIsFinished'] is not True:
+                    # The chunk is not finished. Try again in the next pass.
+                    break
+                else:
+                    # Add the hash to the list.
+                    atHashes.append(tAttr['aulHash'])
 
             # Found all hashes?
             if len(atHashes) == ulNumberOfHashes:
