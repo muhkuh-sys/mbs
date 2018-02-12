@@ -3742,6 +3742,8 @@ class HbootImage:
                 )
 
         __atData = {
+            'TargetInfoPage': None,
+
             # The RootPublicKey must be set by the user.
             'Key': {
                 'type': None,
@@ -3750,6 +3752,8 @@ class HbootImage:
                 'exp': None,
                 'der': None
             },
+
+            'RootKeyIndex': None,
 
             # The Binding must be set by the user.
             'Binding': {
@@ -3761,8 +3765,37 @@ class HbootImage:
         # Loop over all children.
         for tNode in tChunkNode.childNodes:
             if tNode.nodeType == tNode.ELEMENT_NODE:
-                if tNode.localName == 'Key':
+                if tNode.localName == 'TargetInfoPage':
+                    atVal = {'CAL': 0, 'COM': 1, 'APP': 2}
+                    strTarget = self.__xml_get_all_text(tNode)
+                    if strTarget in atVal:
+                        uiTarget = atVal[strTarget]
+                    else:
+                        raise Exception(
+                            'Invalid target: "%s". Valid targets: %s' % (
+                                strTarget,
+                                ', '.join(atVal.keys())
+                            )
+                        )
+                    __atData['TargetInfoPage'] = uiTarget
+
+                elif tNode.localName == 'Key':
                     self.__usip_parse_trusted_path(tNode, __atData['Key'])
+
+                elif tNode.localName == 'RootKeyIndex':
+                    # Get the root key index
+                    strIndex = self.__xml_get_all_text(tNode)
+                    if len(strIndex) == 0:
+                        raise Exception('"RootKeyIndex" has no data!')
+                    ulRootKeyIndex = self.__parse_numeric_expression(
+                        strIndex
+                    )
+                    if (ulRootKeyIndex < 0) or (ulRootKeyIndex > 31):
+                        raise Exception(
+                            'The root key index is out of range: %d' %
+                            ulRootKeyIndex
+                        )
+                    __atData['RootKeyIndex'] = ulRootKeyIndex
 
                 elif tNode.localName == 'Binding':
                     __atData['Binding']['value'] = self.__cert_parse_binding(
@@ -3780,8 +3813,12 @@ class HbootImage:
 
         # Check if all required data was set.
         astrErr = []
+        if __atData['TargetInfoPage'] is None:
+            astrErr.append('No target info page set in HTBL.')
         if __atData['Key']['der'] is None:
             astrErr.append('No key set in HTBL.')
+        if __atData['RootKeyIndex'] is None:
+            astrErr.append('No root key index set in HTBL.')
         if __atData['Binding']['mask'] is None:
             astrErr.append('No "mask" set in the Binding.')
         if __atData['Binding']['value'] is None:
@@ -3804,10 +3841,19 @@ class HbootImage:
         sizChunkMinimumInBytes = 4
         #    4 bytes length
         sizChunkMinimumInBytes += 4
+        #    1 byte info page select
+        sizChunkMinimumInBytes += 1
+        #    1 byte root key index
+        sizChunkMinimumInBytes += 1
+        #    1 byte number of hashes "n"
+        sizChunkMinimumInBytes += 1
+        #    1 byte fill data
+        sizChunkMinimumInBytes += 1
         #   56 bytes binding
         sizChunkMinimumInBytes += 56
-        #    4 bytes number of hashes "n"
-        sizChunkMinimumInBytes += 4
+        #  0 or 520 bytes embedded key
+        if __atData['RootKeyIndex'] < 16:
+            sizChunkMinimumInBytes += 520
         #   48 * "n" bytes hash table
         sizChunkMinimumInBytes += ulNumberOfHashes * 48
         #  "s" bytes for the signature
@@ -3888,19 +3934,68 @@ class HbootImage:
             # Found all hashes?
             if len(atHashes) == ulNumberOfHashes:
                 # Yes, all hashes found. Now build the chunk.
+
+                # Combine all data for the chunk.
+                aucData = array.array('B')
+
+                # Info page select
+                aucData.append(__atData['TargetInfoPage'])
+                # root key index
+                aucData.append(__atData['RootKeyIndex'])
+                # Add the number of hashes.
+                aucData.append(ulNumberOfHashes)
+                # Add one dummy byte of 0x00.
+                aucData.append(0x00)
+                # Add the binding.
+                aucData.extend(__atData['Binding']['value'])
+                aucData.extend(__atData['Binding']['mask'])
+
+                if __atData['RootKeyIndex'] < 16:
+                    # Add the padded key.
+                    iKeyTyp_1ECC_2RSA = __atData['Key']['iKeyTyp_1ECC_2RSA']
+                    atAttr = __atData['Key']['atAttr']
+                    if iKeyTyp_1ECC_2RSA == 2:
+                        # Add the algorithm.
+                        aucData.append(iKeyTyp_1ECC_2RSA)
+                        # Add the strength.
+                        aucData.append(atAttr['id'])
+                        # Add the public modulus N and fill up to 64 bytes.
+                        self.__add_array_with_fillup(aucData, atAttr['mod'], 512)
+                        # Add the exponent E.
+                        aucData.extend(atAttr['exp'])
+                        # Pad the key with 3 bytes.
+                        aucData.extend([0, 0, 0])
+
+                    elif iKeyTyp_1ECC_2RSA == 1:
+                        # Add the algorithm.
+                        aucData.append(iKeyTyp_1ECC_2RSA)
+                        # Add the strength.
+                        aucData.append(atAttr['id'])
+                        # Write all fields and fill up to 64 bytes.
+                        self.__add_array_with_fillup(aucData, atAttr['Qx'], 64)
+                        self.__add_array_with_fillup(aucData, atAttr['Qy'], 64)
+                        self.__add_array_with_fillup(aucData, atAttr['a'], 64)
+                        self.__add_array_with_fillup(aucData, atAttr['b'], 64)
+                        self.__add_array_with_fillup(aucData, atAttr['p'], 64)
+                        self.__add_array_with_fillup(aucData, atAttr['Gx'], 64)
+                        self.__add_array_with_fillup(aucData, atAttr['Gy'], 64)
+                        self.__add_array_with_fillup(aucData, atAttr['n'], 64)
+                        aucData.extend([0, 0, 0])
+                        # Pad the key with 3 bytes.
+                        aucData.extend([0, 0, 0])
+
+                # Append all hashes.
+                for atHash in atHashes:
+                    aucData.fromstring(atHash.tostring())
+
+
                 aulChunk = array.array('I')
                 # Add the ID.
                 aulChunk.append(self.__get_tag_id('H', 'T', 'B', 'L'))
                 # The size field does not include the ID and itself.
                 aulChunk.append(sizChunkMinimumSizeInDwords + sizFillUpInDwords - 2)
-                # Add the binding.
-                aulChunk.fromstring(__atData['Binding']['value'].tostring())
-                aulChunk.fromstring(__atData['Binding']['mask'].tostring())
-                # Append the number of hashes.
-                aulChunk.append(ulNumberOfHashes)
-                # Append all hashes.
-                for aulHash in atHashes:
-                    aulChunk.extend(aulHash)
+                # Add the data part.
+                aulChunk.fromstring(aucData.tostring())
                 # Append the fill-up.
                 aulChunk.extend([0] * sizFillUpInDwords)
 
