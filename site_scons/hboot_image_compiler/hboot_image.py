@@ -2027,7 +2027,15 @@ class HbootImage:
             for uiElementId, atAttr in __atKnownRsaSizes.iteritems():
                 if (sizMod == atAttr['mod']) and (sizExp == atAttr['exp']):
                     # Found the RSA type.
-                    uiId = uiElementId
+                    if(
+                        (self.__strNetxType == 'NETX90_MPW') or
+                        (self.__strNetxType == 'NETX90_FULL') or
+                        (self.__strNetxType == 'NETX90_MPW_APP') or
+                        (self.__strNetxType == 'NETX90_FULL_APP')
+                    ):
+                        uiId = uiElementId + 1
+                    else:
+                        uiId = uiElementId
                     break
 
             if uiId is None:
@@ -2129,7 +2137,15 @@ class HbootImage:
                     (sizNumbers == sizN)
                 ):
                     # Found the ECC type.
-                    uiId = uiElementId
+                    if(
+                        (self.__strNetxType == 'NETX90_MPW') or
+                        (self.__strNetxType == 'NETX90_FULL') or
+                        (self.__strNetxType == 'NETX90_MPW_APP') or
+                        (self.__strNetxType == 'NETX90_FULL_APP')
+                    ):
+                        uiId = uiElementId + 1
+                    else:
+                        uiId = uiElementId
                     break
 
             if uiId is None:
