@@ -1521,13 +1521,13 @@ class HbootImage:
                 if fBool is not None:
                     fStartAppCpu = fBool
 
-            # Check if the firewall settings should be applied.
-            fApplyFirewallSettings = False
-            strBool = tChunkNode.getAttribute('apply_firewall')
+            # Check if the firewall settings should be locked.
+            fLockFirewallSettings = False
+            strBool = tChunkNode.getAttribute('lock_firewall')
             if len(strBool) != 0:
                 fBool = self.__string_to_bool(strBool)
                 if fBool is not None:
-                    fApplyFirewallSettings = fBool
+                    fLockFirewallSettings = fBool
 
             # Check if debugging should be activated.
             fActivateDebugging = False
@@ -1541,7 +1541,7 @@ class HbootImage:
             ulFlags = 0
             if fStartAppCpu is True:
                 ulFlags |= 1
-            if fApplyFirewallSettings is True:
+            if fLockFirewallSettings is True:
                 ulFlags |= 2
             if fActivateDebugging is True:
                 ulFlags |= 4
