@@ -995,7 +995,7 @@ class HbootImage:
                         # Get the address.
                         strAddress = tNode.getAttribute('address')
                         if len(strAddress) == 0:
-                            raise Exception('The file node has no '
+                            raise Exception('The UInt32 node has no '
                                             'address attribute!')
 
                         pulLoadAddress = self.__parse_numeric_expression(
@@ -1020,7 +1020,7 @@ class HbootImage:
                         # Get the address.
                         strAddress = tNode.getAttribute('address')
                         if len(strAddress) == 0:
-                            raise Exception('The file node has no '
+                            raise Exception('The UInt16 node has no '
                                             'address attribute!')
 
                         pulLoadAddress = self.__parse_numeric_expression(
@@ -1045,7 +1045,7 @@ class HbootImage:
                         # Get the address.
                         strAddress = tNode.getAttribute('address')
                         if len(strAddress) == 0:
-                            raise Exception('The file node has no '
+                            raise Exception('The UInt8 node has no '
                                             'address attribute!')
 
                         pulLoadAddress = self.__parse_numeric_expression(
