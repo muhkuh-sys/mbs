@@ -4090,6 +4090,63 @@ class HbootImage:
                 tChunkAttributes['atData'] = aulChunk
                 tChunkAttributes['aulHash'] = None
 
+    def __build_chunk_next(self, tChunkAttributes, atParserState, uiChunkIndex, atAllChunks):
+        tChunkNode = tChunkAttributes['tNode']
+
+        ulDevice = None
+        ulOffset = None
+
+        # Loop over all children.
+        for tNode in tChunkNode.childNodes:
+            if tNode.nodeType == tNode.ELEMENT_NODE:
+                if tNode.localName == 'Device':
+                    strDevice = self.__xml_get_all_text(tNode)
+                    if len(strDevice) == 0:
+                        raise Exception(
+                            'The Next node has no "Device" child.'
+                        )
+
+                    ulDevice = self.__parse_numeric_expression(
+                        strDevice
+                    )
+
+                elif tNode.localName == 'Offset':
+                    strOffset = self.__xml_get_all_text(tNode)
+                    if len(strOffset) == 0:
+                        raise Exception(
+                            'The Next node has no "Offset" child.'
+                        )
+
+                    ulOffset = self.__parse_numeric_expression(
+                        strOffset
+                    )
+
+        # Check if all required data was set.
+        astrErr = []
+        if ulDevice is None:
+            astrErr.append('No device set in NEXT.')
+        if ulOffset is None:
+            astrErr.append('No offset set in NEXT.')
+        if len(astrErr) != 0:
+            raise Exception('\n'.join(astrErr))
+
+        aulChunk = array.array('I')
+        aulChunk.append(self.__get_tag_id('N', 'E', 'X', 'T'))
+        aulChunk.append(2 + self.__sizHashDw)
+        aulChunk.append(ulDevice)
+        aulChunk.append(ulOffset)
+
+        # Get the hash for the chunk.
+        tHash = hashlib.sha384()
+        tHash.update(aulChunk.tostring())
+        strHash = tHash.digest()
+        aulHash = array.array('I', strHash[:self.__sizHashDw * 4])
+        aulChunk.extend(aulHash)
+
+        tChunkAttributes['fIsFinished'] = True
+        tChunkAttributes['atData'] = aulChunk
+        tChunkAttributes['aulHash'] = None
+
     def __string_to_bool(self, strBool):
         strBool = string.upper(strBool)
         if(
@@ -4248,6 +4305,14 @@ class HbootImage:
                             'allowed in SECMEM images.'
                         )
                     self.__add_chunk(atChunks, strChunkName, tChunkNode, self.__build_chunk_hash_table)
+                elif strChunkName == 'Next':
+                    # Found a NEXT node.
+                    if self.__tImageType == self.__IMAGE_TYPE_SECMEM:
+                        raise Exception(
+                            'Next chunks are not '
+                            'allowed in SECMEM images.'
+                        )
+                    self.__add_chunk(atChunks, strChunkName, tChunkNode, self.__build_chunk_next)
                 else:
                     raise Exception('Unknown chunk ID: %s' % strChunkName)
 
