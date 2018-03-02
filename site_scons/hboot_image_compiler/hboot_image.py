@@ -86,6 +86,8 @@ class HbootImage:
     __IMAGE_TYPE_REGULAR = 0
     __IMAGE_TYPE_INTRAM = 1
     __IMAGE_TYPE_SECMEM = 2
+    __IMAGE_TYPE_COM_INFO_PAGE = 3
+    __IMAGE_TYPE_APP_INFO_PAGE = 4
     __sizHashDw = None
 
     __XmlKeyromContents = None
@@ -234,7 +236,9 @@ class HbootImage:
         self.__astrToImageType = dict({
             'REGULAR': self.__IMAGE_TYPE_REGULAR,
             'INTRAM': self.__IMAGE_TYPE_INTRAM,
-            'SECMEM': self.__IMAGE_TYPE_SECMEM
+            'SECMEM': self.__IMAGE_TYPE_SECMEM,
+            'COM_INFO_PAGE': self.__IMAGE_TYPE_COM_INFO_PAGE,
+            'APP_INFO_PAGE': self.__IMAGE_TYPE_APP_INFO_PAGE
         })
 
         # Initialize the include paths from the environment.
@@ -1209,17 +1213,31 @@ class HbootImage:
         aulData.fromstring(strChunk)
 
         aulChunk = array.array('I')
-        aulChunk.append(self.__get_tag_id('D', 'A', 'T', 'A'))
-        aulChunk.append(len(aulData) + 1 + self.__sizHashDw)
-        aulChunk.append(pulLoadAddress)
-        aulChunk.extend(aulData)
+        # Do not add an ID for info page images.
+        if(
+            ( self.__tImageType != self.__IMAGE_TYPE_COM_INFO_PAGE) and
+            ( self.__tImageType != self.__IMAGE_TYPE_APP_INFO_PAGE)
+        ):
+            aulChunk.append(self.__get_tag_id('D', 'A', 'T', 'A'))
+            aulChunk.append(len(aulData) + 1 + self.__sizHashDw)
+            aulChunk.append(pulLoadAddress)
+            aulChunk.extend(aulData)
 
-        # Get the hash for the chunk.
-        tHash = hashlib.sha384()
-        tHash.update(aulChunk.tostring())
-        strHash = tHash.digest()
-        aulHash = array.array('I', strHash[:self.__sizHashDw * 4])
-        aulChunk.extend(aulHash)
+            # Get the hash for the chunk.
+            tHash = hashlib.sha384()
+            tHash.update(aulChunk.tostring())
+            strHash = tHash.digest()
+            aulHash = array.array('I', strHash[:self.__sizHashDw * 4])
+            aulChunk.extend(aulHash)
+
+        else:
+            # The info pages only get the data.
+            aulChunk = aulData
+
+            # Get the hash for the chunk.
+            tHash = hashlib.sha384()
+            tHash.update(aulChunk.tostring())
+            strHash = tHash.digest()
 
         tChunkAttributes['fIsFinished'] = True
         tChunkAttributes['atData'] = aulChunk
@@ -4183,136 +4201,379 @@ class HbootImage:
     def __collect_chunks(self, tImageNode):
         atChunks = []
 
+        # Map the chunk name to...
+        #  'fn': a handler function
+        #  'img': a list of image types where this chunk is valid
+        #  'netx': a list of netX types where this chunk is valid
+        atKnownChunks = {
+            'Options': {
+                'fn': self.__build_chunk_options,
+                'img': [
+                    self.__IMAGE_TYPE_REGULAR,
+                    self.__IMAGE_TYPE_INTRAM,
+                    self.__IMAGE_TYPE_SECMEM,
+                    # self.__IMAGE_TYPE_COM_INFO_PAGE,
+                    # self.__IMAGE_TYPE_APP_INFO_PAGE
+                ],
+                'netx': [
+                    'NETX56',
+                    'NETX4000_RELAXED',
+                    'NETX4000',
+                    'NETX4100',
+                    'NETX90_MPW',
+                    'NETX90_FULL',
+                    'NETX90_MPW_APP',
+                    'NETX90_FULL_APP'
+                ]
+            },
+            'Data': {
+                'fn': self.__build_chunk_data,
+                'img': [
+                    self.__IMAGE_TYPE_REGULAR,
+                    self.__IMAGE_TYPE_INTRAM,
+                    # self.__IMAGE_TYPE_SECMEM,
+                    self.__IMAGE_TYPE_COM_INFO_PAGE,
+                    self.__IMAGE_TYPE_APP_INFO_PAGE
+                ],
+                'netx': [
+                    'NETX56',
+                    'NETX4000_RELAXED',
+                    'NETX4000',
+                    'NETX4100',
+                    'NETX90_MPW',
+                    'NETX90_FULL',
+                    'NETX90_MPW_APP',
+                    'NETX90_FULL_APP'
+                ]
+            },
+            'Text': {
+                'fn': self.__build_chunk_text,
+                'img': [
+                    self.__IMAGE_TYPE_REGULAR,
+                    self.__IMAGE_TYPE_INTRAM,
+                    # self.__IMAGE_TYPE_SECMEM,
+                    # self.__IMAGE_TYPE_COM_INFO_PAGE,
+                    # self.__IMAGE_TYPE_APP_INFO_PAGE
+                ],
+                'netx': [
+                    'NETX56',
+                    'NETX4000_RELAXED',
+                    'NETX4000',
+                    'NETX4100',
+                    'NETX90_MPW',
+                    'NETX90_FULL',
+                    'NETX90_MPW_APP',
+                    'NETX90_FULL_APP'
+                ]
+            },
+            'XIP': {
+                'fn': self.__build_chunk_xip,
+                'img': [
+                    self.__IMAGE_TYPE_REGULAR,
+                    self.__IMAGE_TYPE_INTRAM,
+                    # self.__IMAGE_TYPE_SECMEM,
+                    # self.__IMAGE_TYPE_COM_INFO_PAGE,
+                    # self.__IMAGE_TYPE_APP_INFO_PAGE
+                ],
+                'netx': [
+                    'NETX56',
+                    'NETX4000_RELAXED',
+                    'NETX4000',
+                    'NETX4100',
+                    'NETX90_MPW',
+                    'NETX90_FULL',
+                    'NETX90_MPW_APP',
+                    'NETX90_FULL_APP'
+                ]
+            },
+            'Execute': {
+                'fn': self.__build_chunk_execute,
+                'img': [
+                    self.__IMAGE_TYPE_REGULAR,
+                    self.__IMAGE_TYPE_INTRAM,
+                    # self.__IMAGE_TYPE_SECMEM,
+                    # self.__IMAGE_TYPE_COM_INFO_PAGE,
+                    # self.__IMAGE_TYPE_APP_INFO_PAGE
+                ],
+                'netx': [
+                    'NETX56',
+                    'NETX4000_RELAXED',
+                    'NETX4000',
+                    'NETX4100',
+                    'NETX90_MPW',
+                    'NETX90_FULL',
+                    'NETX90_MPW_APP',
+                    'NETX90_FULL_APP'
+                ]
+            },
+            'ExecuteCA9': {
+                'fn': self.__build_chunk_execute_ca9,
+                'img': [
+                    self.__IMAGE_TYPE_REGULAR,
+                    self.__IMAGE_TYPE_INTRAM,
+                    # self.__IMAGE_TYPE_SECMEM,
+                    # self.__IMAGE_TYPE_COM_INFO_PAGE,
+                    # self.__IMAGE_TYPE_APP_INFO_PAGE
+                ],
+                'netx': [
+                    # 'NETX56',
+                    'NETX4000_RELAXED',
+                    'NETX4000',
+                    'NETX4100',
+                    # 'NETX90_MPW',
+                    # 'NETX90_FULL',
+                    # 'NETX90_MPW_APP',
+                    # 'NETX90_FULL_APP'
+                ]
+            },
+            'SpiMacro': {
+                'fn': self.__build_chunk_spi_macro,
+                'img': [
+                    self.__IMAGE_TYPE_REGULAR,
+                    self.__IMAGE_TYPE_INTRAM,
+                    # self.__IMAGE_TYPE_SECMEM,
+                    # self.__IMAGE_TYPE_COM_INFO_PAGE,
+                    # self.__IMAGE_TYPE_APP_INFO_PAGE
+                ],
+                'netx': [
+                    'NETX56',
+                    'NETX4000_RELAXED',
+                    'NETX4000',
+                    'NETX4100',
+                    'NETX90_MPW',
+                    'NETX90_FULL',
+                    'NETX90_MPW_APP',
+                    'NETX90_FULL_APP'
+                ]
+            },
+            'Skip': {
+                'fn': self.__build_chunk_skip,
+                'img': [
+                    self.__IMAGE_TYPE_REGULAR,
+                    self.__IMAGE_TYPE_INTRAM,
+                    # self.__IMAGE_TYPE_SECMEM,
+                    # self.__IMAGE_TYPE_COM_INFO_PAGE,
+                    # self.__IMAGE_TYPE_APP_INFO_PAGE
+                ],
+                'netx': [
+                    'NETX56',
+                    'NETX4000_RELAXED',
+                    'NETX4000',
+                    'NETX4100',
+                    'NETX90_MPW',
+                    'NETX90_FULL',
+                    'NETX90_MPW_APP',
+                    'NETX90_FULL_APP'
+                ]
+            },
+            'SkipIncomplete': {
+                'fn': self.__build_chunk_skip_incomplete,
+                'img': [
+                    self.__IMAGE_TYPE_REGULAR,
+                    self.__IMAGE_TYPE_INTRAM,
+                    # self.__IMAGE_TYPE_SECMEM,
+                    # self.__IMAGE_TYPE_COM_INFO_PAGE,
+                    # self.__IMAGE_TYPE_APP_INFO_PAGE
+                ],
+                'netx': [
+                    'NETX56',
+                    'NETX4000_RELAXED',
+                    'NETX4000',
+                    'NETX4100',
+                    'NETX90_MPW',
+                    'NETX90_FULL',
+                    'NETX90_MPW_APP',
+                    'NETX90_FULL_APP'
+                ]
+            },
+            'RootCert': {
+                'fn': self.__build_chunk_root_cert,
+                'img': [
+                    self.__IMAGE_TYPE_REGULAR,
+                    self.__IMAGE_TYPE_INTRAM,
+                    # self.__IMAGE_TYPE_SECMEM,
+                    # self.__IMAGE_TYPE_COM_INFO_PAGE,
+                    # self.__IMAGE_TYPE_APP_INFO_PAGE
+                ],
+                'netx': [
+                    # 'NETX56',
+                    'NETX4000_RELAXED',
+                    'NETX4000',
+                    'NETX4100',
+                    # 'NETX90_MPW',
+                    # 'NETX90_FULL',
+                    # 'NETX90_MPW_APP',
+                    # 'NETX90_FULL_APP'
+                ]
+            },
+            'LicenseCert': {
+                'fn': self.__build_chunk_license_cert,
+                'img': [
+                    self.__IMAGE_TYPE_REGULAR,
+                    self.__IMAGE_TYPE_INTRAM,
+                    # self.__IMAGE_TYPE_SECMEM,
+                    # self.__IMAGE_TYPE_COM_INFO_PAGE,
+                    # self.__IMAGE_TYPE_APP_INFO_PAGE
+                ],
+                'netx': [
+                    # 'NETX56',
+                    'NETX4000_RELAXED',
+                    'NETX4000',
+                    'NETX4100',
+                    # 'NETX90_MPW',
+                    # 'NETX90_FULL',
+                    # 'NETX90_MPW_APP',
+                    # 'NETX90_FULL_APP'
+                ]
+            },
+            'CR7Software': {
+                'fn': self.__build_chunk_cr7sw,
+                'img': [
+                    self.__IMAGE_TYPE_REGULAR,
+                    self.__IMAGE_TYPE_INTRAM,
+                    # self.__IMAGE_TYPE_SECMEM,
+                    # self.__IMAGE_TYPE_COM_INFO_PAGE,
+                    # self.__IMAGE_TYPE_APP_INFO_PAGE
+                ],
+                'netx': [
+                    # 'NETX56',
+                    'NETX4000_RELAXED',
+                    'NETX4000',
+                    'NETX4100',
+                    # 'NETX90_MPW',
+                    # 'NETX90_FULL',
+                    # 'NETX90_MPW_APP',
+                    # 'NETX90_FULL_APP'
+                ]
+            },
+            'CA9Software': {
+                'fn': self.__build_chunk_ca9sw,
+                'img': [
+                    self.__IMAGE_TYPE_REGULAR,
+                    self.__IMAGE_TYPE_INTRAM,
+                    # self.__IMAGE_TYPE_SECMEM,
+                    # self.__IMAGE_TYPE_COM_INFO_PAGE,
+                    # self.__IMAGE_TYPE_APP_INFO_PAGE
+                ],
+                'netx': [
+                    # 'NETX56',
+                    'NETX4000_RELAXED',
+                    'NETX4000',
+                    'NETX4100',
+                    # 'NETX90_MPW',
+                    # 'NETX90_FULL',
+                    # 'NETX90_MPW_APP',
+                    # 'NETX90_FULL_APP'
+                ]
+            },
+            'MemoryDeviceUp': {
+                'fn': self.__build_chunk_memory_device_up,
+                'img': [
+                    self.__IMAGE_TYPE_REGULAR,
+                    self.__IMAGE_TYPE_INTRAM,
+                    # self.__IMAGE_TYPE_SECMEM,
+                    # self.__IMAGE_TYPE_COM_INFO_PAGE,
+                    # self.__IMAGE_TYPE_APP_INFO_PAGE
+                ],
+                'netx': [
+                    'NETX56',
+                    'NETX4000_RELAXED',
+                    'NETX4000',
+                    'NETX4100',
+                    'NETX90_MPW',
+                    'NETX90_FULL',
+                    'NETX90_MPW_APP',
+                    'NETX90_FULL_APP'
+                ]
+            },
+            'UpdateSecureInfoPage': {
+                'fn': self.__build_chunk_update_secure_info_page,
+                'img': [
+                    self.__IMAGE_TYPE_REGULAR,
+                    self.__IMAGE_TYPE_INTRAM,
+                    # self.__IMAGE_TYPE_SECMEM,
+                    # self.__IMAGE_TYPE_COM_INFO_PAGE,
+                    # self.__IMAGE_TYPE_APP_INFO_PAGE
+                ],
+                'netx': [
+                    # 'NETX56',
+                    # 'NETX4000_RELAXED',
+                    # 'NETX4000',
+                    # 'NETX4100',
+                    # 'NETX90_MPW',
+                    'NETX90_FULL',
+                    # 'NETX90_MPW_APP',
+                    'NETX90_FULL_APP'
+                ]
+            },
+            'HashTable': {
+                'fn': self.__build_chunk_hash_table,
+                'img': [
+                    self.__IMAGE_TYPE_REGULAR,
+                    self.__IMAGE_TYPE_INTRAM,
+                    # self.__IMAGE_TYPE_SECMEM,
+                    # self.__IMAGE_TYPE_COM_INFO_PAGE,
+                    # self.__IMAGE_TYPE_APP_INFO_PAGE
+                ],
+                'netx': [
+                    # 'NETX56',
+                    # 'NETX4000_RELAXED',
+                    # 'NETX4000',
+                    # 'NETX4100',
+                    # 'NETX90_MPW',
+                    'NETX90_FULL',
+                    # 'NETX90_MPW_APP',
+                    'NETX90_FULL_APP'
+                ]
+            },
+            'Next': {
+                'fn': self.__build_chunk_next,
+                'img': [
+                    self.__IMAGE_TYPE_REGULAR,
+                    self.__IMAGE_TYPE_INTRAM,
+                    # self.__IMAGE_TYPE_SECMEM,
+                    # self.__IMAGE_TYPE_COM_INFO_PAGE,
+                    # self.__IMAGE_TYPE_APP_INFO_PAGE
+                ],
+                'netx': [
+                    # 'NETX56',
+                    # 'NETX4000_RELAXED',
+                    # 'NETX4000',
+                    # 'NETX4100',
+                    # 'NETX90_MPW',
+                    'NETX90_FULL',
+                    # 'NETX90_MPW_APP',
+                    'NETX90_FULL_APP'
+                ]
+            },
+        }
+
         # Loop over all nodes, these are the chunks.
         for tChunkNode in tImageNode.childNodes:
             if tChunkNode.nodeType == tChunkNode.ELEMENT_NODE:
                 strChunkName = tChunkNode.localName
-                if strChunkName == 'Options':
-                    # Found an option node.
-                    self.__add_chunk(atChunks, strChunkName, tChunkNode, self.__build_chunk_options)
-                elif strChunkName == 'Data':
-                    # Found a data node.
-                    if self.__tImageType == self.__IMAGE_TYPE_SECMEM:
-                        raise Exception('Data chunks are not allowed '
-                                        'in SECMEM images.')
-                    self.__add_chunk(atChunks, strChunkName, tChunkNode, self.__build_chunk_data)
-                elif strChunkName == 'Text':
-                    # Found a text node.
-                    if self.__tImageType == self.__IMAGE_TYPE_SECMEM:
-                        raise Exception('Text chunks are not allowed '
-                                        'in SECMEM images.')
-                    self.__add_chunk(atChunks, strChunkName, tChunkNode, self.__build_chunk_text)
-                elif strChunkName == 'XIP':
-                    # Found an XIP node.
-                    if self.__tImageType == self.__IMAGE_TYPE_SECMEM:
-                        raise Exception('XIP chunks are not allowed '
-                                        'in SECMEM images.')
-                    self.__add_chunk(atChunks, strChunkName, tChunkNode, self.__build_chunk_xip)
-                elif strChunkName == 'Execute':
-                    # Found an execute node.
-                    if self.__tImageType == self.__IMAGE_TYPE_SECMEM:
-                        raise Exception('Execute chunks are not allowed '
-                                        'in SECMEM images.')
-                    self.__add_chunk(atChunks, strChunkName, tChunkNode, self.__build_chunk_execute)
-                elif strChunkName == 'ExecuteCA9':
-                    # Found an execute node.
-                    if self.__tImageType == self.__IMAGE_TYPE_SECMEM:
-                        raise Exception('ExecuteCA9 chunks are not allowed '
-                                        'in SECMEM images.')
-                    if self.__strNetxType == 'NETX56':
-                        raise Exception('ExecuteCA9 chunks are not allowed '
-                                        'on netx56.')
-                    self.__add_chunk(atChunks, strChunkName, tChunkNode, self.__build_chunk_execute_ca9)
-                elif strChunkName == 'SpiMacro':
-                    # Found a SPI macro.
-                    if self.__tImageType == self.__IMAGE_TYPE_SECMEM:
-                        raise Exception('SpiMacro chunks are not allowed '
-                                        'in SECMEM images.')
-                    self.__add_chunk(atChunks, strChunkName, tChunkNode, self.__build_chunk_spi_macro)
-                elif strChunkName == 'Skip':
-                    # Found a skip node.
-                    if self.__tImageType == self.__IMAGE_TYPE_SECMEM:
-                        raise Exception('Skip chunks are not allowed '
-                                        'in SECMEM images.')
-                    self.__add_chunk(atChunks, strChunkName, tChunkNode, self.__build_chunk_skip)
-                elif strChunkName == 'SkipIncomplete':
-                    # Found a skip incomplete node.
-                    if self.__tImageType == self.__IMAGE_TYPE_SECMEM:
-                        raise Exception('SkipIncomplete chunks are not '
-                                        'allowed in SECMEM images.')
-                    self.__add_chunk(atChunks, strChunkName, tChunkNode, self.__build_chunk_skip_incomplete)
-                elif strChunkName == 'RootCert':
-                    # Found a root certificate node.
-                    if self.__tImageType == self.__IMAGE_TYPE_SECMEM:
-                        raise Exception('RootCert chunks are not allowed '
-                                        'in SECMEM images.')
-                    if self.__strNetxType == 'NETX56':
-                        raise Exception('RootCert chunks are not allowed '
-                                        'on netx56.')
-                    self.__add_chunk(atChunks, strChunkName, tChunkNode, self.__build_chunk_root_cert)
-                elif strChunkName == 'LicenseCert':
-                    # Found a license certificate node.
-                    if self.__tImageType == self.__IMAGE_TYPE_SECMEM:
-                        raise Exception('LicenseCert chunks are not allowed '
-                                        'in SECMEM images.')
-                    if self.__strNetxType == 'NETX56':
-                        raise Exception('LicenseCert chunks are not allowed '
-                                        'on netx56.')
-                    self.__add_chunk(atChunks, strChunkName, tChunkNode, self.__build_chunk_license_cert)
-                elif strChunkName == 'CR7Software':
-                    # Found a CR7 software node.
-                    if self.__tImageType == self.__IMAGE_TYPE_SECMEM:
-                        raise Exception('CR7Software chunks are not allowed '
-                                        'in SECMEM images.')
-                    if self.__strNetxType == 'NETX56':
-                        raise Exception('CR7Software chunks are not allowed '
-                                        'on netx56.')
-                    self.__add_chunk(atChunks, strChunkName, tChunkNode, self.__build_chunk_cr7sw)
-                elif strChunkName == 'CA9Software':
-                    # Found a CA9 software node.
-                    if self.__tImageType == self.__IMAGE_TYPE_SECMEM:
+                if strChunkName in atKnownChunks:
+                    tAttr = atKnownChunks[strChunkName]
+                    # Is the chunk available for the image type?
+                    if self.__tImageType not in tAttr['img']:
                         raise Exception(
-                            'CA9Software chunks are not allowed '
-                            'in SECMEM images.'
+                            '%s chunks are not allowed in the current '
+                            'image type.' % strChunkName
                         )
-                    if self.__strNetxType == 'NETX56':
+                    if self.__strNetxType not in tAttr['netx']:
                         raise Exception(
-                            'CA9Software chunks are not allowed '
-                            'on netx56.'
+                            '%s chunks are not allowed on %s' %
+                            (
+                                strChunkName,
+                                self.__strNetxType
+                            )
                         )
-                    self.__add_chunk(atChunks, strChunkName, tChunkNode, self.__build_chunk_ca9sw)
-                elif strChunkName == 'MemoryDeviceUp':
-                    # Found a memory device up node.
-                    if self.__tImageType == self.__IMAGE_TYPE_SECMEM:
-                        raise Exception(
-                            'MemoryDeviceUp chunks are not '
-                            'allowed in SECMEM images.'
-                        )
-                    self.__add_chunk(atChunks, strChunkName, tChunkNode, self.__build_chunk_memory_device_up)
-                elif strChunkName == 'UpdateSecureInfoPage':
-                    # Found an USIP node.
-                    if self.__tImageType == self.__IMAGE_TYPE_SECMEM:
-                        raise Exception(
-                            'UpdateSecureInfoPage chunks are not '
-                            'allowed in SECMEM images.'
-                        )
-                    self.__add_chunk(atChunks, strChunkName, tChunkNode, self.__build_chunk_update_secure_info_page)
-                elif strChunkName == 'HashTable':
-                    # Found a HTBL node.
-                    if self.__tImageType == self.__IMAGE_TYPE_SECMEM:
-                        raise Exception(
-                            'HashTable chunks are not '
-                            'allowed in SECMEM images.'
-                        )
-                    self.__add_chunk(atChunks, strChunkName, tChunkNode, self.__build_chunk_hash_table)
-                elif strChunkName == 'Next':
-                    # Found a NEXT node.
-                    if self.__tImageType == self.__IMAGE_TYPE_SECMEM:
-                        raise Exception(
-                            'Next chunks are not '
-                            'allowed in SECMEM images.'
-                        )
-                    self.__add_chunk(atChunks, strChunkName, tChunkNode, self.__build_chunk_next)
+                    self.__add_chunk(
+                        atChunks,
+                        strChunkName,
+                        tChunkNode,
+                        tAttr['fn']
+                    )
                 else:
                     raise Exception('Unknown chunk ID: %s' % strChunkName)
 
@@ -4411,40 +4672,66 @@ class HbootImage:
             self.__tImageType = self.__IMAGE_TYPE_REGULAR
 
         # Check if a header should be written to the output file.
-        fHasHeader = True
-        strBool = tXmlRootNode.getAttribute('has_header')
-        if len(strBool) != 0:
-            fBool = self.__string_to_bool(strBool)
-            if fBool is not None:
-                fHasHeader = fBool
+        # SECMEM and info page images never have a header.
+        if(
+            (self.__tImageType == self.__IMAGE_TYPE_SECMEM) or
+            (self.__tImageType == self.__IMAGE_TYPE_COM_INFO_PAGE) or
+            (self.__tImageType == self.__IMAGE_TYPE_APP_INFO_PAGE)
+        ):
+            fHasHeader = False
+        else:
+            fHasHeader = True
+            strBool = tXmlRootNode.getAttribute('has_header')
+            if len(strBool) != 0:
+                fBool = self.__string_to_bool(strBool)
+                if fBool is not None:
+                    fHasHeader = fBool
         self.__fHasHeader = fHasHeader
 
         # Check if an end marker should be written to the output file.
-        fHasEndMarker = True
-        strBool = tXmlRootNode.getAttribute('has_end')
-        if len(strBool) != 0:
-            fBool = self.__string_to_bool(strBool)
-            if fBool is not None:
-                fHasEndMarker = fBool
+        # SECMEM and info page images never have a header.
+        if(
+            (self.__tImageType == self.__IMAGE_TYPE_SECMEM) or
+            (self.__tImageType == self.__IMAGE_TYPE_COM_INFO_PAGE) or
+            (self.__tImageType == self.__IMAGE_TYPE_APP_INFO_PAGE)
+        ):
+            fHasEndMarker = False
+        else:
+            fHasEndMarker = True
+            strBool = tXmlRootNode.getAttribute('has_end')
+            if len(strBool) != 0:
+                fBool = self.__string_to_bool(strBool)
+                if fBool is not None:
+                    fHasEndMarker = fBool
         self.__fHasEndMarker = fHasEndMarker
 
-        # INTRAM and REGULAR images are DWORD based, SECMEM images are byte
-        # based.
+        # SECMEM images are byte based, all other images are DWORD based.
         if self.__tImageType == self.__IMAGE_TYPE_SECMEM:
             self.__atChunkData = array.array('B')
         else:
             self.__atChunkData = array.array('I')
 
-        # Get the hash size. Default to 1 DWORD.
-        strHashSize = tXmlRootNode.getAttribute('hashsize')
-        if len(strHashSize) != 0:
-            uiHashSize = int(strHashSize)
-            if (uiHashSize < 1) or (uiHashSize > 12):
-                raise Exception('Invalid hash size: %d' % uiHashSize)
-            self.__sizHashDw = uiHashSize
+        # Get the hash size.
+        # Default to 12 DWORDS for info page images.
+        # Default to 0 DWORDS for SECMEM images.
+        # Default to 1 DWORD for all other images.
+        if(self.__tImageType == self.__IMAGE_TYPE_SECMEM):
+            uiHashSize = 0
+        elif(
+            (self.__tImageType == self.__IMAGE_TYPE_COM_INFO_PAGE) or
+            (self.__tImageType == self.__IMAGE_TYPE_APP_INFO_PAGE)
+        ):
+            uiHashSize = 12
         else:
-            # Set the default hash size.
-            self.__sizHashDw = 1
+            strHashSize = tXmlRootNode.getAttribute('hashsize')
+            if len(strHashSize) != 0:
+                uiHashSize = int(strHashSize)
+                if (uiHashSize < 1) or (uiHashSize > 12):
+                    raise Exception('Invalid hash size: %d' % uiHashSize)
+            else:
+                # Set the default hash size.
+                uiHashSize = 1
+        self.__sizHashDw = uiHashSize
 
         # Get the start offset. Default to 0.
         ulStartOffset = 0
@@ -4491,10 +4778,14 @@ class HbootImage:
             if tImageNode.nodeType == tImageNode.ELEMENT_NODE:
                 # Is this a 'Header' node?
                 if tImageNode.localName == 'Header':
-                    if self.__tImageType == self.__IMAGE_TYPE_SECMEM:
+                    if(
+                        (self.__tImageType == self.__IMAGE_TYPE_SECMEM) or
+                        (self.__tImageType == self.__IMAGE_TYPE_COM_INFO_PAGE) or
+                        (self.__tImageType == self.__IMAGE_TYPE_APP_INFO_PAGE)
+                    ):
                         raise Exception(
                             'Header overrides are not allowed in '
-                            'SECMEM images.'
+                            'this image type.'
                         )
                     self.__parse_header_options(tImageNode)
 
@@ -4605,6 +4896,27 @@ class HbootImage:
 
             # Do not add end markers in a SECMEM image.
             atEndMarker = array.array('B')
+
+        elif(
+            (self.__tImageType == self.__IMAGE_TYPE_COM_INFO_PAGE) or
+            (self.__tImageType == self.__IMAGE_TYPE_APP_INFO_PAGE)
+        ):
+            atChunks = self.__atChunkData
+
+            # The chunk data must have a size of 4048 bytes (1012 DWORDS).
+            sizChunksInDWORDs = len(atChunks)
+            if sizChunksInDWORDs != 1012:
+                raise Exception(
+                    'The info page data without the hash must be 1012 '
+                    'bytes, but it is %d bytes.' % sizChunksInDWORDs
+                )
+
+            # Build the hash for the info page.
+            tHash = hashlib.sha384()
+            tHash.update(atChunks.tostring())
+            strHash = tHash.digest()
+            aulHash = array.array('I', strHash)
+            atChunks.extend(aulHash)
 
         else:
             # Get a copy of the chunk data.
