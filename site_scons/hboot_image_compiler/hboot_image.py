@@ -250,7 +250,6 @@ class HbootImage:
                 print('[HBootImage] Init: Reading key ROM file "%s".' %
                       strKeyromFile)
             # Parse the XML file.
-            print(repr(strKeyromFile))
             tFile = open(strKeyromFile, 'rt')
             strXml = tFile.read()
             tFile.close()
