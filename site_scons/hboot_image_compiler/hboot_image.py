@@ -1010,11 +1010,13 @@ class HbootImage:
                     if strDataUint is None:
                         raise Exception('No text in node "UInt32" found!')
 
-                    astrNumbers = string.split(strDataUint)
+                    astrNumbers = string.split(strDataUint, ',')
                     aulNumbers = array.array('I')
                     for strNumber in astrNumbers:
-                        ulNumber = int(strNumber, 0)
-                        aulNumbers.append(ulNumber)
+                        ulNum = self.__parse_numeric_expression(
+                            string.strip(strNumber)
+                        )
+                        aulNumbers.append(ulNum)
 
                     strData = aulNumbers.tostring()
 
@@ -1035,11 +1037,13 @@ class HbootImage:
                     if strDataUint is None:
                         raise Exception('No text in node "UInt16" found!')
 
-                    astrNumbers = string.split(strDataUint)
+                    astrNumbers = string.split(strDataUint, ',')
                     ausNumbers = array.array('H')
                     for strNumber in astrNumbers:
-                        usNumber = int(strNumber, 0)
-                        ausNumbers.append(usNumber)
+                        usNum = self.__parse_numeric_expression(
+                            string.strip(strNumber)
+                        )
+                        ausNumbers.append(usNum)
 
                     strData = ausNumbers.tostring()
 
@@ -1060,11 +1064,13 @@ class HbootImage:
                     if strDataUint is None:
                         raise Exception('No text in node "UInt8" found!')
 
-                    astrNumbers = string.split(strDataUint)
+                    astrNumbers = string.split(strDataUint, ',')
                     aucNumbers = array.array('B')
                     for strNumber in astrNumbers:
-                        ucNumber = int(strNumber, 0)
-                        aucNumbers.append(ucNumber)
+                        ucNum = self.__parse_numeric_expression(
+                            string.strip(strNumber)
+                        )
+                        aucNumbers.append(ucNum)
 
                     strData = aucNumbers.tostring()
 
@@ -1126,11 +1132,13 @@ class HbootImage:
                                     raise Exception('No text in node '
                                                     '"UInt32" found!')
 
-                                astrNumbers = string.split(strDataUint)
+                                astrNumbers = string.split(strDataUint, ',')
                                 aulNumbers = array.array('I')
                                 for strNumber in astrNumbers:
-                                    ulNumber = int(strNumber, 0)
-                                    aulNumbers.append(ulNumber)
+                                    ulNum = self.__parse_numeric_expression(
+                                        string.strip(strNumber)
+                                    )
+                                    aulNumbers.append(ulNum)
 
                                 strDataChunk = aulNumbers.tostring()
                                 astrData.append(strDataChunk)
@@ -1145,11 +1153,13 @@ class HbootImage:
                                     raise Exception('No text in node '
                                                     '"UInt16" found!')
 
-                                astrNumbers = string.split(strDataUint)
+                                astrNumbers = string.split(strDataUint, ',')
                                 ausNumbers = array.array('H')
                                 for strNumber in astrNumbers:
-                                    usNumber = int(strNumber, 0)
-                                    ausNumbers.append(usNumber)
+                                    usNum = self.__parse_numeric_expression(
+                                        string.strip(strNumber)
+                                    )
+                                    ausNumbers.append(usNum)
 
                                 strDataChunk = ausNumbers.tostring()
                                 astrData.append(strDataChunk)
@@ -1164,11 +1174,13 @@ class HbootImage:
                                     raise Exception('No text in node "UInt8" '
                                                     ' found!')
 
-                                astrNumbers = string.split(strDataUint)
+                                astrNumbers = string.split(strDataUint, ',')
                                 aucNumbers = array.array('B')
                                 for strNumber in astrNumbers:
-                                    ucNumber = int(strNumber, 0)
-                                    aucNumbers.append(ucNumber)
+                                    ucNum = self.__parse_numeric_expression(
+                                        string.strip(strNumber)
+                                    )
+                                    aucNumbers.append(ucNum)
 
                                 strDataChunk = aucNumbers.tostring()
                                 astrData.append(strDataChunk)
