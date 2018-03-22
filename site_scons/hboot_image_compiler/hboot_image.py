@@ -1566,6 +1566,14 @@ class HbootImage:
                 if fBool is not None:
                     fActivateDebugging = fBool
 
+            # Check if the firewall settings should be applied.
+            fApplyFirewallSettings = False
+            strBool = tChunkNode.getAttribute('apply_firewall_settings')
+            if len(strBool) != 0:
+                fBool = self.__string_to_bool(strBool)
+                if fBool is not None:
+                    fApplyFirewallSettings = fBool
+
             # Combine all flags.
             ulFlags = 0
             if fStartAppCpu is True:
@@ -1574,6 +1582,8 @@ class HbootImage:
                 ulFlags |= 2
             if fActivateDebugging is True:
                 ulFlags |= 4
+            if fApplyFirewallSettings is True:
+                ulFlags |= 8
 
         aulChunk = array.array('I')
         aulChunk.append(self.__get_tag_id('E', 'X', 'E', 'C'))
