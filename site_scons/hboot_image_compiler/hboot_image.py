@@ -113,6 +113,9 @@ class HbootImage:
 
     __fMoreChunksAllowed = None
 
+    __ulPaddingPreSize = None
+    __ucPaddingPreValue = None
+
     def __init__(self, tEnv, strNetxType, **kwargs):
         strPatchDefinition = None
         strKeyromFile = None
@@ -4765,6 +4768,26 @@ class HbootImage:
                 )
         self.__ulStartOffset = ulStartOffset
 
+        # Get the size and value for a padding. Default to 0 bytes of 0xff.
+        ulPaddingPreSize = 0
+        ucPaddingPreValue = 0xff
+        strPaddingPreSize = tXmlRootNode.getAttribute('padding_pre_size')
+        if len(strPaddingPreSize) != 0:
+            ulPaddingPreSize = int(strPaddingPreSize, 0)
+            if ulPaddingPreSize < 0:
+                raise Exception(
+                    'The padding pre size is invalid: %d' % ulPaddingPreSize
+                )
+        strPaddingPreValue = tXmlRootNode.getAttribute('padding_pre_value')
+        if len(strPaddingPreValue) != 0:
+            ucPaddingPreValue = int(strPaddingPreValue, 0)
+            if (ucPaddingPreValue < 0) or (ucPaddingPreValue > 0xff):
+                raise Exception(
+                    'The padding pre value is invalid: %d' % ucPaddingPreValue
+                )
+        self.__ulPaddingPreSize = ulPaddingPreSize
+        self.__ucPaddingPreValue = ucPaddingPreValue
+
         # Get the device. Default to "UNSPECIFIED".
         astrValidDeviceNames = [
             'UNSPECIFIED',
@@ -4960,6 +4983,12 @@ class HbootImage:
 
         # Write all components to the output file.
         tFile = open(strTargetPath, 'wb')
+        if self.__ulPaddingPreSize != 0:
+            atPadding = array.array(
+                'B',
+                [self.__ucPaddingPreValue] * self.__ulPaddingPreSize
+            )
+            atPadding.tofile(tFile)
         if self.__fHasHeader is True:
             atHeader.tofile(tFile)
         atChunks.tofile(tFile)
