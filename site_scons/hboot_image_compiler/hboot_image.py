@@ -4136,7 +4136,7 @@ class HbootImage:
         tChunkNode = tChunkAttributes['tNode']
 
         ulDevice = None
-        ulOffset = None
+        ulOffsetInBytes = None
 
         # Loop over all children.
         for tNode in tChunkNode.childNodes:
@@ -4159,7 +4159,7 @@ class HbootImage:
                             'The Next node has no "Offset" child.'
                         )
 
-                    ulOffset = self.__parse_numeric_expression(
+                    ulOffsetInBytes = self.__parse_numeric_expression(
                         strOffset
                     )
 
@@ -4167,16 +4167,25 @@ class HbootImage:
         astrErr = []
         if ulDevice is None:
             astrErr.append('No device set in NEXT.')
-        if ulOffset is None:
+        if ulOffsetInBytes is None:
             astrErr.append('No offset set in NEXT.')
         if len(astrErr) != 0:
             raise Exception('\n'.join(astrErr))
+
+        # The offset must be a multiple of DWORDs.
+        if (ulOffsetInBytes % 4) != 0:
+            raise Exception(
+                'The offset %d is no multiple of DWORDS.' % ulOffsetInBytes
+            )
+
+        # Convert the offset in bytes to an offset in DWORDs.
+        ulOffsetInDwords = ulOffsetInBytes / 4
 
         aulChunk = array.array('I')
         aulChunk.append(self.__get_tag_id('N', 'E', 'X', 'T'))
         aulChunk.append(2 + self.__sizHashDw)
         aulChunk.append(ulDevice)
-        aulChunk.append(ulOffset)
+        aulChunk.append(ulOffsetInDwords)
 
         # Get the hash for the chunk.
         tHash = hashlib.sha384()
