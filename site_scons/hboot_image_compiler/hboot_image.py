@@ -4198,6 +4198,49 @@ class HbootImage:
         tChunkAttributes['atData'] = aulChunk
         tChunkAttributes['aulHash'] = None
 
+    def __build_chunk_daxz(self, tChunkAttributes, atParserState, uiChunkIndex, atAllChunks):
+        tChunkNode = tChunkAttributes['tNode']
+
+        # Get the working address.
+        strWorkingAddress = tChunkNode.getAttribute('working_address')
+        if len(strWorkingAddress) == 0:
+            raise Exception('The Concat node has no '
+                            'address attribute!')
+
+        pulWorkingAddress = self.__parse_numeric_expression(strWorkingAddress)
+
+        # Get the data block.
+        atData = {}
+        self.__get_data_contents(tChunkNode, atData, True)
+        strData = atData['data']
+        pulLoadAddress = atData['load_address']
+
+        # Pad the data to a multiple of DWORDs.
+        strPadding = chr(0x00) * ((4 - (len(strData) % 4)) & 3)
+        strPaddedData = strData + strPadding
+
+        # Convert the padded data to an array.
+        aulData = array.array('I')
+        aulData.fromstring(strPaddedData)
+
+        aulChunk = array.array('I')
+        aulChunk.append(self.__get_tag_id('D', 'A', 'X', 'Z'))
+        aulChunk.append(len(aulData) + 2 + self.__sizHashDw)
+        aulChunk.append(pulWorkingAddress)
+        aulChunk.append(pulLoadAddress)
+        aulChunk.extend(aulData)
+
+        # Get the hash for the chunk.
+        tHash = hashlib.sha384()
+        tHash.update(aulChunk.tostring())
+        strHash = tHash.digest()
+        aulHash = array.array('I', strHash[:self.__sizHashDw * 4])
+        aulChunk.extend(aulHash)
+
+        tChunkAttributes['fIsFinished'] = True
+        tChunkAttributes['atData'] = aulChunk
+        tChunkAttributes['aulHash'] = array.array('I', strHash)
+
     def __string_to_bool(self, strBool):
         strBool = string.upper(strBool)
         if(
@@ -4561,6 +4604,26 @@ class HbootImage:
             },
             'Next': {
                 'fn': self.__build_chunk_next,
+                'img': [
+                    self.__IMAGE_TYPE_REGULAR,
+                    self.__IMAGE_TYPE_INTRAM,
+                    # self.__IMAGE_TYPE_SECMEM,
+                    # self.__IMAGE_TYPE_COM_INFO_PAGE,
+                    # self.__IMAGE_TYPE_APP_INFO_PAGE
+                ],
+                'netx': [
+                    # 'NETX56',
+                    # 'NETX4000_RELAXED',
+                    # 'NETX4000',
+                    # 'NETX4100',
+                    # 'NETX90_MPW',
+                    'NETX90_FULL',
+                    # 'NETX90_MPW_APP',
+                    'NETX90_FULL_APP'
+                ]
+            },
+            'DaXZ': {
+                'fn': self.__build_chunk_daxz,
                 'img': [
                     self.__IMAGE_TYPE_REGULAR,
                     self.__IMAGE_TYPE_INTRAM,
