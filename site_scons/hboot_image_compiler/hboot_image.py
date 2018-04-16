@@ -3525,12 +3525,12 @@ class HbootImage:
                 'exp': None,
                 'der': None
             },
-            'RootKeyIndex': 16,
+            'KeyIndex': 0xff,
 
             # The Binding must be set by the user.
             'Binding': {
                 'mask': None,
-                'ref': None
+                'value': None
             },
 
             # The data must be set by the user.
@@ -3559,20 +3559,20 @@ class HbootImage:
                 elif tNode.localName == 'Key':
                     self.__usip_parse_trusted_path(tNode, __atCert['Key'])
 
-                elif tNode.localName == 'RootKeyIndex':
-                    # Get the root key index
+                elif tNode.localName == 'KeyIndex':
+                    # Get the key index
                     strIndex = self.__xml_get_all_text(tNode)
                     if len(strIndex) == 0:
-                        raise Exception('"RootKeyIndex" has no data!')
-                    ulRootKeyIndex = self.__parse_numeric_expression(
+                        raise Exception('"KeyIndex" has no data!')
+                    ulKeyIndex = self.__parse_numeric_expression(
                         strIndex
                     )
-                    if (ulRootKeyIndex < 0) or (ulRootKeyIndex > 31):
+                    if (ulKeyIndex < 0) or (ulKeyIndex > 255):
                         raise Exception(
-                            'The root key index is out of range: %d' %
-                            ulRootKeyIndex
+                            'The key index is out of range: %d' %
+                            ulKeyIndex
                         )
-                    __atCert['RootKeyIndex'] = ulRootKeyIndex
+                    __atCert['KeyIndex'] = ulKeyIndex
 
                 elif tNode.localName == 'Binding':
                     __atCert['Binding']['value'] = self.__cert_parse_binding(
@@ -3595,14 +3595,28 @@ class HbootImage:
         astrErr = []
         if __atCert['TargetInfoPage'] is None:
             astrErr.append('No target set in USIP.')
-        if __atCert['Key']['der'] is None:
-            astrErr.append('No key set in USIP.')
-        if __atCert['Binding']['mask'] is None:
-            astrErr.append('No "mask" set in the Binding.')
-        if __atCert['Binding']['value'] is None:
-            astrErr.append('No "value" set in the Binding.')
         if __atCert['Data']['data'] is None:
             astrErr.append('No "data" set in USIP.')
+        if __atCert['KeyIndex'] == 0xff:
+            if __atCert['Key']['der'] is not None:
+                astrErr.append('The key index is 0xff, '
+                               'but a key set in USIP.')
+            if __atCert['Binding']['mask'] is not None:
+                astrErr.append('The key index is 0xff, '
+                               'but a "mask" set in the Binding.')
+            if __atCert['Binding']['value'] is not None:
+                astrErr.append('The key index is 0xff, '
+                               'but a "value" set in the Binding.')
+        else:
+            if __atCert['Key']['der'] is None:
+                astrErr.append('The key index is not 0xff, '
+                               'but no key set in USIP.')
+            if __atCert['Binding']['mask'] is None:
+                astrErr.append('The key index is not 0xff, '
+                               'but no "mask" set in the Binding.')
+            if __atCert['Binding']['value'] is None:
+                astrErr.append('The key index is not 0xff, '
+                               'but no "value" set in the Binding.')
         if len(astrErr) != 0:
             raise Exception('\n'.join(astrErr))
 
@@ -3614,143 +3628,177 @@ class HbootImage:
 
         # Info page select
         atData.append(__atCert['TargetInfoPage'])
-        # root key index
-        atData.append(__atCert['RootKeyIndex'])
+        # key index
+        atData.append(__atCert['KeyIndex'])
         # Add the size of the patch data in bytes.
         atData.extend([sizPatchData & 0xff, (sizPatchData >> 8) & 0xff])
-        # Add the binding.
-        atData.extend(__atCert['Binding']['value'])
-        atData.extend(__atCert['Binding']['mask'])
 
-        # Add the padded key.
-        iKeyTyp_1ECC_2RSA = __atCert['Key']['iKeyTyp_1ECC_2RSA']
-        atAttr = __atCert['Key']['atAttr']
-        if iKeyTyp_1ECC_2RSA == 2:
-            # Add the algorithm.
-            atData.append(iKeyTyp_1ECC_2RSA)
-            # Add the strength.
-            atData.append(atAttr['id'])
-            # Add the public modulus N and fill up to 64 bytes.
-            self.__add_array_with_fillup(atData, atAttr['mod'], 512)
-            # Add the exponent E.
-            atData.extend(atAttr['exp'])
-            # Pad the key with 3 bytes.
-            atData.extend([0, 0, 0])
+        # Is this a secure chunk.
+        if __atCert['KeyIndex'] == 0xff:
+            # Non-secure.
 
-        elif iKeyTyp_1ECC_2RSA == 1:
-            # Add the algorithm.
-            atData.append(iKeyTyp_1ECC_2RSA)
-            # Add the strength.
-            atData.append(atAttr['id'])
-            # Write all fields and fill up to 64 bytes.
-            self.__add_array_with_fillup(atData, atAttr['Qx'], 64)
-            self.__add_array_with_fillup(atData, atAttr['Qy'], 64)
-            self.__add_array_with_fillup(atData, atAttr['a'], 64)
-            self.__add_array_with_fillup(atData, atAttr['b'], 64)
-            self.__add_array_with_fillup(atData, atAttr['p'], 64)
-            self.__add_array_with_fillup(atData, atAttr['Gx'], 64)
-            self.__add_array_with_fillup(atData, atAttr['Gy'], 64)
-            self.__add_array_with_fillup(atData, atAttr['n'], 64)
-            atData.extend([0, 0, 0])
-            # Pad the key with 3 bytes.
-            atData.extend([0, 0, 0])
+            # Add the patch data.
+            atData.extend(aucPatchData)
+            # Pad the patch data with 0x00.
+            sizPadding = (4 - (sizPatchData % 4)) & 3
+            atData.extend([0] * sizPadding)
 
-        # Add the patch data.
-        atData.extend(aucPatchData)
-        # Pad the patch data with 0x00.
-        sizPadding = (4 - (sizPatchData % 4)) & 3
-        atData.extend([0] * sizPadding)
+            # Convert the padded data to an array.
+            aulData = array.array('I')
+            aulData.fromstring(atData.tostring())
 
-        if iKeyTyp_1ECC_2RSA == 1:
-            sizKeyInDwords = len(atAttr['Qx']) / 4
-            sizSignatureInDwords = 2 * sizKeyInDwords
-        elif iKeyTyp_1ECC_2RSA == 2:
-            sizKeyInDwords = len(atAttr['mod']) / 4
-            sizSignatureInDwords = sizKeyInDwords
+            aulChunk = array.array('I')
+            aulChunk.append(self.__get_tag_id('U', 'S', 'I', 'P'))
+            aulChunk.append(len(aulData) + self.__sizHashDw)
+            aulChunk.extend(aulData)
 
-        # Convert the padded data to an array.
-        aulData = array.array('I')
-        aulData.fromstring(atData.tostring())
+            # Get the hash for the chunk.
+            tHash = hashlib.sha384()
+            tHash.update(aulChunk.tostring())
+            strHash = tHash.digest()
+            aulHash = array.array('I', strHash[:self.__sizHashDw * 4])
+            aulChunk.extend(aulHash)
 
-        aulChunk = array.array('I')
-        aulChunk.append(self.__get_tag_id('U', 'S', 'I', 'P'))
-        aulChunk.append(len(aulData) + sizSignatureInDwords)
-        aulChunk.extend(aulData)
+            tChunkAttributes['fIsFinished'] = True
+            tChunkAttributes['atData'] = aulChunk
+            tChunkAttributes['aulHash'] = array.array('I', strHash)
 
-        # Get the key in DER encoded format.
-        strKeyDER = __atCert['Key']['der']
+        else:
+            # Secure.
 
-        # Create a temporary file for the keypair.
-        iFile, strPathKeypair = tempfile.mkstemp(
-            suffix='der',
-            prefix='tmp_hboot_image',
-            dir=None,
-            text=False
-        )
-        os.close(iFile)
+            # Add the binding.
+            atData.extend(__atCert['Binding']['value'])
+            atData.extend(__atCert['Binding']['mask'])
 
-        # Create a temporary file for the data to sign.
-        iFile, strPathSignatureInputData = tempfile.mkstemp(
-            suffix='bin',
-            prefix='tmp_hboot_image',
-            dir=None,
-            text=False
-        )
-        os.close(iFile)
+            # Add the padded key.
+            iKeyTyp_1ECC_2RSA = __atCert['Key']['iKeyTyp_1ECC_2RSA']
+            atAttr = __atCert['Key']['atAttr']
+            if iKeyTyp_1ECC_2RSA == 2:
+                # Add the algorithm.
+                atData.append(iKeyTyp_1ECC_2RSA)
+                # Add the strength.
+                atData.append(atAttr['id'])
+                # Add the public modulus N and fill up to 64 bytes.
+                self.__add_array_with_fillup(atData, atAttr['mod'], 512)
+                # Add the exponent E.
+                atData.extend(atAttr['exp'])
+                # Pad the key with 3 bytes.
+                atData.extend([0, 0, 0])
 
-        # Write the DER key to the temporary file.
-        tFile = open(strPathKeypair, 'wt')
-        tFile.write(strKeyDER)
-        tFile.close()
+            elif iKeyTyp_1ECC_2RSA == 1:
+                # Add the algorithm.
+                atData.append(iKeyTyp_1ECC_2RSA)
+                # Add the strength.
+                atData.append(atAttr['id'])
+                # Write all fields and fill up to 64 bytes.
+                self.__add_array_with_fillup(atData, atAttr['Qx'], 64)
+                self.__add_array_with_fillup(atData, atAttr['Qy'], 64)
+                self.__add_array_with_fillup(atData, atAttr['a'], 64)
+                self.__add_array_with_fillup(atData, atAttr['b'], 64)
+                self.__add_array_with_fillup(atData, atAttr['p'], 64)
+                self.__add_array_with_fillup(atData, atAttr['Gx'], 64)
+                self.__add_array_with_fillup(atData, atAttr['Gy'], 64)
+                self.__add_array_with_fillup(atData, atAttr['n'], 64)
+                atData.extend([0, 0, 0])
+                # Pad the key with 3 bytes.
+                atData.extend([0, 0, 0])
 
-        # Write the data to sign to the temporary file.
-        tFile = open(strPathSignatureInputData, 'wb')
-        tFile.write(aulChunk.tostring())
-        tFile.close()
+            # Add the patch data.
+            atData.extend(aucPatchData)
+            # Pad the patch data with 0x00.
+            sizPadding = (4 - (sizPatchData % 4)) & 3
+            atData.extend([0] * sizPadding)
 
-        if iKeyTyp_1ECC_2RSA == 1:
-            astrCmd = [
-                self.__cfg_openssl,
-                'dgst',
-                '-sign', strPathKeypair,
-                '-keyform', 'DER',
-                '-sha384'
-            ]
-            astrCmd.extend(self.__cfg_openssloptions)
-            astrCmd.append(strPathSignatureInputData)
-            strEccSignature = subprocess.check_output(astrCmd)
-            aucEccSignature = array.array('B', strEccSignature)
+            if iKeyTyp_1ECC_2RSA == 1:
+                sizKeyInDwords = len(atAttr['Qx']) / 4
+                sizSignatureInDwords = 2 * sizKeyInDwords
+            elif iKeyTyp_1ECC_2RSA == 2:
+                sizKeyInDwords = len(atAttr['mod']) / 4
+                sizSignatureInDwords = sizKeyInDwords
 
-            # Parse the signature.
-            aucSignature = self.__openssl_ecc_get_signature(aucEccSignature, sizKeyInDwords * 4)
+            # Convert the padded data to an array.
+            aulData = array.array('I')
+            aulData.fromstring(atData.tostring())
 
-        elif iKeyTyp_1ECC_2RSA == 2:
-            astrCmd = [
-                self.__cfg_openssl,
-                'dgst',
-                '-sign', strPathKeypair,
-                '-keyform', 'DER',
-                '-sigopt', 'rsa_padding_mode:pss',
-                '-sigopt', 'rsa_pss_saltlen:-1',
-                '-sha384'
-            ]
-            astrCmd.extend(self.__cfg_openssloptions)
-            astrCmd.append(strPathSignatureInputData)
-            strSignatureMirror = subprocess.check_output(astrCmd)
-            aucSignature = array.array('B', strSignatureMirror)
-            # Mirror the signature.
-            aucSignature.reverse()
+            aulChunk = array.array('I')
+            aulChunk.append(self.__get_tag_id('U', 'S', 'I', 'P'))
+            aulChunk.append(len(aulData) + sizSignatureInDwords)
+            aulChunk.extend(aulData)
 
-        # Remove the temp files.
-        os.remove(strPathKeypair)
-        os.remove(strPathSignatureInputData)
+            # Get the key in DER encoded format.
+            strKeyDER = __atCert['Key']['der']
 
-        # Append the signature to the chunk.
-        aulChunk.fromstring(aucSignature.tostring())
+            # Create a temporary file for the keypair.
+            iFile, strPathKeypair = tempfile.mkstemp(
+                suffix='der',
+                prefix='tmp_hboot_image',
+                dir=None,
+                text=False
+            )
+            os.close(iFile)
 
-        tChunkAttributes['fIsFinished'] = True
-        tChunkAttributes['atData'] = aulChunk
-        tChunkAttributes['aulHash'] = None
+            # Create a temporary file for the data to sign.
+            iFile, strPathSignatureInputData = tempfile.mkstemp(
+                suffix='bin',
+                prefix='tmp_hboot_image',
+                dir=None,
+                text=False
+            )
+            os.close(iFile)
+
+            # Write the DER key to the temporary file.
+            tFile = open(strPathKeypair, 'wt')
+            tFile.write(strKeyDER)
+            tFile.close()
+
+            # Write the data to sign to the temporary file.
+            tFile = open(strPathSignatureInputData, 'wb')
+            tFile.write(aulChunk.tostring())
+            tFile.close()
+
+            if iKeyTyp_1ECC_2RSA == 1:
+                astrCmd = [
+                    self.__cfg_openssl,
+                    'dgst',
+                    '-sign', strPathKeypair,
+                    '-keyform', 'DER',
+                    '-sha384'
+                ]
+                astrCmd.extend(self.__cfg_openssloptions)
+                astrCmd.append(strPathSignatureInputData)
+                strEccSignature = subprocess.check_output(astrCmd)
+                aucEccSignature = array.array('B', strEccSignature)
+
+                # Parse the signature.
+                aucSignature = self.__openssl_ecc_get_signature(aucEccSignature, sizKeyInDwords * 4)
+
+            elif iKeyTyp_1ECC_2RSA == 2:
+                astrCmd = [
+                    self.__cfg_openssl,
+                    'dgst',
+                    '-sign', strPathKeypair,
+                    '-keyform', 'DER',
+                    '-sigopt', 'rsa_padding_mode:pss',
+                    '-sigopt', 'rsa_pss_saltlen:-1',
+                    '-sha384'
+                ]
+                astrCmd.extend(self.__cfg_openssloptions)
+                astrCmd.append(strPathSignatureInputData)
+                strSignatureMirror = subprocess.check_output(astrCmd)
+                aucSignature = array.array('B', strSignatureMirror)
+                # Mirror the signature.
+                aucSignature.reverse()
+
+            # Remove the temp files.
+            os.remove(strPathKeypair)
+            os.remove(strPathSignatureInputData)
+
+            # Append the signature to the chunk.
+            aulChunk.fromstring(aucSignature.tostring())
+
+            tChunkAttributes['fIsFinished'] = True
+            tChunkAttributes['atData'] = aulChunk
+            tChunkAttributes['aulHash'] = None
 
     def __build_chunk_hash_table(self, tChunkAttributes, atParserState, uiChunkIndex, atAllChunks):
         # This chunk must be build in multiple passes as it includes the hash
