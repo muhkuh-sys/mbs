@@ -422,7 +422,7 @@ class OptionCompiler:
                             else:
                                 raise Exception('Unknown Type %d' % ulType)
                 else:
-                    raise Exception('Unexpected node: %s', tOptionNode.localName)
+                    raise Exception('Unexpected node: %s' % tOptionNode.localName)
 
         return ''.join(atOptionData)
 
