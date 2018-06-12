@@ -6990,5 +6990,6 @@
 		<Definition name="UART_MODE_PARITY_ENABLE" value="0x02"/>
 		<Definition name="WFE_Loop" value="68211600"/>
 		<Definition name="WFI_Loop" value="68211592"/>
+		<Definition name="apply_port_control" value="0x041165f5"/>
 	</Definitions>
 </PatchDefinitions>
