@@ -224,6 +224,18 @@ class HbootImage:
                         )
                     )
 
+            if len(atGlobalDefines) == 0:
+                print('[HBootImage] Configuration: No defines.')
+            else:
+                for strKey, strValue in atGlobalDefines.iteritems():
+                    print(
+                        '[HBootImage] Configuration: '
+                        'Define %s=%s' % (
+                            strKey,
+                            strValue
+                        )
+                    )
+
         if strPatchDefinition is not None:
             self.__cPatchDefinitions = patch_definitions.PatchDefinitions()
             self.__cPatchDefinitions.read_patch_definition(strPatchDefinition)
