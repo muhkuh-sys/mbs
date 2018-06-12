@@ -1730,6 +1730,7 @@ class HbootImage:
         sizRelative = len(strRelative)
         strFill = tChunkNode.getAttribute('fill')
         sizFill = len(strFill)
+        tNodeFile = None
 
         strAbsFilePath = None
         # Loop over all children.
@@ -1738,8 +1739,9 @@ class HbootImage:
             if tChildNode.nodeType == tChildNode.ELEMENT_NODE:
                 # Is this a 'File' node?
                 if tChildNode.localName == 'File':
+                    tNodeFile = tChildNode
                     # Get the file name.
-                    strFileName = tChildNode.getAttribute('name')
+                    strFileName = tNodeFile.getAttribute('name')
                     if len(strFileName) == 0:
                         raise Exception('The file node has no '
                                         'name attribute!')
@@ -1861,10 +1863,10 @@ class HbootImage:
 
         tChunkAttributes['aulHash'] = array.array('I', strHash)
 
-        return aulChunk, ucFill, sizSkip, strAbsFilePath
+        return aulChunk, ucFill, sizSkip, strAbsFilePath, tNodeFile
 
     def __build_chunk_skip(self, tChunkAttributes, atParserState, uiChunkIndex, atAllChunks):
-        aulChunk, ucFill, sizSkip, strAbsFilePath =\
+        aulChunk, ucFill, sizSkip, strAbsFilePath, tNodeFile =\
             self.__build_chunk_skip_header(tChunkAttributes, atParserState)
 
         # Append the placeholder for the skip area.
@@ -1872,13 +1874,27 @@ class HbootImage:
             # sizSkip is the numbers of DWORDS to skip. Convert it to bytes.
             sizSkipBytes = sizSkip * 4
 
-            # Read at mose sizSkipBytes from the file.
-            tFile = open(strAbsFilePath, 'rb')
-            strFillData = tFile.read(sizSkipBytes)
-            tFile.close()
-            sizFillData = len(strFillData)
+            # Is this an ELF file?
+            strRoot, strExtension = os.path.splitext(strAbsFilePath)
+            if strExtension == '.elf':
+                # Get all data from the ELF file.
+                strFillData, ulLoadAddress = self.__get_data_contents_elf(
+                    tNodeFile,
+                    strAbsFilePath,
+                    False
+                )
+                # Cut down the data to the requested size.
+                if len(strFillData) > sizSkipBytes:
+                    strFillData = strFillData[:sizSkipBytes]
+
+            else:
+                # Read at most sizSkipBytes from the file.
+                tFile = open(strAbsFilePath, 'rb')
+                strFillData = tFile.read(sizSkipBytes)
+                tFile.close()
 
             # Fill up to the requested size.
+            sizFillData = len(strFillData)
             if sizFillData < sizSkipBytes:
                 strFillData += chr(ucFill) * (sizSkipBytes - sizFillData)
 
@@ -1900,7 +1916,7 @@ class HbootImage:
                 'A "SkipIncomplete" chunk can not be combined with an end '
                 'marker. Set "has_end" to "False".'
             )
-        aulChunk, ucFill, sizSkip, strAbsFilePath =\
+        aulChunk, ucFill, sizSkip, strAbsFilePath, tNodeFile =\
             self.__build_chunk_skip_header(tChunkAttributes, atParserState)
 
         # Do not add any data here. The image has to end after this chunk.
