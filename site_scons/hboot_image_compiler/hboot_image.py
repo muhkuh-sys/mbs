@@ -88,6 +88,7 @@ class HbootImage:
     __IMAGE_TYPE_SECMEM = 2
     __IMAGE_TYPE_COM_INFO_PAGE = 3
     __IMAGE_TYPE_APP_INFO_PAGE = 4
+    __IMAGE_TYPE_ALTERNATIVE = 5
     __sizHashDw = None
 
     __XmlKeyromContents = None
@@ -100,10 +101,11 @@ class HbootImage:
     # The magic cookies for the different chips.
     __MAGIC_COOKIE_NETX56 = 0xf8beaf00
     __MAGIC_COOKIE_NETX4000 = 0xf3beaf00
+    __MAGIC_COOKIE_NETX4000_ALT = 0xf3ad9e00
     __MAGIC_COOKIE_NETX90_MPW = 0xf3beaf00
-    __MAGIC_COOKIE_NETX90_MPW_APP = 0xf3ad9e00
+    __MAGIC_COOKIE_NETX90_MPW_ALT = 0xf3ad9e00
     __MAGIC_COOKIE_NETX90_FULL = 0xf3beaf00
-    __MAGIC_COOKIE_NETX90_FULL_APP = 0xf3ad9e00
+    __MAGIC_COOKIE_NETX90_FULL_ALT = 0xf3ad9e00
 
     __resolver = None
 
@@ -241,7 +243,8 @@ class HbootImage:
             'INTRAM': self.__IMAGE_TYPE_INTRAM,
             'SECMEM': self.__IMAGE_TYPE_SECMEM,
             'COM_INFO_PAGE': self.__IMAGE_TYPE_COM_INFO_PAGE,
-            'APP_INFO_PAGE': self.__IMAGE_TYPE_APP_INFO_PAGE
+            'APP_INFO_PAGE': self.__IMAGE_TYPE_APP_INFO_PAGE,
+            'ALTERNATIVE': self.__IMAGE_TYPE_ALTERNATIVE
         })
 
         # Initialize the include paths from the environment.
@@ -539,20 +542,20 @@ class HbootImage:
             (self.__strNetxType == 'NETX4000') or
             (self.__strNetxType == 'NETX4100')
         ):
-            ulMagicCookie = self.__MAGIC_COOKIE_NETX4000
+            if self.__tImageType == self.__IMAGE_TYPE_ALTERNATIVE:
+                ulMagicCookie = self.__MAGIC_COOKIE_NETX4000_ALT
+            else:
+                ulMagicCookie = self.__MAGIC_COOKIE_NETX4000
             ulSignature = self.__get_tag_id('M', 'O', 'O', 'H')
         elif self.__strNetxType == 'NETX90_MPW':
             ulMagicCookie = self.__MAGIC_COOKIE_NETX90_MPW
             ulSignature = self.__get_tag_id('M', 'O', 'O', 'H')
         elif self.__strNetxType == 'NETX90_FULL':
-            ulMagicCookie = self.__MAGIC_COOKIE_NETX90_FULL
+            if self.__tImageType == self.__IMAGE_TYPE_ALTERNATIVE:
+                ulMagicCookie = self.__MAGIC_COOKIE_NETX90_FULL_ALT
+            else:
+                ulMagicCookie = self.__MAGIC_COOKIE_NETX90_FULL
             ulSignature = self.__get_tag_id('M', 'O', 'O', 'H')
-        elif self.__strNetxType == 'NETX90_MPW_APP':
-            ulMagicCookie = self.__MAGIC_COOKIE_NETX90_MPW_APP
-            ulSignature = self.__get_tag_id('M', 'A', 'P', 'P')
-        elif self.__strNetxType == 'NETX90_FULL_APP':
-            ulMagicCookie = self.__MAGIC_COOKIE_NETX90_FULL_APP
-            ulSignature = self.__get_tag_id('M', 'A', 'P', 'P')
         else:
             raise Exception(
                 'Missing platform configuration: no standard header '
@@ -1339,25 +1342,6 @@ class HbootImage:
                     'end': 0x00200000
                 }
             ]
-        elif(
-            (self.__strNetxType == 'NETX90_MPW_APP') or
-            (self.__strNetxType == 'NETX90_FULL_APP')
-        ):
-            atXIPAreas = [
-                # SQI flash
-                {
-                    'device': 'SQIROM',
-                    'start': 0x64000000,
-                    'end': 0x68000000
-                },
-
-                # IFLASH2
-                {
-                    'device': 'INTFLASH',
-                    'start': 0x00200000,
-                    'end': 0x00280000
-                }
-            ]
 
         pulXipStartAddress = None
         for tXipArea in atXIPAreas:
@@ -1781,11 +1765,6 @@ class HbootImage:
             (self.__strNetxType == 'NETX90_FULL')
         ):
             sizOffsetCurrent += (1 + 1 + self.__sizHashDw) * 4
-        elif(
-            (self.__strNetxType == 'NETX90_MPW_APP') or
-            (self.__strNetxType == 'NETX90_FULL_APP')
-        ):
-            sizOffsetCurrent += (1 + 1 + self.__sizHashDw) * 4
         else:
             raise Exception('Continue here!')
         sizOffsetNew = sizOffsetCurrent
@@ -2071,9 +2050,7 @@ class HbootImage:
                     # Found the RSA type.
                     if(
                         (self.__strNetxType == 'NETX90_MPW') or
-                        (self.__strNetxType == 'NETX90_FULL') or
-                        (self.__strNetxType == 'NETX90_MPW_APP') or
-                        (self.__strNetxType == 'NETX90_FULL_APP')
+                        (self.__strNetxType == 'NETX90_FULL')
                     ):
                         uiId = uiElementId + 1
                     else:
@@ -2181,9 +2158,7 @@ class HbootImage:
                     # Found the ECC type.
                     if(
                         (self.__strNetxType == 'NETX90_MPW') or
-                        (self.__strNetxType == 'NETX90_FULL') or
-                        (self.__strNetxType == 'NETX90_MPW_APP') or
-                        (self.__strNetxType == 'NETX90_FULL_APP')
+                        (self.__strNetxType == 'NETX90_FULL')
                     ):
                         uiId = uiElementId + 1
                     else:
@@ -2243,9 +2218,7 @@ class HbootImage:
             sizBindingExpected = 64
         elif(
             (self.__strNetxType == 'NETX90_MPW') or
-            (self.__strNetxType == 'NETX90_FULL') or
-            (self.__strNetxType == 'NETX90_MPW_APP') or
-            (self.__strNetxType == 'NETX90_FULL_APP')
+            (self.__strNetxType == 'NETX90_FULL')
         ):
             sizBindingExpected = 28
 
@@ -4334,6 +4307,7 @@ class HbootImage:
                 'fn': self.__build_chunk_options,
                 'img': [
                     self.__IMAGE_TYPE_REGULAR,
+                    self.__IMAGE_TYPE_ALTERNATIVE,
                     self.__IMAGE_TYPE_INTRAM,
                     self.__IMAGE_TYPE_SECMEM,
                     # self.__IMAGE_TYPE_COM_INFO_PAGE,
@@ -4345,15 +4319,14 @@ class HbootImage:
                     'NETX4000',
                     'NETX4100',
                     'NETX90_MPW',
-                    'NETX90_FULL',
-                    'NETX90_MPW_APP',
-                    'NETX90_FULL_APP'
+                    'NETX90_FULL'
                 ]
             },
             'Data': {
                 'fn': self.__build_chunk_data,
                 'img': [
                     self.__IMAGE_TYPE_REGULAR,
+                    self.__IMAGE_TYPE_ALTERNATIVE,
                     self.__IMAGE_TYPE_INTRAM,
                     # self.__IMAGE_TYPE_SECMEM,
                     self.__IMAGE_TYPE_COM_INFO_PAGE,
@@ -4365,15 +4338,14 @@ class HbootImage:
                     'NETX4000',
                     'NETX4100',
                     'NETX90_MPW',
-                    'NETX90_FULL',
-                    'NETX90_MPW_APP',
-                    'NETX90_FULL_APP'
+                    'NETX90_FULL'
                 ]
             },
             'Text': {
                 'fn': self.__build_chunk_text,
                 'img': [
                     self.__IMAGE_TYPE_REGULAR,
+                    self.__IMAGE_TYPE_ALTERNATIVE,
                     self.__IMAGE_TYPE_INTRAM,
                     # self.__IMAGE_TYPE_SECMEM,
                     # self.__IMAGE_TYPE_COM_INFO_PAGE,
@@ -4385,15 +4357,14 @@ class HbootImage:
                     'NETX4000',
                     'NETX4100',
                     'NETX90_MPW',
-                    'NETX90_FULL',
-                    'NETX90_MPW_APP',
-                    'NETX90_FULL_APP'
+                    'NETX90_FULL'
                 ]
             },
             'XIP': {
                 'fn': self.__build_chunk_xip,
                 'img': [
                     self.__IMAGE_TYPE_REGULAR,
+                    self.__IMAGE_TYPE_ALTERNATIVE,
                     self.__IMAGE_TYPE_INTRAM,
                     # self.__IMAGE_TYPE_SECMEM,
                     # self.__IMAGE_TYPE_COM_INFO_PAGE,
@@ -4405,15 +4376,14 @@ class HbootImage:
                     'NETX4000',
                     'NETX4100',
                     'NETX90_MPW',
-                    'NETX90_FULL',
-                    'NETX90_MPW_APP',
-                    'NETX90_FULL_APP'
+                    'NETX90_FULL'
                 ]
             },
             'Execute': {
                 'fn': self.__build_chunk_execute,
                 'img': [
                     self.__IMAGE_TYPE_REGULAR,
+                    self.__IMAGE_TYPE_ALTERNATIVE,
                     self.__IMAGE_TYPE_INTRAM,
                     # self.__IMAGE_TYPE_SECMEM,
                     # self.__IMAGE_TYPE_COM_INFO_PAGE,
@@ -4425,15 +4395,14 @@ class HbootImage:
                     'NETX4000',
                     'NETX4100',
                     'NETX90_MPW',
-                    'NETX90_FULL',
-                    'NETX90_MPW_APP',
-                    'NETX90_FULL_APP'
+                    'NETX90_FULL'
                 ]
             },
             'ExecuteCA9': {
                 'fn': self.__build_chunk_execute_ca9,
                 'img': [
                     self.__IMAGE_TYPE_REGULAR,
+                    self.__IMAGE_TYPE_ALTERNATIVE,
                     self.__IMAGE_TYPE_INTRAM,
                     # self.__IMAGE_TYPE_SECMEM,
                     # self.__IMAGE_TYPE_COM_INFO_PAGE,
@@ -4445,15 +4414,14 @@ class HbootImage:
                     'NETX4000',
                     'NETX4100',
                     # 'NETX90_MPW',
-                    # 'NETX90_FULL',
-                    # 'NETX90_MPW_APP',
-                    # 'NETX90_FULL_APP'
+                    # 'NETX90_FULL'
                 ]
             },
             'SpiMacro': {
                 'fn': self.__build_chunk_spi_macro,
                 'img': [
                     self.__IMAGE_TYPE_REGULAR,
+                    self.__IMAGE_TYPE_ALTERNATIVE,
                     self.__IMAGE_TYPE_INTRAM,
                     # self.__IMAGE_TYPE_SECMEM,
                     # self.__IMAGE_TYPE_COM_INFO_PAGE,
@@ -4465,15 +4433,14 @@ class HbootImage:
                     'NETX4000',
                     'NETX4100',
                     'NETX90_MPW',
-                    'NETX90_FULL',
-                    'NETX90_MPW_APP',
-                    'NETX90_FULL_APP'
+                    'NETX90_FULL'
                 ]
             },
             'Skip': {
                 'fn': self.__build_chunk_skip,
                 'img': [
                     self.__IMAGE_TYPE_REGULAR,
+                    self.__IMAGE_TYPE_ALTERNATIVE,
                     self.__IMAGE_TYPE_INTRAM,
                     # self.__IMAGE_TYPE_SECMEM,
                     # self.__IMAGE_TYPE_COM_INFO_PAGE,
@@ -4485,15 +4452,14 @@ class HbootImage:
                     'NETX4000',
                     'NETX4100',
                     'NETX90_MPW',
-                    'NETX90_FULL',
-                    'NETX90_MPW_APP',
-                    'NETX90_FULL_APP'
+                    'NETX90_FULL'
                 ]
             },
             'SkipIncomplete': {
                 'fn': self.__build_chunk_skip_incomplete,
                 'img': [
                     self.__IMAGE_TYPE_REGULAR,
+                    self.__IMAGE_TYPE_ALTERNATIVE,
                     self.__IMAGE_TYPE_INTRAM,
                     # self.__IMAGE_TYPE_SECMEM,
                     # self.__IMAGE_TYPE_COM_INFO_PAGE,
@@ -4505,15 +4471,14 @@ class HbootImage:
                     'NETX4000',
                     'NETX4100',
                     'NETX90_MPW',
-                    'NETX90_FULL',
-                    'NETX90_MPW_APP',
-                    'NETX90_FULL_APP'
+                    'NETX90_FULL'
                 ]
             },
             'RootCert': {
                 'fn': self.__build_chunk_root_cert,
                 'img': [
                     self.__IMAGE_TYPE_REGULAR,
+                    self.__IMAGE_TYPE_ALTERNATIVE,
                     self.__IMAGE_TYPE_INTRAM,
                     # self.__IMAGE_TYPE_SECMEM,
                     # self.__IMAGE_TYPE_COM_INFO_PAGE,
@@ -4525,15 +4490,14 @@ class HbootImage:
                     'NETX4000',
                     'NETX4100',
                     # 'NETX90_MPW',
-                    # 'NETX90_FULL',
-                    # 'NETX90_MPW_APP',
-                    # 'NETX90_FULL_APP'
+                    # 'NETX90_FULL'
                 ]
             },
             'LicenseCert': {
                 'fn': self.__build_chunk_license_cert,
                 'img': [
                     self.__IMAGE_TYPE_REGULAR,
+                    self.__IMAGE_TYPE_ALTERNATIVE,
                     self.__IMAGE_TYPE_INTRAM,
                     # self.__IMAGE_TYPE_SECMEM,
                     # self.__IMAGE_TYPE_COM_INFO_PAGE,
@@ -4545,15 +4509,14 @@ class HbootImage:
                     'NETX4000',
                     'NETX4100',
                     # 'NETX90_MPW',
-                    # 'NETX90_FULL',
-                    # 'NETX90_MPW_APP',
-                    # 'NETX90_FULL_APP'
+                    # 'NETX90_FULL'
                 ]
             },
             'CR7Software': {
                 'fn': self.__build_chunk_cr7sw,
                 'img': [
                     self.__IMAGE_TYPE_REGULAR,
+                    self.__IMAGE_TYPE_ALTERNATIVE,
                     self.__IMAGE_TYPE_INTRAM,
                     # self.__IMAGE_TYPE_SECMEM,
                     # self.__IMAGE_TYPE_COM_INFO_PAGE,
@@ -4565,15 +4528,14 @@ class HbootImage:
                     'NETX4000',
                     'NETX4100',
                     # 'NETX90_MPW',
-                    # 'NETX90_FULL',
-                    # 'NETX90_MPW_APP',
-                    # 'NETX90_FULL_APP'
+                    # 'NETX90_FULL'
                 ]
             },
             'CA9Software': {
                 'fn': self.__build_chunk_ca9sw,
                 'img': [
                     self.__IMAGE_TYPE_REGULAR,
+                    self.__IMAGE_TYPE_ALTERNATIVE,
                     self.__IMAGE_TYPE_INTRAM,
                     # self.__IMAGE_TYPE_SECMEM,
                     # self.__IMAGE_TYPE_COM_INFO_PAGE,
@@ -4585,15 +4547,14 @@ class HbootImage:
                     'NETX4000',
                     'NETX4100',
                     # 'NETX90_MPW',
-                    # 'NETX90_FULL',
-                    # 'NETX90_MPW_APP',
-                    # 'NETX90_FULL_APP'
+                    # 'NETX90_FULL'
                 ]
             },
             'MemoryDeviceUp': {
                 'fn': self.__build_chunk_memory_device_up,
                 'img': [
                     self.__IMAGE_TYPE_REGULAR,
+                    self.__IMAGE_TYPE_ALTERNATIVE,
                     self.__IMAGE_TYPE_INTRAM,
                     # self.__IMAGE_TYPE_SECMEM,
                     # self.__IMAGE_TYPE_COM_INFO_PAGE,
@@ -4605,15 +4566,14 @@ class HbootImage:
                     'NETX4000',
                     'NETX4100',
                     'NETX90_MPW',
-                    'NETX90_FULL',
-                    'NETX90_MPW_APP',
-                    'NETX90_FULL_APP'
+                    'NETX90_FULL'
                 ]
             },
             'UpdateSecureInfoPage': {
                 'fn': self.__build_chunk_update_secure_info_page,
                 'img': [
                     self.__IMAGE_TYPE_REGULAR,
+                    self.__IMAGE_TYPE_ALTERNATIVE,
                     self.__IMAGE_TYPE_INTRAM,
                     # self.__IMAGE_TYPE_SECMEM,
                     # self.__IMAGE_TYPE_COM_INFO_PAGE,
@@ -4625,15 +4585,14 @@ class HbootImage:
                     # 'NETX4000',
                     # 'NETX4100',
                     # 'NETX90_MPW',
-                    'NETX90_FULL',
-                    # 'NETX90_MPW_APP',
-                    'NETX90_FULL_APP'
+                    'NETX90_FULL'
                 ]
             },
             'HashTable': {
                 'fn': self.__build_chunk_hash_table,
                 'img': [
                     self.__IMAGE_TYPE_REGULAR,
+                    self.__IMAGE_TYPE_ALTERNATIVE,
                     self.__IMAGE_TYPE_INTRAM,
                     # self.__IMAGE_TYPE_SECMEM,
                     # self.__IMAGE_TYPE_COM_INFO_PAGE,
@@ -4645,15 +4604,14 @@ class HbootImage:
                     # 'NETX4000',
                     # 'NETX4100',
                     # 'NETX90_MPW',
-                    'NETX90_FULL',
-                    # 'NETX90_MPW_APP',
-                    'NETX90_FULL_APP'
+                    'NETX90_FULL'
                 ]
             },
             'Next': {
                 'fn': self.__build_chunk_next,
                 'img': [
                     self.__IMAGE_TYPE_REGULAR,
+                    self.__IMAGE_TYPE_ALTERNATIVE,
                     self.__IMAGE_TYPE_INTRAM,
                     # self.__IMAGE_TYPE_SECMEM,
                     # self.__IMAGE_TYPE_COM_INFO_PAGE,
@@ -4665,15 +4623,14 @@ class HbootImage:
                     # 'NETX4000',
                     # 'NETX4100',
                     # 'NETX90_MPW',
-                    'NETX90_FULL',
-                    # 'NETX90_MPW_APP',
-                    'NETX90_FULL_APP'
+                    'NETX90_FULL'
                 ]
             },
             'DaXZ': {
                 'fn': self.__build_chunk_daxz,
                 'img': [
                     self.__IMAGE_TYPE_REGULAR,
+                    self.__IMAGE_TYPE_ALTERNATIVE,
                     self.__IMAGE_TYPE_INTRAM,
                     # self.__IMAGE_TYPE_SECMEM,
                     # self.__IMAGE_TYPE_COM_INFO_PAGE,
@@ -4685,9 +4642,7 @@ class HbootImage:
                     # 'NETX4000',
                     # 'NETX4100',
                     # 'NETX90_MPW',
-                    'NETX90_FULL',
-                    # 'NETX90_MPW_APP',
-                    'NETX90_FULL_APP'
+                    'NETX90_FULL'
                 ]
             },
         }
@@ -4814,6 +4769,20 @@ class HbootImage:
         else:
             # Set the default type.
             self.__tImageType = self.__IMAGE_TYPE_REGULAR
+
+        # Alternative images are allowed on netX4000 and netX90.
+        astrNetxWithAlternativeImages = [
+            'NETX4000_RELAXED',
+            'NETX4000',
+            'NETX4100',
+            'NETX90_FULL'
+        ]
+        if self.__tImageType == self.__IMAGE_TYPE_ALTERNATIVE:
+            if self.__strNetxType not in astrNetxWithAlternativeImages:
+                raise Exception(
+                    'The image type "ALTERNATIVE" is not allowed for the '
+                    'netX "%s".' % self.__strNetxType
+                )
 
         # Check if a header should be written to the output file.
         # SECMEM and info page images never have a header.
