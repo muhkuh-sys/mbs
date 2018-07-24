@@ -937,6 +937,180 @@ class HbootImage:
 
         return strData
 
+
+    REGI_COMMAND_NoOperation   =  0
+    REGI_COMMAND_LoadStore     =  1
+    REGI_COMMAND_Delay         =  2
+    REGI_COMMAND_Poll          =  3
+    REGI_COMMAND_SourceIsRegister = 0x10
+    REGI_COMMAND_UnlockAccessKey  = 0x20
+
+    atRegisterCommandTypes = {
+        'nop': {
+            'atAttributes': [],
+            'ulCmd': REGI_COMMAND_NoOperation,
+            'atSerialize': [],
+        },
+        'set': {
+            'atAttributes': [
+                {'name': 'address', 'type': 'uint32'}, 
+                {'name': 'value',   'type': 'uint32'}, 
+                {'name': 'unlock',  'type': 'bool', 'optional': True, 'default': False}
+            ],
+            'ulCmd': REGI_COMMAND_LoadStore,
+            'atSerialize': ['address', 'value'],
+        },
+        'copy': {
+            'atAttributes': [ 
+                {'name': 'source',  'type': 'uint32'}, 
+                {'name': 'dest',    'type': 'uint32'}, 
+                {'name': 'unlock',  'type': 'bool', 'optional': True, 'default': False} 
+            ],
+            'ulCmd': REGI_COMMAND_LoadStore + REGI_COMMAND_SourceIsRegister,
+            'atSerialize': ['source', 'dest'],
+        },
+        'delay':{
+            'atAttributes': [ 
+                {'name': 'time_ms', 'type': 'uint32'} 
+            ],
+            'ulCmd': REGI_COMMAND_Delay,
+            'atSerialize': [ 'time_ms'],
+        },
+        'poll': {
+            'atAttributes': [ 
+                {'name': 'address',     'type': 'uint32'}, 
+                {'name': 'mask',        'type': 'uint32'}, 
+                {'name': 'cmp',         'type': 'uint32'}, 
+                {'name': 'timeout_ms',  'type': 'uint32'}, 
+            ],
+            'ulCmd': REGI_COMMAND_Poll,
+            'atSerialize': [ 'address', 'mask', 'cmp', 'timeout_ms' ],
+        },
+    }
+
+    # Read the contents of a <Register> chunk and turn it into an intermediate representation.
+    # Attributes not required for a command are ignored, i.e. <nop address="0x10000000" /> is accepted.
+    def __get_register_contents(self, tRegNode, atCmd):
+        # tRegNode is the <Register> tag. Each child is a register command, e.g. <set>.
+        for tCmdNode in tRegNode.childNodes:
+            # Is this a node element?
+            if tCmdNode.nodeType == tCmdNode.ELEMENT_NODE:
+                tCmd = {}
+                atCmd.append(tCmd)
+                
+                # Get the command name and the list of attributes defined for it.
+                strNodeName = tCmdNode.localName
+                tCmd['name'] = strNodeName
+
+                if not strNodeName in self.atRegisterCommandTypes:
+                    raise Exception(
+                        'Unknown command type in register chunk: %s' % (strNodeName)
+                    )
+                else:
+                    atAttribs = self.atRegisterCommandTypes[strNodeName]['atAttributes']
+                    
+                    # Collect the attributes for the current register command.
+                    for tAttrib in atAttribs:
+                        # Get name and type of each attribute and whether it's optional.
+                        # By default, attributes are mandatory.
+                        strAttribName = tAttrib['name']
+                        strAttribType = tAttrib['type']
+                        fAttribOpt = 'optional' in tAttrib and tAttrib['optional'] == True
+                            
+                        # Get the value of the XML attribute. 
+                        # If the attribute is not present, an empty string is returned.
+                        strAttribVal = tCmdNode.getAttribute(strAttribName).strip()
+                        
+                        # The attribute is present. Convert the value.
+                        if len(strAttribVal) > 0:
+                            if strAttribType=='uint32':
+                                ulAttribVal = self.__parse_numeric_expression(strAttribVal)
+                                if ulAttribVal == None:
+                                    raise Exception(
+                                        'Could not parse value %s in attribute %s' %(strAttribVal, strAttribName)
+                                    )
+                                tCmd[strAttribName] = ulAttribVal
+                                
+                            elif strAttribType=='bool':
+                                if strAttribVal=='true':
+                                    tCmd[strAttribName] = True
+                                elif strAttribVal=='false':
+                                    tCmd[strAttribName] = False
+                                else:
+                                    raise Exception(
+                                        'Invalid value %s for boolean attribute %s' %(strAttribVal, strAttribName)
+                                    )
+                            else:
+                                tCmd[strAttribName] = strAttribVal
+                                
+                        # The attribute is not present and it is optional. 
+                        # Set the default value if defined.
+                        elif fAttribOpt:
+                            # If optional, get the default value if present.
+                            if 'default' in atAttribs:
+                                tCmd[strAttribName] = atAttribs['default']
+                        
+                        # The attribute is not present, but it is mandatory. 
+                        # Raise an error.
+                        else:
+                            raise Exception(
+                                'Mandatory attribute %s is missing' % (strAttribName)
+                            )
+                    #print tCmd     
+    
+    # Serialize the intermediate representatino of a Register chunk.
+    def __serialize_register_chunk(self, atCmd, aulCmds):
+        for tCmd in atCmd:
+            tCmdDesc = self.atRegisterCommandTypes[tCmd['name']]
+            
+            ulCmd = tCmdDesc['ulCmd']
+            if 'unlock' in tCmd and tCmd['unlock'] == True:
+                ulCmd += self.REGI_COMMAND_UnlockAccessKey
+            aulCmds.append(ulCmd)
+            
+            astrAttribs = tCmdDesc['atSerialize']
+            for strAttrib in astrAttribs:
+                val = tCmd[strAttrib]
+                aulCmds.append(val)
+                
+        #print aulCmds
+        
+    # Construct a chunk out of chunk data, adding chunk ID, size and hash.
+    def __wrap_chunk(self, tChunkAttributes, ulTagId, aulData):
+        # Build the chunk.
+        aulChunk = array.array('I')
+        aulChunk.append(ulTagId)
+        aulChunk.append(len(aulData) + self.__sizHashDw)
+        aulChunk.extend(aulData)
+        
+        # Get the hash for the chunk.
+        tHash = hashlib.sha384()
+        tHash.update(aulChunk.tostring())
+        strHash = tHash.digest()
+        aulHash = array.array('I', strHash[:self.__sizHashDw * 4])
+        aulChunk.extend(aulHash)
+    
+        tChunkAttributes['fIsFinished'] = True
+        tChunkAttributes['atData'] = aulChunk
+        tChunkAttributes['aulHash'] = array.array('I', strHash)
+        
+    
+    def __build_chunk_register(self, tChunkAttributes, atParserState, uiChunkIndex, atAllChunks):
+        tRegNode = tChunkAttributes['tNode']
+
+        # Read the register operations from the XML.
+        atCmd = []
+        self.__get_register_contents(tRegNode, atCmd)
+                
+        # Encode the operations.
+        aulData = array.array('I')
+        self.__serialize_register_chunk(atCmd, aulData)
+
+        # Build the chunk
+        ulTagId = self.__get_tag_id('R', 'E', 'G', 'I')
+        self.__wrap_chunk(tChunkAttributes, ulTagId, aulData)
+        
+
     def __get_data_contents(self, tDataNode, atData, fWantLoadAddress):
         strData = None
         pulLoadAddress = None
@@ -4347,6 +4521,25 @@ class HbootImage:
                     'NETX4000',
                     'NETX4100',
                     'NETX90_MPW',
+                    'NETX90_FULL'
+                ]
+            },
+            'Register': {
+                'fn': self.__build_chunk_register,
+                'img': [
+                    self.__IMAGE_TYPE_REGULAR,
+                    self.__IMAGE_TYPE_ALTERNATIVE,
+                    self.__IMAGE_TYPE_INTRAM,
+                    # self.__IMAGE_TYPE_SECMEM,
+                    # self.__IMAGE_TYPE_COM_INFO_PAGE,
+                    # self.__IMAGE_TYPE_APP_INFO_PAGE
+                ],
+                'netx': [
+                    #'NETX56',
+                    #'NETX4000_RELAXED',
+                    #'NETX4000',
+                    #'NETX4100',
+                    #'NETX90_MPW',
                     'NETX90_FULL'
                 ]
             },
