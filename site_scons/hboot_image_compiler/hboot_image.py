@@ -958,7 +958,7 @@ class HbootImage:
                 {'name': 'unlock',  'type': 'bool', 'optional': True, 'default': False}
             ],
             'ulCmd': REGI_COMMAND_LoadStore,
-            'atSerialize': ['address', 'value'],
+            'atSerialize': ['value', 'address'],
         },
         'copy': {
             'atAttributes': [ 
@@ -979,7 +979,7 @@ class HbootImage:
         'poll': {
             'atAttributes': [ 
                 {'name': 'address',     'type': 'uint32'}, 
-                {'name': 'mask',        'type': 'uint32'}, 
+                {'name': 'mask',        'type': 'uint32', 'optional': True, 'default': 0xffffffff}, 
                 {'name': 'cmp',         'type': 'uint32'}, 
                 {'name': 'timeout_ms',  'type': 'uint32'}, 
             ],
@@ -1047,8 +1047,8 @@ class HbootImage:
                         # Set the default value if defined.
                         elif fAttribOpt:
                             # If optional, get the default value if present.
-                            if 'default' in atAttribs:
-                                tCmd[strAttribName] = atAttribs['default']
+                            if 'default' in tAttrib:
+                                tCmd[strAttribName] = tAttrib['default']
                         
                         # The attribute is not present, but it is mandatory. 
                         # Raise an error.
