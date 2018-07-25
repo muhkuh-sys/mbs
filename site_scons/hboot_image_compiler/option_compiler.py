@@ -399,7 +399,7 @@ class OptionCompiler:
                                 if sizElement >= ulSize:
                                     raise Exception('The length of the data element %s for the option %s exceeds the available space. The model reserves %d bytes, which must include a length information, but %d were found.' % (strElementId, strOptionId, ulSize, sizElement))
                             elif ulType == 2:
-                                if sizElement >= ulSize:
+                                if sizElement > ulSize:
                                     raise Exception('The length of the data element %s for the option %s exceeds the available space. The model reserves %d bytes, but %d were found.' % (strElementId, strOptionId, ulSize, sizElement))
                             else:
                                 raise Exception('Unknown Type %d' % ulType)
