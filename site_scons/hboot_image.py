@@ -67,12 +67,12 @@ def __hboot_get_patch_table(env):
             strRelPatchDefinition = 'hboot_netx4000_patch_table.xml'
         elif strAsicTyp == 'NETX90_MPW':
             strRelPatchDefinition = 'hboot_netx90_mpw_patch_table.xml'
-        elif strAsicTyp == 'NETX90_FULL':
-            strRelPatchDefinition = 'hboot_netx90_full_patch_table.xml'
+        elif strAsicTyp == 'NETX90':
+            strRelPatchDefinition = 'hboot_netx90_patch_table.xml'
         elif strAsicTyp == 'NETX90_MPW_APP':
             strRelPatchDefinition = 'hboot_netx90_mpw_app_patch_table.xml'
-        elif strAsicTyp == 'NETX90_FULL_APP':
-            strRelPatchDefinition = 'hboot_netx90_full_app_patch_table.xml'
+        elif strAsicTyp == 'NETX90_APP':
+            strRelPatchDefinition = 'hboot_netx90_app_patch_table.xml'
         elif strAsicTyp == 'NETX56':
             strRelPatchDefinition = 'hboot_netx56_patch_table.xml'
         else:

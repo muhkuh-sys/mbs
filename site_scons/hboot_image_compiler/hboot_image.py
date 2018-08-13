@@ -104,8 +104,8 @@ class HbootImage:
     __MAGIC_COOKIE_NETX4000_ALT = 0xf3ad9e00
     __MAGIC_COOKIE_NETX90_MPW = 0xf3beaf00
     __MAGIC_COOKIE_NETX90_MPW_ALT = 0xf3ad9e00
-    __MAGIC_COOKIE_NETX90_FULL = 0xf3beaf00
-    __MAGIC_COOKIE_NETX90_FULL_ALT = 0xf3ad9e00
+    __MAGIC_COOKIE_NETX90 = 0xf3beaf00
+    __MAGIC_COOKIE_NETX90_ALT = 0xf3ad9e00
 
     __resolver = None
 
@@ -562,11 +562,11 @@ class HbootImage:
         elif self.__strNetxType == 'NETX90_MPW':
             ulMagicCookie = self.__MAGIC_COOKIE_NETX90_MPW
             ulSignature = self.__get_tag_id('M', 'O', 'O', 'H')
-        elif self.__strNetxType == 'NETX90_FULL':
+        elif self.__strNetxType == 'NETX90':
             if self.__tImageType == self.__IMAGE_TYPE_ALTERNATIVE:
-                ulMagicCookie = self.__MAGIC_COOKIE_NETX90_FULL_ALT
+                ulMagicCookie = self.__MAGIC_COOKIE_NETX90_ALT
             else:
-                ulMagicCookie = self.__MAGIC_COOKIE_NETX90_FULL
+                ulMagicCookie = self.__MAGIC_COOKIE_NETX90
             ulSignature = self.__get_tag_id('M', 'O', 'O', 'H')
         else:
             raise Exception(
@@ -796,7 +796,7 @@ class HbootImage:
 
             elif(
                 (self.__strNetxType == 'NETX90_MPW') or
-                (self.__strNetxType == 'NETX90_FULL')
+                (self.__strNetxType == 'NETX90')
             ):
                 # Pad the option chunk to 32 bit size.
                 strPadding = chr(0x00) * ((4 - (len(strData) % 4)) & 3)
@@ -892,7 +892,7 @@ class HbootImage:
 
         if(
             (self.__strNetxType == 'NETX90_MPW') or
-            (self.__strNetxType == 'NETX90_FULL')
+            (self.__strNetxType == 'NETX90')
         ):
             aucData = array.array('B')
 
@@ -1511,7 +1511,7 @@ class HbootImage:
             ]
         elif(
             (self.__strNetxType == 'NETX90_MPW') or
-            (self.__strNetxType == 'NETX90_FULL')
+            (self.__strNetxType == 'NETX90')
         ):
             atXIPAreas = [
                 # SQI flash
@@ -1711,7 +1711,7 @@ class HbootImage:
         sizDataInDwords = 5
         if(
             (self.__strNetxType == 'NETX90_MPW') or
-            (self.__strNetxType == 'NETX90_FULL')
+            (self.__strNetxType == 'NETX90')
         ):
             sizDataInDwords = 6
 
@@ -1950,7 +1950,7 @@ class HbootImage:
             sizOffsetCurrent += (1 + 1 + self.__sizHashDw) * 4
         elif(
             (self.__strNetxType == 'NETX90_MPW') or
-            (self.__strNetxType == 'NETX90_FULL')
+            (self.__strNetxType == 'NETX90')
         ):
             sizOffsetCurrent += (1 + 1 + self.__sizHashDw) * 4
         else:
@@ -2252,7 +2252,7 @@ class HbootImage:
                     # Found the RSA type.
                     if(
                         (self.__strNetxType == 'NETX90_MPW') or
-                        (self.__strNetxType == 'NETX90_FULL')
+                        (self.__strNetxType == 'NETX90')
                     ):
                         uiId = uiElementId + 1
                     else:
@@ -2360,7 +2360,7 @@ class HbootImage:
                     # Found the ECC type.
                     if(
                         (self.__strNetxType == 'NETX90_MPW') or
-                        (self.__strNetxType == 'NETX90_FULL')
+                        (self.__strNetxType == 'NETX90')
                     ):
                         uiId = uiElementId + 1
                     else:
@@ -2420,7 +2420,7 @@ class HbootImage:
             sizBindingExpected = 64
         elif(
             (self.__strNetxType == 'NETX90_MPW') or
-            (self.__strNetxType == 'NETX90_FULL')
+            (self.__strNetxType == 'NETX90')
         ):
             sizBindingExpected = 28
 
@@ -4521,7 +4521,7 @@ class HbootImage:
                     'NETX4000',
                     'NETX4100',
                     'NETX90_MPW',
-                    'NETX90_FULL'
+                    'NETX90'
                 ]
             },
             'Register': {
@@ -4540,7 +4540,7 @@ class HbootImage:
                     #'NETX4000',
                     #'NETX4100',
                     #'NETX90_MPW',
-                    'NETX90_FULL'
+                    'NETX90'
                 ]
             },
             'Data': {
@@ -4559,7 +4559,7 @@ class HbootImage:
                     'NETX4000',
                     'NETX4100',
                     'NETX90_MPW',
-                    'NETX90_FULL'
+                    'NETX90'
                 ]
             },
             'Text': {
@@ -4578,7 +4578,7 @@ class HbootImage:
                     'NETX4000',
                     'NETX4100',
                     'NETX90_MPW',
-                    'NETX90_FULL'
+                    'NETX90'
                 ]
             },
             'XIP': {
@@ -4597,7 +4597,7 @@ class HbootImage:
                     'NETX4000',
                     'NETX4100',
                     'NETX90_MPW',
-                    'NETX90_FULL'
+                    'NETX90'
                 ]
             },
             'Execute': {
@@ -4616,7 +4616,7 @@ class HbootImage:
                     'NETX4000',
                     'NETX4100',
                     'NETX90_MPW',
-                    'NETX90_FULL'
+                    'NETX90'
                 ]
             },
             'ExecuteCA9': {
@@ -4635,7 +4635,7 @@ class HbootImage:
                     'NETX4000',
                     'NETX4100',
                     # 'NETX90_MPW',
-                    # 'NETX90_FULL'
+                    # 'NETX90'
                 ]
             },
             'SpiMacro': {
@@ -4654,7 +4654,7 @@ class HbootImage:
                     'NETX4000',
                     'NETX4100',
                     'NETX90_MPW',
-                    'NETX90_FULL'
+                    'NETX90'
                 ]
             },
             'Skip': {
@@ -4673,7 +4673,7 @@ class HbootImage:
                     'NETX4000',
                     'NETX4100',
                     'NETX90_MPW',
-                    'NETX90_FULL'
+                    'NETX90'
                 ]
             },
             'SkipIncomplete': {
@@ -4692,7 +4692,7 @@ class HbootImage:
                     'NETX4000',
                     'NETX4100',
                     'NETX90_MPW',
-                    'NETX90_FULL'
+                    'NETX90'
                 ]
             },
             'RootCert': {
@@ -4711,7 +4711,7 @@ class HbootImage:
                     'NETX4000',
                     'NETX4100',
                     # 'NETX90_MPW',
-                    # 'NETX90_FULL'
+                    # 'NETX90'
                 ]
             },
             'LicenseCert': {
@@ -4730,7 +4730,7 @@ class HbootImage:
                     'NETX4000',
                     'NETX4100',
                     # 'NETX90_MPW',
-                    # 'NETX90_FULL'
+                    # 'NETX90'
                 ]
             },
             'CR7Software': {
@@ -4749,7 +4749,7 @@ class HbootImage:
                     'NETX4000',
                     'NETX4100',
                     # 'NETX90_MPW',
-                    # 'NETX90_FULL'
+                    # 'NETX90'
                 ]
             },
             'CA9Software': {
@@ -4768,7 +4768,7 @@ class HbootImage:
                     'NETX4000',
                     'NETX4100',
                     # 'NETX90_MPW',
-                    # 'NETX90_FULL'
+                    # 'NETX90'
                 ]
             },
             'MemoryDeviceUp': {
@@ -4787,7 +4787,7 @@ class HbootImage:
                     'NETX4000',
                     'NETX4100',
                     'NETX90_MPW',
-                    'NETX90_FULL'
+                    'NETX90'
                 ]
             },
             'UpdateSecureInfoPage': {
@@ -4806,7 +4806,7 @@ class HbootImage:
                     # 'NETX4000',
                     # 'NETX4100',
                     # 'NETX90_MPW',
-                    'NETX90_FULL'
+                    'NETX90'
                 ]
             },
             'HashTable': {
@@ -4825,7 +4825,7 @@ class HbootImage:
                     # 'NETX4000',
                     # 'NETX4100',
                     # 'NETX90_MPW',
-                    'NETX90_FULL'
+                    'NETX90'
                 ]
             },
             'Next': {
@@ -4844,7 +4844,7 @@ class HbootImage:
                     # 'NETX4000',
                     # 'NETX4100',
                     # 'NETX90_MPW',
-                    'NETX90_FULL'
+                    'NETX90'
                 ]
             },
             'DaXZ': {
@@ -4863,7 +4863,7 @@ class HbootImage:
                     # 'NETX4000',
                     # 'NETX4100',
                     # 'NETX90_MPW',
-                    'NETX90_FULL'
+                    'NETX90'
                 ]
             },
         }
@@ -4996,7 +4996,7 @@ class HbootImage:
             'NETX4000_RELAXED',
             'NETX4000',
             'NETX4100',
-            'NETX90_FULL'
+            'NETX90'
         ]
         if self.__tImageType == self.__IMAGE_TYPE_ALTERNATIVE:
             if self.__strNetxType not in astrNetxWithAlternativeImages:
