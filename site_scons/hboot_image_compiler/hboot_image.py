@@ -948,7 +948,7 @@ class HbootImage:
     atRegisterCommandTypes = {
         'nop': {
             'atAttributes': [],
-            'ulCmd': REGI_COMMAND_NoOperation,
+            'ucCmd': REGI_COMMAND_NoOperation,
             'atSerialize': [],
         },
         'set': {
@@ -957,7 +957,7 @@ class HbootImage:
                 {'name': 'value',   'type': 'uint32'}, 
                 {'name': 'unlock',  'type': 'bool', 'optional': True, 'default': False}
             ],
-            'ulCmd': REGI_COMMAND_LoadStore,
+            'ucCmd': REGI_COMMAND_LoadStore,
             'atSerialize': ['value', 'address'],
         },
         'copy': {
@@ -966,14 +966,14 @@ class HbootImage:
                 {'name': 'dest',    'type': 'uint32'}, 
                 {'name': 'unlock',  'type': 'bool', 'optional': True, 'default': False} 
             ],
-            'ulCmd': REGI_COMMAND_LoadStore + REGI_COMMAND_SourceIsRegister,
+            'ucCmd': REGI_COMMAND_LoadStore + REGI_COMMAND_SourceIsRegister,
             'atSerialize': ['source', 'dest'],
         },
         'delay':{
             'atAttributes': [ 
                 {'name': 'time_ms', 'type': 'uint32'} 
             ],
-            'ulCmd': REGI_COMMAND_Delay,
+            'ucCmd': REGI_COMMAND_Delay,
             'atSerialize': [ 'time_ms'],
         },
         'poll': {
@@ -983,7 +983,7 @@ class HbootImage:
                 {'name': 'cmp',         'type': 'uint32'}, 
                 {'name': 'timeout_ms',  'type': 'uint32'}, 
             ],
-            'ulCmd': REGI_COMMAND_Poll,
+            'ucCmd': REGI_COMMAND_Poll,
             'atSerialize': [ 'address', 'mask', 'cmp', 'timeout_ms' ],
         },
     }
@@ -1065,7 +1065,7 @@ class HbootImage:
         for tCmd in atCmd:
             tCmdDesc = self.atRegisterCommandTypes[tCmd['name']]
             
-            ucCmd = tCmdDesc['ulCmd']
+            ucCmd = tCmdDesc['ucCmd']
             if 'unlock' in tCmd and tCmd['unlock'] == True:
                 ucCmd += self.REGI_COMMAND_UnlockAccessKey
             abData.append(ucCmd)
