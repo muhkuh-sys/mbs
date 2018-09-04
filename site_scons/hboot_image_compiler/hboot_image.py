@@ -1058,23 +1058,34 @@ class HbootImage:
                             )
                     #print tCmd     
     
-    # Serialize the intermediate representatino of a Register chunk.
+    # Serialize the intermediate representation of a Register chunk.
     def __serialize_register_chunk(self, atCmd, aulCmds):
+        abData = bytearray()
+        
         for tCmd in atCmd:
             tCmdDesc = self.atRegisterCommandTypes[tCmd['name']]
             
-            ulCmd = tCmdDesc['ulCmd']
+            ucCmd = tCmdDesc['ulCmd']
             if 'unlock' in tCmd and tCmd['unlock'] == True:
-                ulCmd += self.REGI_COMMAND_UnlockAccessKey
-            aulCmds.append(ulCmd)
+                ucCmd += self.REGI_COMMAND_UnlockAccessKey
+            abData.append(ucCmd)
             
             astrAttribs = tCmdDesc['atSerialize']
             for strAttrib in astrAttribs:
-                val = tCmd[strAttrib]
-                aulCmds.append(val)
+                ulVal = tCmd[strAttrib]
+                self.__append_32bit(abData, ulVal)
                 
-        #print aulCmds
+        # Pad array to multiple of 4 bytes 
+        while (len(abData)&3) != 0:
+            abData.append(0)
+            
+        # Convert to an arrray of dwords
+        strData = str(abData)
+        aulData = array.array('I')
+        aulData.fromstring(strData)
         
+        aulCmds.extend(aulData)
+    
     # Construct a chunk out of chunk data, adding chunk ID, size and hash.
     def __wrap_chunk(self, tChunkAttributes, ulTagId, aulData):
         # Build the chunk.
