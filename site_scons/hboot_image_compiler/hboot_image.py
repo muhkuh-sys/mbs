@@ -1720,10 +1720,7 @@ class HbootImage:
         # netX90 has some strange additional options.
         ulFlags = None
         sizDataInDwords = 5
-        if(
-            (self.__strNetxType == 'NETX90_MPW') or
-            (self.__strNetxType == 'NETX90')
-        ):
+        if( self.__strNetxType == 'NETX90' ):
             sizDataInDwords = 6
 
             # Check if the APP CPU should be started.
