@@ -4000,7 +4000,7 @@ class HbootImage:
             ulNumberOfHashes = int(strNumberOfHashes, 0)
             if (ulNumberOfHashes < 1) or (ulNumberOfHashes > 8):
                 raise Exception(
-                    'The number of hashes is invalid: %d' % ulStartOffset
+                    'The number of hashes is invalid: %d' % ulNumberOfHashes
                 )
 
         # Get the required size of the chunk. Default to "None" which means
