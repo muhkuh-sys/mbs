@@ -657,7 +657,7 @@ class HbootImage:
     def __add_array_with_fillup(self, aucBuffer, aucNewData, sizMinimum):
         aucBuffer.extend(aucNewData)
         sizNewData = len(aucNewData)
-        if sizNewData<sizMinimum:
+        if sizNewData < sizMinimum:
             aucBuffer.extend([0] * (sizMinimum - sizNewData))
 
     def __parse_numeric_expression(self, strExpression):
@@ -937,13 +937,12 @@ class HbootImage:
 
         return strData
 
-
-    REGI_COMMAND_NoOperation   =  0
-    REGI_COMMAND_LoadStore     =  1
-    REGI_COMMAND_Delay         =  2
-    REGI_COMMAND_Poll          =  3
+    REGI_COMMAND_NoOperation = 0
+    REGI_COMMAND_LoadStore = 1
+    REGI_COMMAND_Delay = 2
+    REGI_COMMAND_Poll = 3
     REGI_COMMAND_SourceIsRegister = 0x10
-    REGI_COMMAND_UnlockAccessKey  = 0x20
+    REGI_COMMAND_UnlockAccessKey = 0x20
 
     atRegisterCommandTypes = {
         'nop': {
@@ -953,38 +952,38 @@ class HbootImage:
         },
         'set': {
             'atAttributes': [
-                {'name': 'address', 'type': 'uint32'}, 
-                {'name': 'value',   'type': 'uint32'}, 
+                {'name': 'address', 'type': 'uint32'},
+                {'name': 'value',   'type': 'uint32'},
                 {'name': 'unlock',  'type': 'bool', 'optional': True, 'default': False}
             ],
             'ucCmd': REGI_COMMAND_LoadStore,
             'atSerialize': ['value', 'address'],
         },
         'copy': {
-            'atAttributes': [ 
-                {'name': 'source',  'type': 'uint32'}, 
-                {'name': 'dest',    'type': 'uint32'}, 
-                {'name': 'unlock',  'type': 'bool', 'optional': True, 'default': False} 
+            'atAttributes': [
+                {'name': 'source',  'type': 'uint32'},
+                {'name': 'dest',    'type': 'uint32'},
+                {'name': 'unlock',  'type': 'bool', 'optional': True, 'default': False}
             ],
             'ucCmd': REGI_COMMAND_LoadStore + REGI_COMMAND_SourceIsRegister,
             'atSerialize': ['source', 'dest'],
         },
-        'delay':{
-            'atAttributes': [ 
-                {'name': 'time_ms', 'type': 'uint32'} 
+        'delay': {
+            'atAttributes': [
+                {'name': 'time_ms', 'type': 'uint32'}
             ],
             'ucCmd': REGI_COMMAND_Delay,
-            'atSerialize': [ 'time_ms'],
+            'atSerialize': ['time_ms'],
         },
         'poll': {
-            'atAttributes': [ 
-                {'name': 'address',     'type': 'uint32'}, 
-                {'name': 'mask',        'type': 'uint32', 'optional': True, 'default': 0xffffffff}, 
-                {'name': 'cmp',         'type': 'uint32'}, 
-                {'name': 'timeout_ms',  'type': 'uint32'}, 
+            'atAttributes': [
+                {'name': 'address',     'type': 'uint32'},
+                {'name': 'mask',        'type': 'uint32', 'optional': True, 'default': 0xffffffff},
+                {'name': 'cmp',         'type': 'uint32'},
+                {'name': 'timeout_ms',  'type': 'uint32'},
             ],
             'ucCmd': REGI_COMMAND_Poll,
-            'atSerialize': [ 'address', 'mask', 'cmp', 'timeout_ms' ],
+            'atSerialize': ['address', 'mask', 'cmp', 'timeout_ms'],
         },
     }
 
@@ -997,95 +996,95 @@ class HbootImage:
             if tCmdNode.nodeType == tCmdNode.ELEMENT_NODE:
                 tCmd = {}
                 atCmd.append(tCmd)
-                
+
                 # Get the command name and the list of attributes defined for it.
                 strNodeName = tCmdNode.localName
                 tCmd['name'] = strNodeName
 
-                if not strNodeName in self.atRegisterCommandTypes:
+                if strNodeName not in self.atRegisterCommandTypes:
                     raise Exception(
                         'Unknown command type in register chunk: %s' % (strNodeName)
                     )
                 else:
                     atAttribs = self.atRegisterCommandTypes[strNodeName]['atAttributes']
-                    
+
                     # Collect the attributes for the current register command.
                     for tAttrib in atAttribs:
                         # Get name and type of each attribute and whether it's optional.
                         # By default, attributes are mandatory.
                         strAttribName = tAttrib['name']
                         strAttribType = tAttrib['type']
-                        fAttribOpt = 'optional' in tAttrib and tAttrib['optional'] == True
-                            
-                        # Get the value of the XML attribute. 
+                        fAttribOpt = 'optional' in tAttrib and tAttrib['optional'] is True
+
+                        # Get the value of the XML attribute.
                         # If the attribute is not present, an empty string is returned.
                         strAttribVal = tCmdNode.getAttribute(strAttribName).strip()
-                        
+
                         # The attribute is present. Convert the value.
                         if len(strAttribVal) > 0:
-                            if strAttribType=='uint32':
+                            if strAttribType == 'uint32':
                                 ulAttribVal = self.__parse_numeric_expression(strAttribVal)
-                                if ulAttribVal == None:
+                                if ulAttribVal is None:
                                     raise Exception(
-                                        'Could not parse value %s in attribute %s' %(strAttribVal, strAttribName)
+                                        'Could not parse value %s in attribute %s' % (strAttribVal, strAttribName)
                                     )
                                 tCmd[strAttribName] = ulAttribVal
-                                
-                            elif strAttribType=='bool':
-                                if strAttribVal=='true':
+
+                            elif strAttribType == 'bool':
+                                if strAttribVal == 'true':
                                     tCmd[strAttribName] = True
-                                elif strAttribVal=='false':
+                                elif strAttribVal == 'false':
                                     tCmd[strAttribName] = False
                                 else:
                                     raise Exception(
-                                        'Invalid value %s for boolean attribute %s' %(strAttribVal, strAttribName)
+                                        'Invalid value %s for boolean attribute %s' % (strAttribVal, strAttribName)
                                     )
                             else:
                                 tCmd[strAttribName] = strAttribVal
-                                
-                        # The attribute is not present and it is optional. 
+
+                        # The attribute is not present and it is optional.
                         # Set the default value if defined.
                         elif fAttribOpt:
                             # If optional, get the default value if present.
                             if 'default' in tAttrib:
                                 tCmd[strAttribName] = tAttrib['default']
-                        
-                        # The attribute is not present, but it is mandatory. 
+
+                        # The attribute is not present, but it is mandatory.
                         # Raise an error.
                         else:
                             raise Exception(
                                 'Mandatory attribute %s is missing' % (strAttribName)
                             )
-                    #print tCmd     
-    
+                    # print tCmd
+
     # Serialize the intermediate representation of a Register chunk.
     def __serialize_register_chunk(self, atCmd, aulCmds):
         abData = bytearray()
-        
+
         for tCmd in atCmd:
             tCmdDesc = self.atRegisterCommandTypes[tCmd['name']]
-            
+
             ucCmd = tCmdDesc['ucCmd']
-            if 'unlock' in tCmd and tCmd['unlock'] == True:
+            if 'unlock' in tCmd and tCmd['unlock'] is True:
                 ucCmd += self.REGI_COMMAND_UnlockAccessKey
             abData.append(ucCmd)
-            
+
             astrAttribs = tCmdDesc['atSerialize']
             for strAttrib in astrAttribs:
                 ulVal = tCmd[strAttrib]
                 self.__append_32bit(abData, ulVal)
-                
-        # Pad array to multiple of 4 bytes 
-        while (len(abData)&3) != 0:
+
+        # Pad array to multiple of 4 bytes
+        while (len(abData) & 3) != 0:
             abData.append(0)
-            
+
         # Convert to an arrray of dwords
         strData = str(abData)
         aulData = array.array('I')
         aulData.fromstring(strData)
-        
+
         aulCmds.extend(aulData)
-    
+
     # Construct a chunk out of chunk data, adding chunk ID, size and hash.
     def __wrap_chunk(self, tChunkAttributes, ulTagId, aulData):
         # Build the chunk.
@@ -1093,26 +1092,25 @@ class HbootImage:
         aulChunk.append(ulTagId)
         aulChunk.append(len(aulData) + self.__sizHashDw)
         aulChunk.extend(aulData)
-        
+
         # Get the hash for the chunk.
         tHash = hashlib.sha384()
         tHash.update(aulChunk.tostring())
         strHash = tHash.digest()
         aulHash = array.array('I', strHash[:self.__sizHashDw * 4])
         aulChunk.extend(aulHash)
-    
+
         tChunkAttributes['fIsFinished'] = True
         tChunkAttributes['atData'] = aulChunk
         tChunkAttributes['aulHash'] = array.array('I', strHash)
-        
-    
+
     def __build_chunk_register(self, tChunkAttributes, atParserState, uiChunkIndex, atAllChunks):
         tRegNode = tChunkAttributes['tNode']
 
         # Read the register operations from the XML.
         atCmd = []
         self.__get_register_contents(tRegNode, atCmd)
-                
+
         # Encode the operations.
         aulData = array.array('I')
         self.__serialize_register_chunk(atCmd, aulData)
@@ -1120,7 +1118,6 @@ class HbootImage:
         # Build the chunk
         ulTagId = self.__get_tag_id('R', 'E', 'G', 'I')
         self.__wrap_chunk(tChunkAttributes, ulTagId, aulData)
-        
 
     def __get_data_contents(self, tDataNode, atData, fWantLoadAddress):
         strData = None
@@ -1429,8 +1426,8 @@ class HbootImage:
         aulChunk = array.array('I')
         # Do not add an ID for info page images.
         if(
-            ( self.__tImageType != self.__IMAGE_TYPE_COM_INFO_PAGE) and
-            ( self.__tImageType != self.__IMAGE_TYPE_APP_INFO_PAGE)
+            (self.__tImageType != self.__IMAGE_TYPE_COM_INFO_PAGE) and
+            (self.__tImageType != self.__IMAGE_TYPE_APP_INFO_PAGE)
         ):
             aulChunk.append(self.__get_tag_id('D', 'A', 'T', 'A'))
             aulChunk.append(len(aulData) + 1 + self.__sizHashDw)
@@ -1720,7 +1717,7 @@ class HbootImage:
         # netX90 has some strange additional options.
         ulFlags = None
         sizDataInDwords = 5
-        if( self.__strNetxType == 'NETX90' ):
+        if(self.__strNetxType == 'NETX90'):
             sizDataInDwords = 6
 
             # Check if the APP CPU should be started.
@@ -2130,7 +2127,7 @@ class HbootImage:
                 else:
                     for strDataHex in string.split(strLine, ':'):
                         strDataHexStrip = string.strip(strDataHex)
-                        if len(strDataHexStrip)!=0:
+                        if len(strDataHexStrip) != 0:
                             strDataBin = binascii.unhexlify(strDataHexStrip)
                             aucData.append(ord(strDataBin))
 
@@ -2138,7 +2135,7 @@ class HbootImage:
 
     def __openssl_cut_leading_zero(self, aucData):
         # Does the number start with "00" and is the third digit >= 8?
-        if aucData[0]==0x00 and aucData[1]>=0x80:
+        if aucData[0] == 0x00 and aucData[1] >= 0x80:
             # Remove the leading "00".
             aucData.pop(0)
 
@@ -2147,7 +2144,7 @@ class HbootImage:
 
     def __openssl_uncompress_field(self, aucData):
         # The data must not be compressed.
-        if aucData[0]!=0x04:
+        if aucData[0] != 0x04:
             raise Exception('The data is compressed. This is not supported yet.')
         # Cut off the first byte.
         aucData.pop(0)
@@ -2334,7 +2331,7 @@ class HbootImage:
                 raise Exception('Can not find cofactor!')
             ulCofactor = long(tMatch.group(1))
             ulCofactorHex = long(tMatch.group(2), 16)
-            if ulCofactor!=ulCofactorHex:
+            if ulCofactor != ulCofactorHex:
                 raise Exception('Decimal version differs from hex version!')
 
             __atKnownEccSizes = {
@@ -4277,7 +4274,6 @@ class HbootImage:
                 for atHash in atHashes:
                     aucData.fromstring(atHash.tostring())
 
-
                 aulChunk = array.array('I')
                 # Add the ID.
                 aulChunk.append(self.__get_tag_id('H', 'T', 'B', 'L'))
@@ -4543,11 +4539,11 @@ class HbootImage:
                     # self.__IMAGE_TYPE_APP_INFO_PAGE
                 ],
                 'netx': [
-                    #'NETX56',
-                    #'NETX4000_RELAXED',
-                    #'NETX4000',
-                    #'NETX4100',
-                    #'NETX90_MPW',
+                    # 'NETX56',
+                    # 'NETX4000_RELAXED',
+                    # 'NETX4000',
+                    # 'NETX4100',
+                    # 'NETX90_MPW',
                     'NETX90'
                 ]
             },
