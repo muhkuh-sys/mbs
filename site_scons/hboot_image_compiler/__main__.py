@@ -14,6 +14,7 @@ tParser.add_argument('-n', '--netx-type',
                      choices=[
                          'NETX56',
                          'NETX90',
+                         'NETX90B',
                          'NETX90_MPW',
                          'NETX4000_RELAXED',
                          'NETX4000',
@@ -99,6 +100,7 @@ tArgs = tParser.parse_args()
 atDefaultPatchTables = {
     'NETX56': 'hboot_netx56_patch_table.xml',
     'NETX90': 'hboot_netx90_patch_table.xml',
+    'NETX90B': 'hboot_netx90b_patch_table.xml',
     'NETX90_MPW': 'hboot_netx90_mpw_patch_table.xml',
     'NETX4000_RELAXED': 'hboot_netx4000_relaxed_patch_table.xml',
     'NETX4000': 'hboot_netx4000_patch_table.xml',

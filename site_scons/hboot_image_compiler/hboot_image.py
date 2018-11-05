@@ -106,6 +106,8 @@ class HbootImage:
     __MAGIC_COOKIE_NETX90_MPW_ALT = 0xf3ad9e00
     __MAGIC_COOKIE_NETX90 = 0xf3beaf00
     __MAGIC_COOKIE_NETX90_ALT = 0xf3ad9e00
+    __MAGIC_COOKIE_NETX90B = 0xf3beaf00
+    __MAGIC_COOKIE_NETX90B_ALT = 0xf3ad9e00
 
     __resolver = None
 
@@ -568,6 +570,12 @@ class HbootImage:
             else:
                 ulMagicCookie = self.__MAGIC_COOKIE_NETX90
             ulSignature = self.__get_tag_id('M', 'O', 'O', 'H')
+        elif self.__strNetxType == 'NETX90B':
+            if self.__tImageType == self.__IMAGE_TYPE_ALTERNATIVE:
+                ulMagicCookie = self.__MAGIC_COOKIE_NETX90B_ALT
+            else:
+                ulMagicCookie = self.__MAGIC_COOKIE_NETX90B
+            ulSignature = self.__get_tag_id('M', 'O', 'O', 'H')
         else:
             raise Exception(
                 'Missing platform configuration: no standard header '
@@ -796,7 +804,8 @@ class HbootImage:
 
             elif(
                 (self.__strNetxType == 'NETX90_MPW') or
-                (self.__strNetxType == 'NETX90')
+                (self.__strNetxType == 'NETX90') or
+                (self.__strNetxType == 'NETX90B')
             ):
                 # Pad the option chunk to 32 bit size.
                 strPadding = chr(0x00) * ((4 - (len(strData) % 4)) & 3)
@@ -892,7 +901,8 @@ class HbootImage:
 
         if(
             (self.__strNetxType == 'NETX90_MPW') or
-            (self.__strNetxType == 'NETX90')
+            (self.__strNetxType == 'NETX90') or
+            (self.__strNetxType == 'NETX90B')
         ):
             aucData = array.array('B')
 
@@ -1519,7 +1529,8 @@ class HbootImage:
             ]
         elif(
             (self.__strNetxType == 'NETX90_MPW') or
-            (self.__strNetxType == 'NETX90')
+            (self.__strNetxType == 'NETX90') or
+            (self.__strNetxType == 'NETX90B')
         ):
             atXIPAreas = [
                 # SQI flash
@@ -1714,10 +1725,13 @@ class HbootImage:
         }
         self.__get_execute_data(tChunkNode, __atData)
 
-        # netX90 has some strange additional options.
+        # netX90 and netX90B have some strange additional options.
         ulFlags = None
         sizDataInDwords = 5
-        if(self.__strNetxType == 'NETX90'):
+        if(
+          (self.__strNetxType == 'NETX90') or
+          (self.__strNetxType == 'NETX90B')
+        ):
             sizDataInDwords = 6
 
             # Check if the APP CPU should be started.
@@ -1955,7 +1969,8 @@ class HbootImage:
             sizOffsetCurrent += (1 + 1 + self.__sizHashDw) * 4
         elif(
             (self.__strNetxType == 'NETX90_MPW') or
-            (self.__strNetxType == 'NETX90')
+            (self.__strNetxType == 'NETX90') or
+            (self.__strNetxType == 'NETX90B')
         ):
             sizOffsetCurrent += (1 + 1 + self.__sizHashDw) * 4
         else:
@@ -2257,7 +2272,8 @@ class HbootImage:
                     # Found the RSA type.
                     if(
                         (self.__strNetxType == 'NETX90_MPW') or
-                        (self.__strNetxType == 'NETX90')
+                        (self.__strNetxType == 'NETX90') or
+                        (self.__strNetxType == 'NETX90B')
                     ):
                         uiId = uiElementId + 1
                     else:
@@ -2365,7 +2381,8 @@ class HbootImage:
                     # Found the ECC type.
                     if(
                         (self.__strNetxType == 'NETX90_MPW') or
-                        (self.__strNetxType == 'NETX90')
+                        (self.__strNetxType == 'NETX90') or
+                        (self.__strNetxType == 'NETX90B')
                     ):
                         uiId = uiElementId + 1
                     else:
@@ -2425,7 +2442,8 @@ class HbootImage:
             sizBindingExpected = 64
         elif(
             (self.__strNetxType == 'NETX90_MPW') or
-            (self.__strNetxType == 'NETX90')
+            (self.__strNetxType == 'NETX90') or
+            (self.__strNetxType == 'NETX90B')
         ):
             sizBindingExpected = 28
 
@@ -4525,6 +4543,7 @@ class HbootImage:
                     'NETX4000',
                     'NETX4100',
                     'NETX90_MPW',
+                    'NETX90B',
                     'NETX90'
                 ]
             },
@@ -4544,7 +4563,8 @@ class HbootImage:
                     # 'NETX4000',
                     # 'NETX4100',
                     # 'NETX90_MPW',
-                    'NETX90'
+                    'NETX90',
+                    'NETX90B'
                 ]
             },
             'Data': {
@@ -4563,7 +4583,8 @@ class HbootImage:
                     'NETX4000',
                     'NETX4100',
                     'NETX90_MPW',
-                    'NETX90'
+                    'NETX90',
+                    'NETX90B'
                 ]
             },
             'Text': {
@@ -4582,7 +4603,8 @@ class HbootImage:
                     'NETX4000',
                     'NETX4100',
                     'NETX90_MPW',
-                    'NETX90'
+                    'NETX90',
+                    'NETX90B'
                 ]
             },
             'XIP': {
@@ -4601,7 +4623,8 @@ class HbootImage:
                     'NETX4000',
                     'NETX4100',
                     'NETX90_MPW',
-                    'NETX90'
+                    'NETX90',
+                    'NETX90B'
                 ]
             },
             'Execute': {
@@ -4620,7 +4643,8 @@ class HbootImage:
                     'NETX4000',
                     'NETX4100',
                     'NETX90_MPW',
-                    'NETX90'
+                    'NETX90',
+                    'NETX90B'
                 ]
             },
             'ExecuteCA9': {
@@ -4639,7 +4663,8 @@ class HbootImage:
                     'NETX4000',
                     'NETX4100',
                     # 'NETX90_MPW',
-                    # 'NETX90'
+                    # 'NETX90',
+                    # 'NETX90B'
                 ]
             },
             'SpiMacro': {
@@ -4658,7 +4683,8 @@ class HbootImage:
                     'NETX4000',
                     'NETX4100',
                     'NETX90_MPW',
-                    'NETX90'
+                    'NETX90',
+                    'NETX90B'
                 ]
             },
             'Skip': {
@@ -4677,7 +4703,8 @@ class HbootImage:
                     'NETX4000',
                     'NETX4100',
                     'NETX90_MPW',
-                    'NETX90'
+                    'NETX90',
+                    'NETX90B'
                 ]
             },
             'SkipIncomplete': {
@@ -4696,7 +4723,8 @@ class HbootImage:
                     'NETX4000',
                     'NETX4100',
                     'NETX90_MPW',
-                    'NETX90'
+                    'NETX90',
+                    'NETX90B'
                 ]
             },
             'RootCert': {
@@ -4715,7 +4743,8 @@ class HbootImage:
                     'NETX4000',
                     'NETX4100',
                     # 'NETX90_MPW',
-                    # 'NETX90'
+                    # 'NETX90',
+                    # 'NETX90B'
                 ]
             },
             'LicenseCert': {
@@ -4734,7 +4763,8 @@ class HbootImage:
                     'NETX4000',
                     'NETX4100',
                     # 'NETX90_MPW',
-                    # 'NETX90'
+                    # 'NETX90',
+                    # 'NETX90B'
                 ]
             },
             'CR7Software': {
@@ -4753,7 +4783,8 @@ class HbootImage:
                     'NETX4000',
                     'NETX4100',
                     # 'NETX90_MPW',
-                    # 'NETX90'
+                    # 'NETX90',
+                    # 'NETX90B'
                 ]
             },
             'CA9Software': {
@@ -4772,7 +4803,8 @@ class HbootImage:
                     'NETX4000',
                     'NETX4100',
                     # 'NETX90_MPW',
-                    # 'NETX90'
+                    # 'NETX90',
+                    # 'NETX90B'
                 ]
             },
             'MemoryDeviceUp': {
@@ -4791,7 +4823,8 @@ class HbootImage:
                     'NETX4000',
                     'NETX4100',
                     'NETX90_MPW',
-                    'NETX90'
+                    'NETX90',
+                    'NETX90B'
                 ]
             },
             'UpdateSecureInfoPage': {
@@ -4810,7 +4843,8 @@ class HbootImage:
                     # 'NETX4000',
                     # 'NETX4100',
                     # 'NETX90_MPW',
-                    'NETX90'
+                    'NETX90',
+                    'NETX90B'
                 ]
             },
             'HashTable': {
@@ -4829,7 +4863,8 @@ class HbootImage:
                     # 'NETX4000',
                     # 'NETX4100',
                     # 'NETX90_MPW',
-                    'NETX90'
+                    'NETX90',
+                    'NETX90B'
                 ]
             },
             'Next': {
@@ -4848,7 +4883,8 @@ class HbootImage:
                     # 'NETX4000',
                     # 'NETX4100',
                     # 'NETX90_MPW',
-                    'NETX90'
+                    'NETX90',
+                    'NETX90B'
                 ]
             },
             'DaXZ': {
@@ -4867,7 +4903,8 @@ class HbootImage:
                     # 'NETX4000',
                     # 'NETX4100',
                     # 'NETX90_MPW',
-                    'NETX90'
+                    'NETX90',
+                    'NETX90B'
                 ]
             },
         }
@@ -5000,7 +5037,8 @@ class HbootImage:
             'NETX4000_RELAXED',
             'NETX4000',
             'NETX4100',
-            'NETX90'
+            'NETX90',
+            'NETX90B'
         ]
         if self.__tImageType == self.__IMAGE_TYPE_ALTERNATIVE:
             if self.__strNetxType not in astrNetxWithAlternativeImages:
