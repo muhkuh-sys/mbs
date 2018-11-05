@@ -3583,22 +3583,61 @@ class HbootImage:
     def __build_chunk_memory_device_up(self, tChunkAttributes, atParserState, uiChunkIndex, atAllChunks):
         tChunkNode = tChunkAttributes['tNode']
 
-        # Get the device.
-        strDevice = tChunkNode.getAttribute('device')
+        # The netX90B is the first chip which allows more than one device in
+        # an MDUP chunk. All other chips allow only one device.
+        if self.__strNetxType == 'NETX90B':
+            # Get the comma separated list of devices.
+            strDeviceList = tChunkNode.getAttribute('device')
+            # Split the list by comma.
+            astrDeviceList = string.split(strDeviceList, ',')
+            aucDevices = array.array('B')
+            for strDevice in astrDeviceList:
+                # Parse the data.
+                ulDevice = self.__parse_numeric_expression(string.strip(strDevice))
+                if ulDevice < 0:
+                    raise Exception('The device attribute does not accept a '
+                                    'negative value:' % ulDevice)
+                if ulDevice > 0xff:
+                    raise Exception('The device attribute must not be larger '
+                                    'than 0xff:' % ulDevice)
 
-        # Parse the data.
-        ulDevice = self.__parse_numeric_expression(strDevice)
-        if ulDevice < 0:
-            raise Exception('The device attribute does not accept a '
-                            'negative value:' % ulDevice)
-        if ulDevice > 0xff:
-            raise Exception('The device attribute must not be larger '
-                            'than 0xff:' % ulDevice)
+                aucDevices.append(ulDevice)
 
-        aulChunk = array.array('I')
-        aulChunk.append(self.__get_tag_id('M', 'D', 'U', 'P'))
-        aulChunk.append(1 + self.__sizHashDw)
-        aulChunk.append(ulDevice)
+            if len(aucDevices) == 0:
+                raise Exception('The device attribute must not be empty.')
+            if len(aucDevices) > 12:
+                raise Exception('The device attribute must not have more '
+                                'than 12 entries on the netX90B.')
+
+            # Pad the data with 0x00 (NOP) to a multiple of 4.
+            sizPadding = (4 - (len(aucDevices) & 3) & 3)
+            aucDevices.extend([0] * sizPadding)
+
+            # Get the size of the data in DWORDs.
+            sizDataDW = len(aucDevices) / 4
+
+            aulChunk = array.array('I')
+            aulChunk.append(self.__get_tag_id('M', 'D', 'U', 'P'))
+            aulChunk.append(sizDataDW + self.__sizHashDw)
+            aulChunk.fromstring(aucDevices.tostring())
+
+        else:
+            # Get the device.
+            strDevice = tChunkNode.getAttribute('device')
+
+            # Parse the data.
+            ulDevice = self.__parse_numeric_expression(strDevice)
+            if ulDevice < 0:
+                raise Exception('The device attribute does not accept a '
+                                'negative value:' % ulDevice)
+            if ulDevice > 0xff:
+                raise Exception('The device attribute must not be larger '
+                                'than 0xff:' % ulDevice)
+
+            aulChunk = array.array('I')
+            aulChunk.append(self.__get_tag_id('M', 'D', 'U', 'P'))
+            aulChunk.append(1 + self.__sizHashDw)
+            aulChunk.append(ulDevice)
 
         # Get the hash for the chunk.
         tHash = hashlib.sha384()
