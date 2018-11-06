@@ -951,6 +951,7 @@ class HbootImage:
     REGI_COMMAND_LoadStore = 1
     REGI_COMMAND_Delay = 2
     REGI_COMMAND_Poll = 3
+    REGI_COMMAND_LoadStoreMask = 4
     REGI_COMMAND_SourceIsRegister = 0x10
     REGI_COMMAND_UnlockAccessKey = 0x20
 
@@ -995,6 +996,26 @@ class HbootImage:
             'ucCmd': REGI_COMMAND_Poll,
             'atSerialize': ['address', 'mask', 'cmp', 'timeout_ms'],
         },
+        'setmask': {
+            'atAttributes': [
+                {'name': 'address', 'type': 'uint32'},
+                {'name': 'mask', 'type': 'uint32'},
+                {'name': 'value',   'type': 'uint32'},
+                {'name': 'unlock',  'type': 'bool', 'optional': True, 'default': False}
+            ],
+            'ucCmd': REGI_COMMAND_LoadStoreMask,
+            'atSerialize': ['value', 'mask', 'address'],
+        },
+        'copymask': {
+            'atAttributes': [
+                {'name': 'source',  'type': 'uint32'},
+                {'name': 'mask', 'type': 'uint32'},
+                {'name': 'dest',    'type': 'uint32'},
+                {'name': 'unlock',  'type': 'bool', 'optional': True, 'default': False}
+            ],
+            'ucCmd': REGI_COMMAND_LoadStoreMask + REGI_COMMAND_SourceIsRegister,
+            'atSerialize': ['source', 'mask', 'dest'],
+        }
     }
 
     # Read the contents of a <Register> chunk and turn it into an intermediate representation.
