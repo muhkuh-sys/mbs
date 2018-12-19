@@ -1118,6 +1118,32 @@ class HbootImage:
         # Build the chunk
         ulTagId = self.__get_tag_id('R', 'E', 'G', 'I')
         self.__wrap_chunk(tChunkAttributes, ulTagId, aulData)
+    
+    
+    def __get_firewall_contents(self, tChunkNode, atEntries):  
+        # Get the data block.
+        self.__get_data_contents(tChunkNode, atEntries, False)
+    
+    def __serialize_firewall_chunk(self, atEntries, aulData):
+        # Convert the padded data to an array.
+        strData = atEntries['data']
+        aulData.fromstring(strData)
+
+    def __build_chunk_firewall(self, tChunkAttributes, atParserState, uiChunkIndex, atAllChunks):
+        tChunkNode = tChunkAttributes['tNode']
+
+        # Read the firewall settings from the XML.
+        atEntries = {}
+        self.__get_firewall_contents(tChunkNode, atEntries)
+
+        # Encode the payload of the firewall chunk.
+        aulData = array.array('I')
+        self.__serialize_firewall_chunk(atEntries, aulData)
+
+        # Build the chunk
+        ulTagId = self.__get_tag_id('F', 'R', 'W', 'L')
+        self.__wrap_chunk(tChunkAttributes, ulTagId, aulData)
+        
 
     def __get_data_contents(self, tDataNode, atData, fWantLoadAddress):
         strData = None
@@ -4530,6 +4556,25 @@ class HbootImage:
             },
             'Register': {
                 'fn': self.__build_chunk_register,
+                'img': [
+                    self.__IMAGE_TYPE_REGULAR,
+                    self.__IMAGE_TYPE_ALTERNATIVE,
+                    self.__IMAGE_TYPE_INTRAM,
+                    # self.__IMAGE_TYPE_SECMEM,
+                    # self.__IMAGE_TYPE_COM_INFO_PAGE,
+                    # self.__IMAGE_TYPE_APP_INFO_PAGE
+                ],
+                'netx': [
+                    # 'NETX56',
+                    # 'NETX4000_RELAXED',
+                    # 'NETX4000',
+                    # 'NETX4100',
+                    # 'NETX90_MPW',
+                    'NETX90'
+                ]
+            },
+            'Firewall': {
+                'fn': self.__build_chunk_firewall,
                 'img': [
                     self.__IMAGE_TYPE_REGULAR,
                     self.__IMAGE_TYPE_ALTERNATIVE,
