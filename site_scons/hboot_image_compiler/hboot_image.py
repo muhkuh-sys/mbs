@@ -106,6 +106,8 @@ class HbootImage:
     __MAGIC_COOKIE_NETX90_MPW_ALT = 0xf3ad9e00
     __MAGIC_COOKIE_NETX90 = 0xf3beaf00
     __MAGIC_COOKIE_NETX90_ALT = 0xf3ad9e00
+    __MAGIC_COOKIE_NETX90B = 0xf3beaf00
+    __MAGIC_COOKIE_NETX90B_ALT = 0xf3ad9e00
 
     __resolver = None
 
@@ -568,6 +570,12 @@ class HbootImage:
             else:
                 ulMagicCookie = self.__MAGIC_COOKIE_NETX90
             ulSignature = self.__get_tag_id('M', 'O', 'O', 'H')
+        elif self.__strNetxType == 'NETX90B':
+            if self.__tImageType == self.__IMAGE_TYPE_ALTERNATIVE:
+                ulMagicCookie = self.__MAGIC_COOKIE_NETX90B_ALT
+            else:
+                ulMagicCookie = self.__MAGIC_COOKIE_NETX90B
+            ulSignature = self.__get_tag_id('M', 'O', 'O', 'H')
         else:
             raise Exception(
                 'Missing platform configuration: no standard header '
@@ -796,7 +804,8 @@ class HbootImage:
 
             elif(
                 (self.__strNetxType == 'NETX90_MPW') or
-                (self.__strNetxType == 'NETX90')
+                (self.__strNetxType == 'NETX90') or
+                (self.__strNetxType == 'NETX90B')
             ):
                 # Pad the option chunk to 32 bit size.
                 strPadding = chr(0x00) * ((4 - (len(strData) % 4)) & 3)
@@ -892,7 +901,8 @@ class HbootImage:
 
         if(
             (self.__strNetxType == 'NETX90_MPW') or
-            (self.__strNetxType == 'NETX90')
+            (self.__strNetxType == 'NETX90') or
+            (self.__strNetxType == 'NETX90B')
         ):
             aucData = array.array('B')
 
@@ -941,6 +951,7 @@ class HbootImage:
     REGI_COMMAND_LoadStore = 1
     REGI_COMMAND_Delay = 2
     REGI_COMMAND_Poll = 3
+    REGI_COMMAND_LoadStoreMask = 4
     REGI_COMMAND_SourceIsRegister = 0x10
     REGI_COMMAND_UnlockAccessKey = 0x20
 
@@ -985,6 +996,26 @@ class HbootImage:
             'ucCmd': REGI_COMMAND_Poll,
             'atSerialize': ['address', 'mask', 'cmp', 'timeout_ms'],
         },
+        'setmask': {
+            'atAttributes': [
+                {'name': 'address', 'type': 'uint32'},
+                {'name': 'mask', 'type': 'uint32'},
+                {'name': 'value',   'type': 'uint32'},
+                {'name': 'unlock',  'type': 'bool', 'optional': True, 'default': False}
+            ],
+            'ucCmd': REGI_COMMAND_LoadStoreMask,
+            'atSerialize': ['value', 'mask', 'address'],
+        },
+        'copymask': {
+            'atAttributes': [
+                {'name': 'source',  'type': 'uint32'},
+                {'name': 'mask', 'type': 'uint32'},
+                {'name': 'dest',    'type': 'uint32'},
+                {'name': 'unlock',  'type': 'bool', 'optional': True, 'default': False}
+            ],
+            'ucCmd': REGI_COMMAND_LoadStoreMask + REGI_COMMAND_SourceIsRegister,
+            'atSerialize': ['source', 'mask', 'dest'],
+        }
     }
 
     # Read the contents of a <Register> chunk and turn it into an intermediate representation.
@@ -1545,7 +1576,8 @@ class HbootImage:
             ]
         elif(
             (self.__strNetxType == 'NETX90_MPW') or
-            (self.__strNetxType == 'NETX90')
+            (self.__strNetxType == 'NETX90') or
+            (self.__strNetxType == 'NETX90B')
         ):
             atXIPAreas = [
                 # SQI flash
@@ -1740,10 +1772,13 @@ class HbootImage:
         }
         self.__get_execute_data(tChunkNode, __atData)
 
-        # netX90 has some strange additional options.
+        # netX90 and netX90B have some strange additional options.
         ulFlags = None
         sizDataInDwords = 5
-        if(self.__strNetxType == 'NETX90'):
+        if(
+          (self.__strNetxType == 'NETX90') or
+          (self.__strNetxType == 'NETX90B')
+        ):
             sizDataInDwords = 6
 
             # Check if the APP CPU should be started.
@@ -1981,7 +2016,8 @@ class HbootImage:
             sizOffsetCurrent += (1 + 1 + self.__sizHashDw) * 4
         elif(
             (self.__strNetxType == 'NETX90_MPW') or
-            (self.__strNetxType == 'NETX90')
+            (self.__strNetxType == 'NETX90') or
+            (self.__strNetxType == 'NETX90B')
         ):
             sizOffsetCurrent += (1 + 1 + self.__sizHashDw) * 4
         else:
@@ -2283,7 +2319,8 @@ class HbootImage:
                     # Found the RSA type.
                     if(
                         (self.__strNetxType == 'NETX90_MPW') or
-                        (self.__strNetxType == 'NETX90')
+                        (self.__strNetxType == 'NETX90') or
+                        (self.__strNetxType == 'NETX90B')
                     ):
                         uiId = uiElementId + 1
                     else:
@@ -2391,7 +2428,8 @@ class HbootImage:
                     # Found the ECC type.
                     if(
                         (self.__strNetxType == 'NETX90_MPW') or
-                        (self.__strNetxType == 'NETX90')
+                        (self.__strNetxType == 'NETX90') or
+                        (self.__strNetxType == 'NETX90B')
                     ):
                         uiId = uiElementId + 1
                     else:
@@ -2451,7 +2489,8 @@ class HbootImage:
             sizBindingExpected = 64
         elif(
             (self.__strNetxType == 'NETX90_MPW') or
-            (self.__strNetxType == 'NETX90')
+            (self.__strNetxType == 'NETX90') or
+            (self.__strNetxType == 'NETX90B')
         ):
             sizBindingExpected = 28
 
@@ -3591,22 +3630,61 @@ class HbootImage:
     def __build_chunk_memory_device_up(self, tChunkAttributes, atParserState, uiChunkIndex, atAllChunks):
         tChunkNode = tChunkAttributes['tNode']
 
-        # Get the device.
-        strDevice = tChunkNode.getAttribute('device')
+        # The netX90B is the first chip which allows more than one device in
+        # an MDUP chunk. All other chips allow only one device.
+        if self.__strNetxType == 'NETX90B':
+            # Get the comma separated list of devices.
+            strDeviceList = tChunkNode.getAttribute('device')
+            # Split the list by comma.
+            astrDeviceList = string.split(strDeviceList, ',')
+            aucDevices = array.array('B')
+            for strDevice in astrDeviceList:
+                # Parse the data.
+                ulDevice = self.__parse_numeric_expression(string.strip(strDevice))
+                if ulDevice < 0:
+                    raise Exception('The device attribute does not accept a '
+                                    'negative value:' % ulDevice)
+                if ulDevice > 0xff:
+                    raise Exception('The device attribute must not be larger '
+                                    'than 0xff:' % ulDevice)
 
-        # Parse the data.
-        ulDevice = self.__parse_numeric_expression(strDevice)
-        if ulDevice < 0:
-            raise Exception('The device attribute does not accept a '
-                            'negative value:' % ulDevice)
-        if ulDevice > 0xff:
-            raise Exception('The device attribute must not be larger '
-                            'than 0xff:' % ulDevice)
+                aucDevices.append(ulDevice)
 
-        aulChunk = array.array('I')
-        aulChunk.append(self.__get_tag_id('M', 'D', 'U', 'P'))
-        aulChunk.append(1 + self.__sizHashDw)
-        aulChunk.append(ulDevice)
+            if len(aucDevices) == 0:
+                raise Exception('The device attribute must not be empty.')
+            if len(aucDevices) > 12:
+                raise Exception('The device attribute must not have more '
+                                'than 12 entries on the netX90B.')
+
+            # Pad the data with 0x00 (NOP) to a multiple of 4.
+            sizPadding = (4 - (len(aucDevices) & 3) & 3)
+            aucDevices.extend([0] * sizPadding)
+
+            # Get the size of the data in DWORDs.
+            sizDataDW = len(aucDevices) / 4
+
+            aulChunk = array.array('I')
+            aulChunk.append(self.__get_tag_id('M', 'D', 'U', 'P'))
+            aulChunk.append(sizDataDW + self.__sizHashDw)
+            aulChunk.fromstring(aucDevices.tostring())
+
+        else:
+            # Get the device.
+            strDevice = tChunkNode.getAttribute('device')
+
+            # Parse the data.
+            ulDevice = self.__parse_numeric_expression(strDevice)
+            if ulDevice < 0:
+                raise Exception('The device attribute does not accept a '
+                                'negative value:' % ulDevice)
+            if ulDevice > 0xff:
+                raise Exception('The device attribute must not be larger '
+                                'than 0xff:' % ulDevice)
+
+            aulChunk = array.array('I')
+            aulChunk.append(self.__get_tag_id('M', 'D', 'U', 'P'))
+            aulChunk.append(1 + self.__sizHashDw)
+            aulChunk.append(ulDevice)
 
         # Get the hash for the chunk.
         tHash = hashlib.sha384()
@@ -4551,6 +4629,7 @@ class HbootImage:
                     'NETX4000',
                     'NETX4100',
                     'NETX90_MPW',
+                    'NETX90B',
                     'NETX90'
                 ]
             },
@@ -4570,7 +4649,8 @@ class HbootImage:
                     # 'NETX4000',
                     # 'NETX4100',
                     # 'NETX90_MPW',
-                    'NETX90'
+                    'NETX90',
+                    'NETX90B'
                 ]
             },
             'Firewall': {
@@ -4608,7 +4688,8 @@ class HbootImage:
                     'NETX4000',
                     'NETX4100',
                     'NETX90_MPW',
-                    'NETX90'
+                    'NETX90',
+                    'NETX90B'
                 ]
             },
             'Text': {
@@ -4627,7 +4708,8 @@ class HbootImage:
                     'NETX4000',
                     'NETX4100',
                     'NETX90_MPW',
-                    'NETX90'
+                    'NETX90',
+                    'NETX90B'
                 ]
             },
             'XIP': {
@@ -4646,7 +4728,8 @@ class HbootImage:
                     'NETX4000',
                     'NETX4100',
                     'NETX90_MPW',
-                    'NETX90'
+                    'NETX90',
+                    'NETX90B'
                 ]
             },
             'Execute': {
@@ -4665,7 +4748,8 @@ class HbootImage:
                     'NETX4000',
                     'NETX4100',
                     'NETX90_MPW',
-                    'NETX90'
+                    'NETX90',
+                    'NETX90B'
                 ]
             },
             'ExecuteCA9': {
@@ -4684,7 +4768,8 @@ class HbootImage:
                     'NETX4000',
                     'NETX4100',
                     # 'NETX90_MPW',
-                    # 'NETX90'
+                    # 'NETX90',
+                    # 'NETX90B'
                 ]
             },
             'SpiMacro': {
@@ -4703,7 +4788,8 @@ class HbootImage:
                     'NETX4000',
                     'NETX4100',
                     'NETX90_MPW',
-                    'NETX90'
+                    'NETX90',
+                    'NETX90B'
                 ]
             },
             'Skip': {
@@ -4722,7 +4808,8 @@ class HbootImage:
                     'NETX4000',
                     'NETX4100',
                     'NETX90_MPW',
-                    'NETX90'
+                    'NETX90',
+                    'NETX90B'
                 ]
             },
             'SkipIncomplete': {
@@ -4741,7 +4828,8 @@ class HbootImage:
                     'NETX4000',
                     'NETX4100',
                     'NETX90_MPW',
-                    'NETX90'
+                    'NETX90',
+                    'NETX90B'
                 ]
             },
             'RootCert': {
@@ -4760,7 +4848,8 @@ class HbootImage:
                     'NETX4000',
                     'NETX4100',
                     # 'NETX90_MPW',
-                    # 'NETX90'
+                    # 'NETX90',
+                    # 'NETX90B'
                 ]
             },
             'LicenseCert': {
@@ -4779,7 +4868,8 @@ class HbootImage:
                     'NETX4000',
                     'NETX4100',
                     # 'NETX90_MPW',
-                    # 'NETX90'
+                    # 'NETX90',
+                    # 'NETX90B'
                 ]
             },
             'CR7Software': {
@@ -4798,7 +4888,8 @@ class HbootImage:
                     'NETX4000',
                     'NETX4100',
                     # 'NETX90_MPW',
-                    # 'NETX90'
+                    # 'NETX90',
+                    # 'NETX90B'
                 ]
             },
             'CA9Software': {
@@ -4817,7 +4908,8 @@ class HbootImage:
                     'NETX4000',
                     'NETX4100',
                     # 'NETX90_MPW',
-                    # 'NETX90'
+                    # 'NETX90',
+                    # 'NETX90B'
                 ]
             },
             'MemoryDeviceUp': {
@@ -4836,7 +4928,8 @@ class HbootImage:
                     'NETX4000',
                     'NETX4100',
                     'NETX90_MPW',
-                    'NETX90'
+                    'NETX90',
+                    'NETX90B'
                 ]
             },
             'UpdateSecureInfoPage': {
@@ -4855,7 +4948,8 @@ class HbootImage:
                     # 'NETX4000',
                     # 'NETX4100',
                     # 'NETX90_MPW',
-                    'NETX90'
+                    'NETX90',
+                    'NETX90B'
                 ]
             },
             'HashTable': {
@@ -4874,7 +4968,8 @@ class HbootImage:
                     # 'NETX4000',
                     # 'NETX4100',
                     # 'NETX90_MPW',
-                    'NETX90'
+                    'NETX90',
+                    'NETX90B'
                 ]
             },
             'Next': {
@@ -4893,7 +4988,8 @@ class HbootImage:
                     # 'NETX4000',
                     # 'NETX4100',
                     # 'NETX90_MPW',
-                    'NETX90'
+                    'NETX90',
+                    'NETX90B'
                 ]
             },
             'DaXZ': {
@@ -4912,7 +5008,8 @@ class HbootImage:
                     # 'NETX4000',
                     # 'NETX4100',
                     # 'NETX90_MPW',
-                    'NETX90'
+                    'NETX90',
+                    'NETX90B'
                 ]
             },
         }
@@ -5045,7 +5142,8 @@ class HbootImage:
             'NETX4000_RELAXED',
             'NETX4000',
             'NETX4100',
-            'NETX90'
+            'NETX90',
+            'NETX90B'
         ]
         if self.__tImageType == self.__IMAGE_TYPE_ALTERNATIVE:
             if self.__strNetxType not in astrNetxWithAlternativeImages:
