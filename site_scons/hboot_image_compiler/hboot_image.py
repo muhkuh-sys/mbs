@@ -1158,6 +1158,8 @@ class HbootImage:
     def __serialize_firewall_chunk(self, atEntries, aulData):
         # Convert the padded data to an array.
         strData = atEntries['data']
+        if len(strData) != 36*4:
+            raise Exception ('The data size of a Firewall chunk must be 36 dwords (144 bytes).')
         aulData.fromstring(strData)
 
     def __build_chunk_firewall(self, tChunkAttributes, atParserState, uiChunkIndex, atAllChunks):
