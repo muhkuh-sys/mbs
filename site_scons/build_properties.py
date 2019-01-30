@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
-#-------------------------------------------------------------------------#
-#   Copyright (C) 2010 by Christoph Thelen                                #
+# ----------------------------------------------------------------------- #
+#   Copyright (C) 2019 by Christoph Thelen                                #
 #   doc_bacardi@users.sourceforge.net                                     #
 #                                                                         #
 #   This program is free software; you can redistribute it and/or modify  #
@@ -17,10 +17,10 @@
 #   along with this program; if not, write to the                         #
 #   Free Software Foundation, Inc.,                                       #
 #   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             #
-#-------------------------------------------------------------------------#
+# ----------------------------------------------------------------------- #
 
 
-from SCons.Script import *
+import SCons
 import os
 
 
@@ -29,61 +29,83 @@ _g_build_properties = None
 # Init the global environment helper
 _g_env_help = None
 
-#----------------------------------------------------------------------------
+
+# ---------------------------------------------------------------------------
 #
 # Get the build properties from a file or from the command line.
 #
 def Read():
-	global _g_build_properties
-	global _g_env_help
-	
-	# specify the name of the file in which variables are stored
-	strFileName = os.path.join(SCons.Node.FS.get_default_fs().SConstruct_dir.abspath, 'build.properties')
-	_g_build_properties = Variables([strFileName])
-	
-	# Register which variables we're interested in and
-	# get values from a saved file if any (defaults, which are
-	# specified in the last argument, are used otherwise).
-	# See http://scons.org/doc/1.2.0.d20090919/HTML/scons-user/x2378.html for details.
-	_g_build_properties.Add(EnumVariable('CFG_BUILD', 'Build the project in release or debug mode.', 'release', ('debug', 'release'), ignorecase=1))
-	
-	_g_env_help = Environment(variables=_g_build_properties)
+    global _g_build_properties
+    global _g_env_help
+
+    # specify the name of the file in which variables are stored
+    strFileName = os.path.join(
+        SCons.Node.FS.get_default_fs().SConstruct_dir.abspath,
+        'build.properties'
+    )
+    _g_build_properties = SCons.Script.Variables([strFileName])
+
+    # Register which variables we're interested in and
+    # get values from a saved file if any (defaults, which are
+    # specified in the last argument, are used otherwise).
+    # See http://scons.org/doc/1.2.0.d20090919/HTML/scons-user/x2378.html
+    # for details.
+    _g_build_properties.Add(
+        SCons.Variables.EnumVariable(
+            'CFG_BUILD',
+            'Build the project in release or debug mode.',
+            'release',
+            ('debug', 'release'),
+            ignorecase=1
+        )
+    )
+
+    _g_env_help = SCons.Environment.Environment(variables=_g_build_properties)
 
 
-#----------------------------------------------------------------------------
+# ---------------------------------------------------------------------------
 #
 # Generate the help texts for the properties.
 #
 def GenerateHelp():
-	global _g_build_properties
-	global _g_env_help
-	
-	Help(_g_build_properties.GenerateHelpText(_g_env_help))
+    global _g_build_properties
+    global _g_env_help
+
+    SCons.Script.Help(_g_build_properties.GenerateHelpText(_g_env_help))
 
 
-#----------------------------------------------------------------------------
+# ---------------------------------------------------------------------------
 #
 # Show a summary of all properties
 #
 def PrintSummary():
-	global _g_env_help
-	
-	print 'Build properties:'
-	print 'Copy the next lines to a file named "build.properties" to modify them.'
-	print '--------8<--------8<--------8<----snip----8<--------8<--------8<--------'
-	print 'CFG_BUILD = "%s"' % _g_env_help['CFG_BUILD']
-	print '-------->8-------->8-------->8----snap---->8-------->8-------->8--------'
+    global _g_build_properties
+    global _g_env_help
+
+    strHelp = _g_build_properties.GenerateHelpText(_g_env_help)
+    astrLines = strHelp.splitlines(True)
+    astrHelpComments = ['# ' + strLine for strLine in astrLines];
+    print('Build properties:')
+    print('Copy the next lines to a file named "build.properties" to modify '
+          'them.')
+    print('--------8<--------8<--------8<----snip----8<--------8<--------8<-'
+          '-------')
+    print(''.join(astrHelpComments))
+    print('CFG_BUILD = "%s"' % _g_env_help['CFG_BUILD'])
+    print('-------->8-------->8-------->8----snap---->8-------->8-------->8-'
+          '-------')
+    print()
 
 
 def ApplyToEnv(env):
-	global _g_env_help
-	
-	env['CFG_BUILD'] = _g_env_help['CFG_BUILD']
-	
-	strBuild = str.lower(_g_env_help['CFG_BUILD'])
-	if strBuild=='release':
-		# this is the release build
-		env.Append(CCFLAGS = ['-O2'])
-	elif strBuild=='debug':
-		# this is the debug build
-		env.Append(CCFLAGS = ['-O0'])
+    global _g_env_help
+
+    env['CFG_BUILD'] = _g_env_help['CFG_BUILD']
+
+    strBuild = str.lower(_g_env_help['CFG_BUILD'])
+    if strBuild == 'release':
+        # this is the release build
+        env.Append(CCFLAGS=['-O2'])
+    elif strBuild == 'debug':
+        # this is the debug build
+        env.Append(CCFLAGS=['-O0'])
