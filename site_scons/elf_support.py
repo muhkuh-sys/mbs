@@ -27,12 +27,23 @@ import subprocess
 # NOTE: this is only for debug.
 import datetime
 
+def run_cmd(aCmd, stdout=subprocess.PIPE):
+    strOutput = None
+    try:
+        proc = subprocess.Popen(aCmd, stdout=stdout)
+        strOutput = proc.communicate()[0]
+    except Exception as e:
+        print("Failed to call external program:")
+        print(aCmd) 
+        print(e) 
+        raise
+    return strOutput
 
 def get_segment_table(env, strFileName, astrSegmentsToConsider=None):
     atSegments = []
     aCmd = [env['OBJDUMP'], '-h', '-w', strFileName]
-    proc = subprocess.Popen(aCmd, stdout=subprocess.PIPE)
-    strOutput = proc.communicate()[0]
+    strOutput = run_cmd(aCmd)
+        
     for match_obj in re.finditer('[ \t]*([0-9]+)[ \t]+([^ \t]+)[ \t]+([0-9a-fA-F]+)[ \t]+([0-9a-fA-F]+)[ \t]+([0-9a-fA-F]+)[ \t]+([0-9a-fA-F]+)[ \t]+([0-9*]+)[ \t]+([a-zA-Z ,]+)', strOutput):
         strName = match_obj.group(2)
         if (astrSegmentsToConsider is None) or (strName in astrSegmentsToConsider):
@@ -53,8 +64,7 @@ def get_segment_table(env, strFileName, astrSegmentsToConsider=None):
 
 def get_symbol_table(env, strFileName):
     aCmd = [env['READELF'], '--symbols', '--wide', strFileName]
-    proc = subprocess.Popen(aCmd, stdout=subprocess.PIPE)
-    strOutput = proc.communicate()[0]
+    strOutput = run_cmd(aCmd)
 
     atSymbols = dict({})
 

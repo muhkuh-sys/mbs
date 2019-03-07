@@ -875,6 +875,7 @@ class HbootImage:
         # Extract the binary.
         tBinFile, strBinFileName = tempfile.mkstemp()
         os.close(tBinFile)
+        
         astrCmd = [
             self.__tEnv['OBJCOPY'],
             '--output-target=binary'
@@ -884,7 +885,16 @@ class HbootImage:
                 astrCmd.append('--only-section=%s' % strSegment)
         astrCmd.append(strAbsFilePath)
         astrCmd.append(strBinFileName)
-        subprocess.check_call(astrCmd)
+        #subprocess.check_call(astrCmd)
+        
+        try:
+            subprocess.check_call(astrCmd)        
+        except Exception as e:
+            print("Failed to call external program:")
+            print(astrCmd) 
+            print(e) 
+            raise
+            
 
         # Get the application data.
         tBinFile = open(strBinFileName, 'rb')
