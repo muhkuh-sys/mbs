@@ -177,6 +177,9 @@ class HbootImage:
 
         # Do not override anything in the pre-calculated header yet.
         self.__atHeaderOverride = [None] * 16
+        
+        # Add info to be used by the flasher to the header of the boot image.
+        self.__fSetFlasherParameters = False
 
         # No chunks yet.
         self.__atChunkData = None
@@ -544,6 +547,60 @@ class HbootImage:
                 for tNode in atIncludeNodes:
                     self.__preprocess_include(tNode)
 
+
+    BUS_SPI = 1
+    BUS_IFlash = 2
+    atDeviceMapping_netx4000 = {
+        'SQIROM0':{'bus':BUS_SPI, 'unit':0, 'chip_select':0},
+        'SQIROM1':{'bus':BUS_SPI, 'unit':1, 'chip_select':0},
+        }
+    
+    atDeviceMapping_netx90 = {
+        'INTFLASH':{'bus':BUS_IFlash, 'unit':3, 'chip_select':0},
+        'SQIROM':  {'bus':BUS_SPI,    'unit':0, 'chip_select':0},
+        }
+    
+    ROMLOADER_CHIPTYP_NETX4000_RELAXED     = 8
+    ROMLOADER_CHIPTYP_NETX90_MPW           = 10
+    ROMLOADER_CHIPTYP_NETX4000_FULL        = 11
+    ROMLOADER_CHIPTYP_NETX4100_SMALL       = 12
+    ROMLOADER_CHIPTYP_NETX90               = 13
+    
+    atChipTypeMapping = {
+        'NETX90':           { 'chip_type':ROMLOADER_CHIPTYP_NETX90,            'dev_mapping':atDeviceMapping_netx90},
+        #NETX90B
+        'NETX90_MPW':       { 'chip_type':ROMLOADER_CHIPTYP_NETX90_MPW,        'dev_mapping':atDeviceMapping_netx90},
+        'NETX4000_RELAXED': { 'chip_type':ROMLOADER_CHIPTYP_NETX4000_RELAXED,  'dev_mapping':atDeviceMapping_netx4000},
+        'NETX4000':         { 'chip_type':ROMLOADER_CHIPTYP_NETX4000_FULL,     'dev_mapping':atDeviceMapping_netx4000},
+        'NETX4100':         { 'chip_type':ROMLOADER_CHIPTYP_NETX4100_SMALL,    'dev_mapping':atDeviceMapping_netx4000},
+    }
+
+    # Insert information for use by the flasher:
+    # chip type, target flash device and flash offset.
+    #
+    # __strNetxType   is always set (mandatory command line arg), but may not be in the mapping.
+    # __strDevice     is always set, but may not be in the mapping.
+    # __ulStartOffset is always set and defaults to 0.
+    # 
+    # This function is only called if selected by <Header set_flasher_parameters="true"> 
+    # -> Raise an error if the information can't be determined.
+    def __set_flasher_parameters(self, aBootBlock):
+        if self.__strNetxType not in self.atChipTypeMapping:
+            raise Exception("Cannot set flasher parameters for chip type %s" % self.__strNetxType)
+        tChipMap = self.atChipTypeMapping[self.__strNetxType]
+        ucChiptype = tChipMap['chip_type']
+        tDevMap = tChipMap['dev_mapping']
+        if self.__strDevice not in tDevMap:
+            raise Exception ("Cannot set flasher parameters for device %s" % self.__strDevice)
+        tDevInfo = tDevMap[self.__strDevice]
+        
+        ulFlashInfo = 1 * ucChiptype + 0x100 * tDevInfo['bus'] + 0x10000 * tDevInfo['unit'] + 0x1000000 * tDevInfo['chip_select']
+        ulFlashOffset = self.__ulStartOffset 
+        
+        aBootBlock[5] = ulFlashInfo
+        aBootBlock[2] = ulFlashOffset
+        
+    
     def __build_standard_header(self, atChunks):
 
         ulMagicCookie = None
@@ -679,6 +736,17 @@ class HbootImage:
         return ulResult
 
     def __parse_header_options(self, tOptionsNode):
+        strFlashInfo = tOptionsNode.getAttribute('set_flasher_parameters')
+        if strFlashInfo == "":
+            self.__fSetFlasherParameters = False
+        elif strFlashInfo == "true":
+            self.__fSetFlasherParameters = True
+        elif strFlashInfo == "false":
+            self.__fSetFlasherParameters = False
+        else:
+            raise Exception("Incorrect value of <Header> attribute 'set_flasher_parameters': %s" % strFlashInfo)
+        
+        
         # Loop over all child nodes.
         for tValueNode in tOptionsNode.childNodes:
             if tValueNode.nodeType == tValueNode.ELEMENT_NODE:
@@ -5233,8 +5301,13 @@ class HbootImage:
             ulStartOffset = int(strStartOffset, 0)
             if ulStartOffset < 0:
                 raise Exception(
-                    'The start offset is invalid: %d' % ulStartOffset
+                    'The start offset in the <HBootImage> tag is invalid: %d' % ulStartOffset
                 )
+            elif ulStartOffset % 4 != 0:
+                raise Exception(
+                    'The start offset in the <HBootImage> tag must be a multiple of 4: %d' % ulStartOffset
+                )
+            
         self.__ulStartOffset = ulStartOffset
 
         # Get the size and value for a padding. Default to 0 bytes of 0xff.
@@ -5440,6 +5513,10 @@ class HbootImage:
 
             # Generate the standard header.
             atHeaderStandard = self.__build_standard_header(atChunks)
+            
+            # Insert flasher parameters if selected.
+            if self.__fSetFlasherParameters == True:
+                self.__set_flasher_parameters(atHeaderStandard)
 
             # Combine the standard header with the overrides.
             atHeader = self.__combine_headers(atHeaderStandard)
