@@ -39,6 +39,20 @@ def patch_image(strInputFile, strOutputFile, fVerbose=False):
     if aulHBoot[0x06] != 0x41505041:
         raise Exception('The input image has no valid netX90 APP signature.')
 
+    # Set flasher parameter (chip type, flash device and flash offset)
+    # chip type is always netx 90, but which variant?
+    # bus/unit/chip select is always 2/2/0 (intflash 2)
+    # The offset is always 0.
+    ucChipType = 13 # netx 90
+    ucBus = 2
+    ucUnit = 2
+    ucCs = 0
+    ulFlashDevice = 1 * ucChipType + 0x100 * ucBus + 0x10000 * ucUnit + 0x1000000 * ucCs
+    ulFlashOffset = 0
+    
+    aulHBoot[0x01] = ulFlashOffset
+    aulHBoot[0x05] = ulFlashDevice
+    
     # Set the new length.
     # This is the complete file size except the CM4 header (448 bytes) and the
     # APP HBOOT header (64 bytes). The remaining size if converted from bytes
