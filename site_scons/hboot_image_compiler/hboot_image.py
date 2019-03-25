@@ -1459,6 +1459,18 @@ class HbootImage:
                                 strDataChunk = binascii.unhexlify(strDataHex)
                                 astrData.append(strDataChunk)
 
+                            elif tConcatNode.localName == 'String':
+                                # Get the text in this node and include it
+                                # verbatim in the chunk.
+                                strDataString = self.__xml_get_all_text(
+                                    tConcatNode
+                                )
+                                if strDataString is None:
+                                    raise Exception('No text in node "String" '
+                                                    ' found!')
+                                
+                                astrData.append(strDataString)
+
                             elif tConcatNode.localName == 'UInt32':
                                 # Get the text in this node and split it
                                 # by whitespace.
@@ -1527,7 +1539,11 @@ class HbootImage:
                                     tConcatNode
                                 )
                                 astrData.append(strDataChunk)
-
+                                
+                            else:
+                                raise Exception('Unexpected node: %s' 
+                                    % (tConcatNode.localName))
+                                    
                     strData = ''.join(astrData)
 
                 else:
