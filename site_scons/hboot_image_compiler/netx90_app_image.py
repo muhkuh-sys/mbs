@@ -152,42 +152,93 @@ class AppImage:
             strAbsFilePath,
             astrSegmentsToDump
         )
-        # Get the estimated binary size from the segments.
-        ulEstimatedBinSize = elf_support.get_estimated_bin_size(atSegments)
-        # Do not create files larger than 512MB.
-        if ulEstimatedBinSize >= 0x20000000:
-            raise Exception('The resulting file seems to extend '
-                            '512MBytes. Too scared to continue!')
-
-        strOverwriteAddress = tNode.getAttribute(
-            'overwrite_address'
-        ).strip()
-        if len(strOverwriteAddress) == 0:
-            pulLoadAddress = elf_support.get_load_address(atSegments)
-        else:
-            pulLoadAddress = int(strOverwriteAddress, 0)
-
-        # Extract the binary.
-        tBinFile, strBinFileName = tempfile.mkstemp()
-        os.close(tBinFile)
-        astrCmd = [
-            self.__tEnv['OBJCOPY'],
-            '--output-target=binary'
-        ]
+        
+        print("%d segments found" % len(atSegments))
+        for tSegment in atSegments:
+            print(tSegment)
+        
+        # atSegments is the list of segments contained in the elf file.
+        # astrSegmentsToDump is the list of names of the segments to dump (from the XML file).
+        
+        # If astrSegmentsToDump is not None and non-empty,
+        # filter the segments and the list of segments to dump.
+        # 
+        # For each segment name in astrSegmentsToDump:
+        # If the segment is not present in atSegments, print a warning and remove the name from astrSegmentsToDump.
+        # If the segment is in atSegments but its size is 0, warn and remove it from astrSegmentsToDump and atSegments.
+        # If the segment is in atSegments but not marked as loadable, warn and remove it from astrSegmentsToDump and atSegments.
+        
+        # If astrSegmentsToDump is None:
+        # Do we have to do anything?
+        
         if astrSegmentsToDump is not None:
-            for strSegment in astrSegmentsToDump:
-                astrCmd.append('--only-section=%s' % strSegment)
-        astrCmd.append(strAbsFilePath)
-        astrCmd.append(strBinFileName)
-        subprocess.check_call(astrCmd)
-
-        # Get the application data.
-        tBinFile = open(strBinFileName, 'rb')
-        strData = tBinFile.read()
-        tBinFile.close()
-
-        # Remove the temp file.
-        os.remove(strBinFileName)
+            atName2Segment = dict({})
+            astrSegments2 = []
+            atSegments2 = []
+            
+            # prepare a segment name to segment mapping from atSegments
+            for tSegment in atSegments:
+                strName = elf_support.segment_get_name(tSegment)
+                atName2Segment[strName]=tSegment
+            
+            for strName in astrSegmentsToDump:
+                if strName not in atName2Segment:
+                    print("Warning: Requested segment %s not found - ignoring" % strName )
+                else:
+                    tSegment = atName2Segment[strName]
+                    if 0 == elf_support.segment_get_size(tSegment):
+                        print("Warning: Requested segment %s is empty - ignoring" % strName )
+                    elif False == elf_support.segment_is_loadable(tSegment):
+                        print("Warning: Requested segment %s is not loadable - ignoring" % strName )
+                    else:
+                        print("Found requested segment %s" % strName)
+                        astrSegments2.append(strName)
+                        atSegments2.append(tSegment)
+                
+            astrSegmentsToDump = astrSegments2      
+            atSegments = atSegments2
+        
+        if len(atSegments) == 0:
+            strData = ''
+            pulLoadAddress = 0
+            
+        else:
+            # Get the estimated binary size from the segments.
+            ulEstimatedBinSize = elf_support.get_estimated_bin_size(atSegments)
+            # Do not create files larger than 512MB.
+            if ulEstimatedBinSize >= 0x20000000:
+                raise Exception('The resulting file seems to extend '
+                                '512MBytes. Too scared to continue!')
+    
+            strOverwriteAddress = tNode.getAttribute(
+                'overwrite_address'
+            ).strip()
+            if len(strOverwriteAddress) == 0:
+                pulLoadAddress = elf_support.get_load_address(atSegments)
+            else:
+                pulLoadAddress = int(strOverwriteAddress, 0)
+    
+            # Extract the binary.
+            tBinFile, strBinFileName = tempfile.mkstemp()
+            os.close(tBinFile)
+            astrCmd = [
+                self.__tEnv['OBJCOPY'],
+                '--output-target=binary'
+            ]
+            if astrSegmentsToDump is not None:
+                for strSegment in astrSegmentsToDump:
+                    astrCmd.append('--only-section=%s' % strSegment)
+            astrCmd.append(strAbsFilePath)
+            astrCmd.append(strBinFileName)
+            subprocess.check_call(astrCmd)
+    
+            # Get the application data.
+            tBinFile = open(strBinFileName, 'rb')
+            strData = tBinFile.read()
+            tBinFile.close()
+    
+            # Remove the temp file.
+            os.remove(strBinFileName)
 
         return strData, pulLoadAddress
 
@@ -1135,6 +1186,7 @@ class AppImage:
                 # Convert the data to an array.
                 aulData = array.array('I')
                 aulData.fromstring(strData)
+                
                 # Get the header address.
                 if tNodeChild.hasAttribute('headeraddress') is not True:
                     raise Exception('Missing "headeraddress" attribute.')
@@ -1185,6 +1237,35 @@ class AppImage:
         if sizDataBlocks == 0:
             raise Exception('No data blocks found.')
 
+        # Are enough destination files available?
+        if len(self.__atDataBlocks) > len(astrDestinationPaths):
+            raise Exception(
+                'Need %d output files, but only %d given.' %
+                (len(self.__atDataBlocks), len(astrDestinationPaths))
+            )
+            
+        # Remove empty data blocks and their destination paths.
+        atDataBlocks2 = []
+        astrDestinationPaths2 = []
+        #for tDataBlock, strPath in self.__atDataBlocks, astrDestinationPaths:
+        sizDataBlocks = len(self.__atDataBlocks)
+        for iCnt in range(0, sizDataBlocks):
+            tAttr = self.__atDataBlocks[iCnt]
+            strData = tAttr['data']
+            strPath = astrDestinationPaths[iCnt]
+            if len(strData) > 0:
+                atDataBlocks2.append(tAttr)
+                astrDestinationPaths2.append(strPath)
+            else:
+                print("Skipping empty data block. File %s will not be created." % strPath)
+        self.__atDataBlocks = atDataBlocks2
+        astrDestinationPaths = astrDestinationPaths2
+            
+        # There must be at least one data block left.
+        sizDataBlocks = len(self.__atDataBlocks)
+        if sizDataBlocks == 0:
+            raise Exception('No data blocks remaining.')
+
         # The first header must have a header address of 0x00000000.
         tFirstAttr = self.__atDataBlocks[0]
         if tFirstAttr['headeraddress'] != 0x00000000:
@@ -1193,20 +1274,13 @@ class AppImage:
                 '0x00000000, but it has 0x%08x.' %
                 tFirstAttr['headeraddress']
             )
-
+            
         # Build headers for all data blocks after the first one.
         for sizIdx in range(1, sizDataBlocks):
             self.build_header(sizIdx)
 
         # Patch the first data block.
-        self.patch_first_data_block()
-
-        # Are enough destination files available?
-        if len(self.__atDataBlocks) > len(astrDestinationPaths):
-            raise Exception(
-                'Need %d output files, but only %d given.' %
-                (len(self.__atDataBlocks), len(astrDestinationPaths))
-            )
+        self.patch_first_data_block()            
 
         # Append ASIG thing to the last block if requested.
         if tNodeAsig is not None:
@@ -1218,6 +1292,7 @@ class AppImage:
             tAttr = self.__atDataBlocks[iCnt]
             strDestinationPath = astrDestinationPaths[iCnt]
 
+            print('Writing file %s' % strDestinationPath)
             tFile = open(strDestinationPath, 'wb')
 
             ulPrePaddingSize = tAttr['prePaddingSize']
