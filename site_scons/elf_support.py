@@ -61,6 +61,14 @@ def get_segment_table(env, strFileName, astrSegmentsToConsider=None):
             }))
     return atSegments
 
+def segment_get_name(tSegment):
+    return tSegment['name']
+
+def segment_get_size(tSegment):
+    return tSegment['size']
+    
+def segment_is_loadable(tSegment):
+    return ('CONTENTS' in tSegment['flags']) and ('ALLOC' in tSegment['flags']) and ('LOAD' in tSegment['flags'])
 
 def get_symbol_table(env, strFileName):
     aCmd = [env['READELF'], '--symbols', '--wide', strFileName]
