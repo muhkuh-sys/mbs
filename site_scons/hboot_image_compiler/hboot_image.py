@@ -565,10 +565,11 @@ class HbootImage:
     ROMLOADER_CHIPTYP_NETX4000_FULL        = 11
     ROMLOADER_CHIPTYP_NETX4100_SMALL       = 12
     ROMLOADER_CHIPTYP_NETX90               = 13
+    ROMLOADER_CHIPTYP_NETX90B              = 14 
     
     atChipTypeMapping = {
         'NETX90':           { 'chip_type':ROMLOADER_CHIPTYP_NETX90,            'dev_mapping':atDeviceMapping_netx90},
-        #NETX90B
+        'NETX90B':          { 'chip_type':ROMLOADER_CHIPTYP_NETX90B,           'dev_mapping':atDeviceMapping_netx90},
         'NETX90_MPW':       { 'chip_type':ROMLOADER_CHIPTYP_NETX90_MPW,        'dev_mapping':atDeviceMapping_netx90},
         'NETX4000_RELAXED': { 'chip_type':ROMLOADER_CHIPTYP_NETX4000_RELAXED,  'dev_mapping':atDeviceMapping_netx4000},
         'NETX4000':         { 'chip_type':ROMLOADER_CHIPTYP_NETX4000_FULL,     'dev_mapping':atDeviceMapping_netx4000},
@@ -4765,7 +4766,8 @@ class HbootImage:
                     # 'NETX4000',
                     # 'NETX4100',
                     # 'NETX90_MPW',
-                    'NETX90'
+                    'NETX90',
+                    'NETX90B'
                 ]
             },
             'Data': {
