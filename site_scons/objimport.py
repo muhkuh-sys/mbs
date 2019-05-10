@@ -38,9 +38,20 @@ def objimport_action(target, source, env):
 	# Get the target path.
 	strDstPath = os.path.abspath(target[0].get_path())
 
+	# Get the binary architecture.
+	strAsicTyp = env['ASIC_TYP']
+	strOutputArchitecture = 'Unknown'
+	strBinaryArchitecture = 'Unknown'
+	if strAsicTyp=='NETIOL':
+		strOutputArchitecture = 'elf32-littleriscv'
+		strBinaryArchitecture = 'RISCV'
+	else:
+		strOutputArchitecture = 'elf32-littlearm'
+		strBinaryArchitecture = 'ARM'
+
 	# Change to the folder of the sourcefile.
 	os.chdir(os.path.abspath(strSrcPath))
-	iReturnCode = subprocess.call([env['OBJCOPY'], '-v', '-I', 'binary', '-O', 'elf32-littlearm', '-B', 'ARM', '--rename-section', '.data=%s'%strSectionName, strSrcFile, strDstPath])
+	iReturnCode = subprocess.call([env['OBJCOPY'], '-v', '-I', 'binary', '-O', strOutputArchitecture, '-B', strBinaryArchitecture, '--rename-section', '.data=%s'%strSectionName, strSrcFile, strDstPath])
 
 	# Move back to the old folder.
 	os.chdir(strOldPath)
