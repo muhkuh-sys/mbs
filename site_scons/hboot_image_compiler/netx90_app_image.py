@@ -1530,7 +1530,7 @@ if __name__ == '__main__':
     # Parse all alias definitions.
     atKnownFiles = {}
     if tArgs.astrAliases is not None:
-        tPattern = re.compile('([a-zA-Z0-9_]+)=(.+)$')
+        tPattern = re.compile('([a-zA-Z0-9_]+)=(.*)$')
         for strAliasDefinition in tArgs.astrAliases:
             tMatch = re.match(tPattern, strAliasDefinition)
             if tMatch is None:
