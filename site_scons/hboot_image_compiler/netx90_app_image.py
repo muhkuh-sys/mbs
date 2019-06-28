@@ -137,7 +137,10 @@ class AppImage:
         # with PROGBITS are dumped.
         strSegmentsToDump = self.resolve_alias(tNode.getAttribute('segments').strip())
         astrSegmentsToDump = None
-        if len(strSegmentsToDump) != 0:
+        if strSegmentsToDump==',':
+            # Note: astrSegmentsToDump must be empty, not None
+            astrSegmentsToDump = []
+        elif len(strSegmentsToDump) != 0:
             astrSegmentsToDump = [
                 strSegment.strip() for strSegment in
                 string.split(strSegmentsToDump, ',')
@@ -1243,23 +1246,6 @@ class AppImage:
                 'Need %d output files, but only %d given.' %
                 (len(self.__atDataBlocks), len(astrDestinationPaths))
             )
-            
-        # Remove empty data blocks and their destination paths.
-        atDataBlocks2 = []
-        astrDestinationPaths2 = []
-        #for tDataBlock, strPath in self.__atDataBlocks, astrDestinationPaths:
-        sizDataBlocks = len(self.__atDataBlocks)
-        for iCnt in range(0, sizDataBlocks):
-            tAttr = self.__atDataBlocks[iCnt]
-            strData = tAttr['data']
-            strPath = astrDestinationPaths[iCnt]
-            if len(strData) > 0:
-                atDataBlocks2.append(tAttr)
-                astrDestinationPaths2.append(strPath)
-            else:
-                print("Skipping empty data block. File %s will not be created." % strPath)
-        self.__atDataBlocks = atDataBlocks2
-        astrDestinationPaths = astrDestinationPaths2
             
         # There must be at least one data block left.
         sizDataBlocks = len(self.__atDataBlocks)
