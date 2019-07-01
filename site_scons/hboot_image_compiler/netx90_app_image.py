@@ -38,6 +38,11 @@ class AppImage:
     # This is a dictionary of all resolved files.
     __atKnownFiles = None
 
+    # This is a two-layer dictionary mapping ELF file paths and segment names to
+    # an entry for each segment.
+    # It is used to keep track of which segments have been used in a boot image.
+    __tElfSegments = None
+
     # No data blocks yet.
     __atDataBlocks = None
     
@@ -58,6 +63,64 @@ class AppImage:
         # No SSL options yet.
         self.__cfg_openssloptions = []
 
+    def segments_init(self):
+        self.__tElfSegments = {}
+        
+    # check if the segment list for ELF is already in the list and add it, if not.
+    def segments_get_elf_segments(self, strElfPath):
+        if strElfPath not in self.__tElfSegments:
+            atSegmentsAll = elf_support.get_segment_table(
+                self.__tEnv,
+                strElfPath,
+                None
+            )
+            
+            # construct a name to segment mapping
+            tSegments = {}
+            for tSegment in atSegmentsAll:
+                if elf_support.segment_is_loadable(tSegment):
+                    strName = elf_support.segment_get_name(tSegment)
+                    ulSize = elf_support.segment_get_size(tSegment)
+                    tEntry = {
+                        'name': strName,
+                        'size': ulSize,
+                        'used': False
+                    }
+                tSegments[strName] = tEntry
+            
+            self.__tElfSegments[strElfPath]=tSegments
+            
+        return self.__tElfSegments[strElfPath]
+            
+    # mark a segment in an ELF file as used
+    # todo: We only warn if the segment is not known in this ELF file.
+    def segments_mark_used(self, strElfPath, strSegmentName):
+        tSegments = self.segments_get_elf_segments(strElfPath)
+        if strSegmentName in tSegments:
+            tSegments[strSegmentName]['used']=True
+            
+    # mark all segments of an ELF file as used
+    def segments_mark_used_all(self, strElfPath):
+        tSegments = self.segments_get_elf_segments(strElfPath)
+        for tSegment in tSegments.values():
+            tSegment['used'] = True
+        
+    
+    # check if there are any unused segments which contain data
+    def segments_check_unused(self):
+        fUnusedSegments = False
+        for strElfPath, tSegments in self.__tElfSegments.items():
+            for tSegment in tSegments.values():
+                if tSegment['used'] != True:
+                    if tSegment['size'] == 0:
+                        print("Info: Unused empty segment '%s' in %s" % (tSegment['name'], strElfPath))
+                    else:
+                        print("Warning: Unused segment '%s' in file %s" % (tSegment['name'], strElfPath))
+                        fUnusedSegments = True
+        if fUnusedSegments==False:
+            print("No unused segments found")
+        return fUnusedSegments 
+        
     def read_keyrom(self, strKeyromFile):
         # Read the keyrom file if specified.
         if strKeyromFile is not None:
@@ -67,6 +130,10 @@ class AppImage:
             tFile.close()
             self.__XmlKeyromContents = xml.etree.ElementTree.fromstring(strXml)
 
+    # If strVal begins with the @ character:
+    # If the remainder of the string can be resolved as an alias, return the resolved value.
+    # If not, raise an error.
+    # If strVal does not begin with the @ character, return strVal.
     def resolve_alias(self, strVal):
         if len(strVal)>0 and strVal[0] == '@':
             strAlias = strVal[1:]
@@ -76,6 +143,24 @@ class AppImage:
                 raise Exception('Missing definition for alias: %s' % strAlias)
 
         return strVal
+        
+    # If strVal begins with the @ character:
+    # If the remainder of the string can be resolved as an alias, return the resolved value.
+    # If not, return the empty string.
+    # If strVal does not begin with the @ character, return strVal.
+    def safe_resolve_alias(self, strVal):
+        if len(strVal)>0 and strVal[0] == '@':
+            strAlias = strVal[1:]
+            if strAlias in self.__atKnownFiles:
+                strVal = self.__atKnownFiles[strAlias]
+            else:
+                strVal = ""
+        return strVal
+        
+    def is_alias(self, strVal):
+        return len(strVal)>0 and strVal[0] == '@'
+        
+        
 
     def __find_file(self, strFilePath):
         strAbsFilePath = None
@@ -191,12 +276,14 @@ class AppImage:
                     tSegment = atName2Segment[strName]
                     if 0 == elf_support.segment_get_size(tSegment):
                         print("Warning: Requested segment %s is empty - ignoring" % strName )
+                        self.segments_mark_used(strAbsFilePath, strName)
                     elif False == elf_support.segment_is_loadable(tSegment):
                         print("Warning: Requested segment %s is not loadable - ignoring" % strName )
                     else:
                         print("Found requested segment %s" % strName)
                         astrSegments2.append(strName)
                         atSegments2.append(tSegment)
+                        self.segments_mark_used(strAbsFilePath, strName)
                 
             astrSegmentsToDump = astrSegments2      
             atSegments = atSegments2
@@ -204,6 +291,7 @@ class AppImage:
         if len(atSegments) == 0:
             strData = ''
             pulLoadAddress = 0
+            self.segments_mark_used_all(strAbsFilePath)
             
         else:
             # Get the estimated binary size from the segments.
@@ -1135,8 +1223,12 @@ class AppImage:
         # Is the block XIP?
         if tAttr['destination'] == tAttr['headeraddress'] + 64:
             aulHBoot[3] = 0
-        else:
+        # Is the block in the SDRAM?
+        elif (tAttr['destination'] >= 0x10000000) and (tAttr['destination'] < 0x20000000):
             aulHBoot[3] = tAttr['destination'] + int(self.__astrSdRamOffset, 0)
+        else:
+            aulHBoot[3] = 0
+            
 
         # Set the data size in DWORDs.
         aulHBoot[4] = len(tAttr['data'])
@@ -1166,9 +1258,36 @@ class AppImage:
 
         tAttr['header'] = aulHBoot
 
+    # If the output file name is omitted, there must not be a segment list specified.
+    # The segment list attribute must be either 
+    # - absent
+    # - empty
+    # - ","
+    # - not resolvable
+    # If the attribute is present and
+    # - contains a non-alias value (other than ",")
+    # - or contains an alias that can be resolved,
+    # raise an error.
+    def data_node_check_no_segments(self, tNodeData):
+        #print("*** data_node_check_no_segments *****")
+        for tNodeChild in tNodeData.childNodes:
+            #print (tNodeChild.localName)
+            if tNodeChild.localName == 'File':
+                strVal = tNodeChild.getAttribute('segments').strip()
+                strVal2 = self.safe_resolve_alias(strVal)
+                #print("segments: %s -> %s" % (strVal, strVal2))
+                if len(strVal2)>0 and strVal2!=',':
+                    #print("Exception")
+                    # Error, no segment list should be supplied
+                    raise Exception ('Output filename is empty but a segment list is specified')
+                #else:
+                #    print("Accept")
+        
     def process_app_image(self, strSourcePath, astrDestinationPaths):
         # No data blocks yet.
         self.__atDataBlocks = []
+        
+        self.segments_init()
 
         tXml = xml.dom.minidom.parse(strSourcePath)
         tNodeRoot = tXml.documentElement
@@ -1177,58 +1296,78 @@ class AppImage:
 
         # Loop over all data elements.
         tNodeAsig = None
+        
+        # Offset into the list of output file paths
+        iDestPathIndex = 0
+        
         for tNodeChild in tNodeRoot.childNodes:
             if tNodeChild.localName == 'data':
-                # Get one data block.
-                strData, pulLoadAddress = self.__get_data_contents(tNodeChild)
-                # The input image must be a multiple of DWORDS.
-                if (len(strData) % 4) != 0:
-                    raise Exception(
-                        'The size of the input image is not a multiple of DWORDS.'
-                    )
-                # Convert the data to an array.
-                aulData = array.array('I')
-                aulData.fromstring(strData)
-                
-                # Get the header address.
-                if tNodeChild.hasAttribute('headeraddress') is not True:
-                    raise Exception('Missing "headeraddress" attribute.')
-                strHeaderAddress = self.resolve_alias(tNodeChild.getAttribute('headeraddress'))
-                ulHeaderAddress = int(strHeaderAddress, 0)
-                if ulHeaderAddress is None:
-                    raise Exception(
-                        'Failed to parse number: "%s".',
-                        strHeaderAddress
-                    )
-
-                # Get the padding.
-                ulPaddingPreSize = 0
-                ucPaddingPreValue = 0xff
-                strPaddingPreSize = tNodeChild.getAttribute('padding_pre_size')
-                if len(strPaddingPreSize) != 0:
-                    ulPaddingPreSize = int(strPaddingPreSize, 0)
-                    if ulPaddingPreSize < 0:
+                if iDestPathIndex >= len(astrDestinationPaths):
+                    print('Skipping data node because no output file name is supplied')
+                    self.data_node_check_no_segments(tNodeChild)
+                                                
+                elif astrDestinationPaths[iDestPathIndex] == '':
+                    iDestPathIndex = iDestPathIndex + 1
+                    print('destination path: %d >%s<' % (iDestPathIndex, ''))
+                    print('Skipping data node because output file name is empty')
+                    self.data_node_check_no_segments(tNodeChild)
+                                        
+                else:
+                    strDesinationPath = astrDestinationPaths[iDestPathIndex] 
+                    iDestPathIndex = iDestPathIndex + 1
+                    print('destination path: %d >%s<' % (iDestPathIndex, strDesinationPath))
+                    
+                    # Get one data block.
+                    strData, pulLoadAddress = self.__get_data_contents(tNodeChild)
+                    # The input image must be a multiple of DWORDS.
+                    if (len(strData) % 4) != 0:
                         raise Exception(
-                            'The padding pre size is invalid: %d' % ulPaddingPreSize
+                            'The size of the input image is not a multiple of DWORDS.'
                         )
-                strPaddingPreValue = tNodeChild.getAttribute('padding_pre_value')
-                if len(strPaddingPreValue) != 0:
-                    ucPaddingPreValue = int(strPaddingPreValue, 0)
-                    if (ucPaddingPreValue < 0) or (ucPaddingPreValue > 0xff):
+                    # Convert the data to an array.
+                    aulData = array.array('I')
+                    aulData.fromstring(strData)
+                    
+                    # Get the header address.
+                    if tNodeChild.hasAttribute('headeraddress') is not True:
+                        raise Exception('Missing "headeraddress" attribute.')
+                    strHeaderAddress = self.resolve_alias(tNodeChild.getAttribute('headeraddress'))
+                    ulHeaderAddress = int(strHeaderAddress, 0)
+                    if ulHeaderAddress is None:
                         raise Exception(
-                            'The padding pre value is invalid: %d' % ucPaddingPreValue
+                            'Failed to parse number: "%s".',
+                            strHeaderAddress
                         )
-
-                tAttr = {
-                    'prePaddingSize': ulPaddingPreSize,
-                    'prePaddingValue': ucPaddingPreValue,
-                    'header': None,
-                    'data': aulData,
-                    'headeraddress': ulHeaderAddress,
-                    'destination': pulLoadAddress,
-                    'asig': None
-                }
-                self.__atDataBlocks.append(tAttr)
+    
+                    # Get the padding.
+                    ulPaddingPreSize = 0
+                    ucPaddingPreValue = 0xff
+                    strPaddingPreSize = tNodeChild.getAttribute('padding_pre_size')
+                    if len(strPaddingPreSize) != 0:
+                        ulPaddingPreSize = int(strPaddingPreSize, 0)
+                        if ulPaddingPreSize < 0:
+                            raise Exception(
+                                'The padding pre size is invalid: %d' % ulPaddingPreSize
+                            )
+                    strPaddingPreValue = tNodeChild.getAttribute('padding_pre_value')
+                    if len(strPaddingPreValue) != 0:
+                        ucPaddingPreValue = int(strPaddingPreValue, 0)
+                        if (ucPaddingPreValue < 0) or (ucPaddingPreValue > 0xff):
+                            raise Exception(
+                                'The padding pre value is invalid: %d' % ucPaddingPreValue
+                            )
+    
+                    tAttr = {
+                        'prePaddingSize': ulPaddingPreSize,
+                        'prePaddingValue': ucPaddingPreValue,
+                        'header': None,
+                        'data': aulData,
+                        'headeraddress': ulHeaderAddress,
+                        'destination': pulLoadAddress,
+                        'asig': None,
+                        'destinationPath': strDesinationPath
+                    }
+                    self.__atDataBlocks.append(tAttr)
 
             elif tNodeChild.localName == 'asig':
                 if tNodeAsig is not None:
@@ -1240,17 +1379,16 @@ class AppImage:
         if sizDataBlocks == 0:
             raise Exception('No data blocks found.')
 
-        # Are enough destination files available?
-        if len(self.__atDataBlocks) > len(astrDestinationPaths):
+        # Raise an error if there are any unused output file paths remaining
+        if len(astrDestinationPaths) > iDestPathIndex:
             raise Exception(
-                'Need %d output files, but only %d given.' %
-                (len(self.__atDataBlocks), len(astrDestinationPaths))
-            )
-            
-        # There must be at least one data block left.
-        sizDataBlocks = len(self.__atDataBlocks)
-        if sizDataBlocks == 0:
-            raise Exception('No data blocks remaining.')
+                '%d output files specified, but only %d were used' %
+                (len(astrDestinationPaths), iDestPathIndex)
+                )
+                
+        # Check if any loadable segments recorded for the elf file(s) have not been used
+        if True == self.segments_check_unused():
+            raise Exception('There are unused segments containing data')
 
         # The first header must have a header address of 0x00000000.
         tFirstAttr = self.__atDataBlocks[0]
@@ -1276,7 +1414,7 @@ class AppImage:
         # Write the data blocks.
         for iCnt in range(0, len(self.__atDataBlocks)):
             tAttr = self.__atDataBlocks[iCnt]
-            strDestinationPath = astrDestinationPaths[iCnt]
+            strDestinationPath = tAttr['destinationPath']
 
             print('Writing file %s' % strDestinationPath)
             tFile = open(strDestinationPath, 'wb')
@@ -1361,6 +1499,7 @@ def __app_image_action(target, source, env):
     tAppImage = AppImage(env, astrIncludePaths, atKnownFiles)
     if strKeyRomPath is not None:
         tAppImage.read_keyrom(strKeyRomPath)
+    
     tAppImage.process_app_image(
         strSourcePath,
         astrDestinationPaths
@@ -1565,6 +1704,13 @@ if __name__ == '__main__':
     tAppImg = AppImage(tEnv, tArgs.astrIncludePaths, atKnownFiles, tArgs.strSdRamOffset)
     if tArgs.strKeyRomPath is not None:
         tAppImg.read_keyrom(tArgs.strKeyRomPath)
+    
+    #print ("===================================")
+    #print ("Number of destination paths: %d" % (len(tArgs.astrOutputFiles)))
+    #for strDesinationPath in tArgs.astrOutputFiles: 
+    #    print('>%s<' % strDesinationPath)
+    #print ("===================================")
+
     tAppImg.process_app_image(
         tArgs.strInputFile,
         tArgs.astrOutputFiles
