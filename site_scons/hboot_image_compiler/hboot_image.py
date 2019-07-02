@@ -1983,7 +1983,7 @@ class HbootImage:
             (__atCore0['pfnExecFunction'] == 0) and
             (__atCore1['pfnExecFunction'] == 0)
         ):
-            raise Exception('No core is started with the ExecuteCA9 chunk!')
+            print('Warning: No core is started with the ExecuteCA9 chunk!')
 
         aulChunk = array.array('I')
         aulChunk.append(self.__get_tag_id('E', 'X', 'A', '9'))
