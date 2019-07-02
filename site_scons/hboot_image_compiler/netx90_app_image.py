@@ -49,15 +49,18 @@ class AppImage:
     # No SDRamOffset yet.
     __astrSdRamOffset = None
 
+    __strNetxType = None
+    
     __XmlKeyromContents = None
     __cfg_openssl = 'openssl'
     __cfg_openssloptions = None
 
-    def __init__(self, tEnv, astrIncludePaths, atKnownFiles, astrSdRamOffset):
+    def __init__(self, tEnv, strNetxType, astrIncludePaths, atKnownFiles, astrSdRamOffset):
         self.__tEnv = tEnv
         self.__astrIncludePaths = astrIncludePaths
         self.__atKnownFiles = atKnownFiles
         self.__astrSdRamOffset = astrSdRamOffset
+        self.__strNetxType = strNetxType
 
         self.__cfg_openssl = 'openssl'
         # No SSL options yet.
@@ -1093,6 +1096,22 @@ class AppImage:
 
         return aulChunk
 
+    ROMLOADER_CHIPTYP_NETX90_MPW           = 10
+    ROMLOADER_CHIPTYP_NETX90               = 13
+    ROMLOADER_CHIPTYP_NETX90B              = 14 
+        
+    atChipTypeMapping = {
+        # These names are for compatibility with the COM side HBoot image tool
+        # 'NETX90':     ROMLOADER_CHIPTYP_NETX90,    
+        # 'NETX90B':    ROMLOADER_CHIPTYP_NETX90B,   
+        # 'NETX90_MPW': ROMLOADER_CHIPTYP_NETX90_MPW,
+        # These names are for compatibility with the netx 90 HWConfig tool.
+        'netx90':     ROMLOADER_CHIPTYP_NETX90B,  # Alias for the latest chip revision.
+        'netx90_rev0':ROMLOADER_CHIPTYP_NETX90,
+        'netx90_rev1':ROMLOADER_CHIPTYP_NETX90B,
+        'netx90_mpw': ROMLOADER_CHIPTYP_NETX90_MPW,
+    }
+        
     BUS_SPI = 1
     BUS_IFlash = 2
     atDeviceMapping_netx90 = [
@@ -1103,6 +1122,10 @@ class AppImage:
     # Insert information for use by the flasher:
     # chip type, target flash device and flash offset.
     def __set_flasher_parameters(self, aulHBoot, ulHeaderAddress):
+        if self.__strNetxType not in self.atChipTypeMapping:
+            raise Exception("Cannot set flasher parameters for chip type %s" % self.__strNetxType)
+        ucChipType = self.atChipTypeMapping[self.__strNetxType]
+    
         tDevInfo = None
         for tDev in self.atDeviceMapping_netx90:
             if tDev['start'] <= ulHeaderAddress and ulHeaderAddress <= tDev['end']:
@@ -1114,7 +1137,6 @@ class AppImage:
         
         print ('Found flash device %s for address 0x%08x' % (tDevInfo['name'], ulHeaderAddress))
 
-        ucChipType = 13 # netx 90
         ulFlashDevice = 1 * ucChipType + 0x100 * tDevInfo['bus'] + 0x10000 * tDevInfo['unit'] + 0x1000000 * tDevInfo['chip_select']
         ulFlashOffset = ulHeaderAddress
         
@@ -1593,6 +1615,24 @@ if __name__ == '__main__':
         help='write the output to OUTPUT_FILE'
     )
     tParser.add_argument(
+        '-n', '--netx-type',
+        dest='strNetxType',
+        required=True,
+        choices=[
+            # For compatibility with hboot_image.py
+            # 'NETX90',
+            # 'NETX90B',
+            # 'NETX90_MPW',
+            # For compatibility with HWConfig tool
+            'netx90',  # Alias for the latest chip revision, currently rev. 1 
+            'netx90_mpw',
+            'netx90_rev0', 
+            'netx90_rev1',
+        ],
+        metavar='NETX',
+        help='Build the image for netx type NETX.'
+    )
+    tParser.add_argument(
         '-c', '--objcopy',
         dest='strObjCopy',
         required=False,
@@ -1701,7 +1741,7 @@ if __name__ == '__main__':
         'HBOOT_INCLUDE': tArgs.astrIncludePaths
     }
 
-    tAppImg = AppImage(tEnv, tArgs.astrIncludePaths, atKnownFiles, tArgs.strSdRamOffset)
+    tAppImg = AppImage(tEnv, tArgs.strNetxType, tArgs.astrIncludePaths, atKnownFiles, tArgs.strSdRamOffset)
     if tArgs.strKeyRomPath is not None:
         tAppImg.read_keyrom(tArgs.strKeyRomPath)
     
