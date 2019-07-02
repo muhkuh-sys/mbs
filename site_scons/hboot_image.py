@@ -75,6 +75,8 @@ def __hboot_get_patch_table(env):
             strRelPatchDefinition = 'hboot_netx90_app_patch_table.xml'
         elif strAsicTyp == 'NETX56':
             strRelPatchDefinition = 'hboot_netx56_patch_table.xml'
+        elif strAsicTyp == 'NETXXL_MPW':
+            strRelPatchDefinition = 'hboot_netxxl_mpw_patch_table.xml'
         else:
             raise Exception('Invalid ASIC typ: "%s"' % strAsicTyp)
 
