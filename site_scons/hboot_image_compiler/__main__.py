@@ -18,7 +18,8 @@ tParser.add_argument('-n', '--netx-type',
                          'NETX90_MPW',
                          'NETX4000_RELAXED',
                          'NETX4000',
-                         'NETX4100'
+                         'NETX4100',
+                         'NETXXL_MPW'
                      ],
                      metavar='NETX',
                      help='Build the image for netx type NETX.')

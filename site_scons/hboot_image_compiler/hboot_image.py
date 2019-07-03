@@ -108,6 +108,7 @@ class HbootImage:
     __MAGIC_COOKIE_NETX90_ALT = 0xf3ad9e00
     __MAGIC_COOKIE_NETX90B = 0xf3beaf00
     __MAGIC_COOKIE_NETX90B_ALT = 0xf3ad9e00
+    __MAGIC_COOKIE_NETXXL_MPW = 0xf2beaf00
 
     __resolver = None
 
@@ -634,6 +635,12 @@ class HbootImage:
             else:
                 ulMagicCookie = self.__MAGIC_COOKIE_NETX90B
             ulSignature = self.__get_tag_id('M', 'O', 'O', 'H')
+        elif self.__strNetxType == 'NETXXL_MPW':
+            if self.__tImageType == self.__IMAGE_TYPE_ALTERNATIVE:
+                raise Exception('The netXXL has no alternative images.')
+            else:
+                ulMagicCookie = self.__MAGIC_COOKIE_NETXXL_MPW
+            ulSignature = self.__get_tag_id('M', 'O', 'O', 'H')
         else:
             raise Exception(
                 'Missing platform configuration: no standard header '
@@ -874,7 +881,8 @@ class HbootImage:
             elif(
                 (self.__strNetxType == 'NETX90_MPW') or
                 (self.__strNetxType == 'NETX90') or
-                (self.__strNetxType == 'NETX90B')
+                (self.__strNetxType == 'NETX90B') or
+                (self.__strNetxType == 'NETXXL_MPW')
             ):
                 # Pad the option chunk to 32 bit size.
                 strPadding = chr(0x00) * ((4 - (len(strData) % 4)) & 3)
@@ -4727,7 +4735,8 @@ class HbootImage:
                     'NETX4100',
                     'NETX90_MPW',
                     'NETX90B',
-                    'NETX90'
+                    'NETX90',
+                    'NETXXL_MPW'
                 ]
             },
             'Register': {
@@ -4747,7 +4756,8 @@ class HbootImage:
                     # 'NETX4100',
                     # 'NETX90_MPW',
                     'NETX90',
-                    'NETX90B'
+                    'NETX90B',
+                    'NETXXL_MPW'
                 ]
             },
             'Firewall': {
@@ -4787,7 +4797,8 @@ class HbootImage:
                     'NETX4100',
                     'NETX90_MPW',
                     'NETX90',
-                    'NETX90B'
+                    'NETX90B',
+                    'NETXXL_MPW'
                 ]
             },
             'Text': {
@@ -4807,7 +4818,8 @@ class HbootImage:
                     'NETX4100',
                     'NETX90_MPW',
                     'NETX90',
-                    'NETX90B'
+                    'NETX90B',
+                    'NETXXL_MPW'
                 ]
             },
             'XIP': {
@@ -4827,7 +4839,8 @@ class HbootImage:
                     'NETX4100',
                     'NETX90_MPW',
                     'NETX90',
-                    'NETX90B'
+                    'NETX90B',
+                    'NETXXL_MPW'
                 ]
             },
             'Execute': {
@@ -4847,7 +4860,8 @@ class HbootImage:
                     'NETX4100',
                     'NETX90_MPW',
                     'NETX90',
-                    'NETX90B'
+                    'NETX90B',
+                    'NETXXL_MPW'
                 ]
             },
             'ExecuteCA9': {
@@ -4887,7 +4901,8 @@ class HbootImage:
                     'NETX4100',
                     'NETX90_MPW',
                     'NETX90',
-                    'NETX90B'
+                    'NETX90B',
+                    'NETXXL_MPW'
                 ]
             },
             'Skip': {
@@ -4907,7 +4922,8 @@ class HbootImage:
                     'NETX4100',
                     'NETX90_MPW',
                     'NETX90',
-                    'NETX90B'
+                    'NETX90B',
+                    'NETXXL_MPW'
                 ]
             },
             'SkipIncomplete': {
@@ -5027,7 +5043,8 @@ class HbootImage:
                     'NETX4100',
                     'NETX90_MPW',
                     'NETX90',
-                    'NETX90B'
+                    'NETX90B',
+                    'NETXXL_MPW'
                 ]
             },
             'UpdateSecureInfoPage': {
@@ -5107,7 +5124,8 @@ class HbootImage:
                     # 'NETX4100',
                     # 'NETX90_MPW',
                     'NETX90',
-                    'NETX90B'
+                    'NETX90B',
+                    'NETXXL_MPW'
                 ]
             },
         }
