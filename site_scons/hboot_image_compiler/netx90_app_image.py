@@ -47,7 +47,7 @@ class AppImage:
     __atDataBlocks = None
     
     # No SDRamOffset yet.
-    __astrSdRamOffset = None
+    __ulSDRamSplitOffset = None
 
     __strNetxType = None
     
@@ -55,11 +55,11 @@ class AppImage:
     __cfg_openssl = 'openssl'
     __cfg_openssloptions = None
 
-    def __init__(self, tEnv, strNetxType, astrIncludePaths, atKnownFiles, astrSdRamOffset):
+    def __init__(self, tEnv, strNetxType, astrIncludePaths, atKnownFiles, ulSDRamSplitOffset):
         self.__tEnv = tEnv
         self.__astrIncludePaths = astrIncludePaths
         self.__atKnownFiles = atKnownFiles
-        self.__astrSdRamOffset = astrSdRamOffset
+        self.__ulSDRamSplitOffset = ulSDRamSplitOffset
         self.__strNetxType = strNetxType
 
         self.__cfg_openssl = 'openssl'
@@ -1247,7 +1247,7 @@ class AppImage:
             aulHBoot[3] = 0
         # Is the block in the SDRAM?
         elif (tAttr['destination'] >= 0x10000000) and (tAttr['destination'] < 0x20000000):
-            aulHBoot[3] = tAttr['destination'] + int(self.__astrSdRamOffset, 0)
+            aulHBoot[3] = tAttr['destination'] + self.__ulSDRamSplitOffset
         else:
             aulHBoot[3] = 0
             
@@ -1682,12 +1682,12 @@ if __name__ == '__main__':
     )
     tParser.add_argument(
         '-s',
-        '--sdsize',
-        dest='strSdRamOffset',
-        default="0x400000",
+        '--sdram_split_offset',
+        dest='strSDRamSplitOffset',
+        default="0x00000000",
         required=False,
         metavar="SDRAM",
-        help='sdram size to set the offset'
+        help='Address offset for COM CPU to access APP side SDRAM.'
     )
     tParser.add_argument(
         '-v',
@@ -1741,7 +1741,8 @@ if __name__ == '__main__':
         'HBOOT_INCLUDE': tArgs.astrIncludePaths
     }
 
-    tAppImg = AppImage(tEnv, tArgs.strNetxType, tArgs.astrIncludePaths, atKnownFiles, tArgs.strSdRamOffset)
+    ulSDRamSplitOffset = int(tArgs.strSDRamSplitOffset, 0)
+    tAppImg = AppImage(tEnv, tArgs.strNetxType, tArgs.astrIncludePaths, atKnownFiles, ulSDRamSplitOffset)
     if tArgs.strKeyRomPath is not None:
         tAppImg.read_keyrom(tArgs.strKeyRomPath)
     
