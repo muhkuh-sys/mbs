@@ -89,6 +89,19 @@ tParser.add_argument('--openssl-options',
                      action='append',
                      metavar='SSLOPT',
                      help='Add SSLOPT to the arguments for OpenSSL.')
+tParser.add_argument('--openssl-exe',
+                     dest='strOpensslExe',
+                     required=False,
+                     default='openssl',
+                     metavar='PATH',
+                     help='Add individual OpenSSL Path.')
+tParser.add_argument('--openssl-rand-off',
+                     dest='fOpensslRandOff',
+                     required=False,
+					 default=False,
+                     action='store_const', const=True,
+                     metavar='SSLRAND',
+                     help='Set openssl randomization true or false.')
 tParser.add_argument('strInputFile',
                      metavar='FILE',
                      help='Read the HBoot definition from FILE.')
@@ -182,7 +195,9 @@ tCompiler = hboot_image.HbootImage(
     verbose=tArgs.fVerbose,
     sniplibs=tArgs.astrSnipLib,
     keyrom=tArgs.strKeyRomPath,
-    openssloptions=tArgs.astrOpensslOptions
+    openssloptions=tArgs.astrOpensslOptions,
+	opensslexe=tArgs.strOpensslExe,
+	opensslrandoff=tArgs.fOpensslRandOff
 )
 tCompiler.parse_image(tArgs.strInputFile)
 tCompiler.write(tArgs.strOutputFile)

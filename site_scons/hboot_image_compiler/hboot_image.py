@@ -94,6 +94,7 @@ class HbootImage:
     __XmlKeyromContents = None
     __cfg_openssl = 'openssl'
     __cfg_openssloptions = None
+    __fOpensslRandOff = False
 
     # This is the revision for the netX10, netX51 and netX52 Secmem zone.
     __SECMEM_ZONE2_REV1_0 = 0x81
@@ -124,12 +125,14 @@ class HbootImage:
     def __init__(self, tEnv, strNetxType, **kwargs):
         strPatchDefinition = None
         strKeyromFile = None
+        strCfgOpenssl = None
         astrIncludePaths = []
         astrSnippetSearchPaths = []
         atKnownFiles = {}
         atGlobalDefines = {}
         atOpensslOptions = []
         fVerbose = False
+        fOpensslRandOff = False
 
         # Parse the kwargs.
         for strKey, tValue in iter(kwargs.items()):
@@ -170,11 +173,19 @@ class HbootImage:
             elif strKey == 'openssloptions':
                 atOpensslOptions = tValue
 
+            elif strKey == 'opensslexe':
+			    strCfgOpenssl = tValue
+				
+            elif strKey == 'opensslrandoff':
+			    fOpensslRandOff = bool(tValue)
+
         # Set the default search path if nothing was specified.
         if len(astrSnippetSearchPaths) == 0:
             astrSnippetSearchPaths = ['sniplib']
 
         self.__fVerbose = fVerbose
+		
+        self.__fOpensslRandOff = fOpensslRandOff
 
         # Do not override anything in the pre-calculated header yet.
         self.__atHeaderOverride = [None] * 16
@@ -196,7 +207,10 @@ class HbootImage:
 
         # Set the OpenSSL options.
         self.__cfg_openssloptions = atOpensslOptions
-
+		
+		# Set the OpenSSL Path.
+        self.__cfg_openssl = strCfgOpenssl
+		
         if self.__fVerbose:
             print('[HBootImage] Configuration: netX type = %s' % strNetxType)
             print('[HBootImage] Configuration: patch definitions = "%s"' %
@@ -2361,7 +2375,8 @@ class HbootImage:
         tProcess = subprocess.Popen(
             astrCmd,
             stdin=subprocess.PIPE,
-            stdout=subprocess.PIPE
+            stdout=subprocess.PIPE,
+			shell=True
         )
         (strStdout, strStdErr) = tProcess.communicate(strKeyDER)
         if tProcess.returncode != 0:
@@ -2385,7 +2400,7 @@ class HbootImage:
 
             # Extract the public exponent.
             tReExp = re.compile(
-                '^%s\s+(\d+)\s+\(0x([0-9a-fA-F]+)\)$' % strMatchExponent,
+                '^%s\s+(\d+)\s+\(0x([0-9a-fA-F]+)\)' % strMatchExponent,
                 re.MULTILINE
             )
             tMatch = tReExp.search(strStdout)
@@ -4136,7 +4151,7 @@ class HbootImage:
             os.close(iFile)
 
             # Write the DER key to the temporary file.
-            tFile = open(strPathKeypair, 'wt')
+            tFile = open(strPathKeypair, 'wb')
             tFile.write(strKeyDER)
             tFile.close()
 
@@ -4167,11 +4182,14 @@ class HbootImage:
                     'dgst',
                     '-sign', strPathKeypair,
                     '-keyform', 'DER',
-                    '-sigopt', 'rsa_padding_mode:pss',
-                    '-sigopt', 'rsa_pss_saltlen:-1',
                     '-sha384'
                 ]
-                astrCmd.extend(self.__cfg_openssloptions)
+                if self.__cfg_openssloptions:
+                    astrCmd.extend(self.__cfg_openssloptions)
+                if not self.__fOpensslRandOff:
+                    astrCmd.extend([
+                        '-sigopt', 'rsa_padding_mode:pss',
+                        '-sigopt', 'rsa_pss_saltlen:-1'])
                 astrCmd.append(strPathSignatureInputData)
                 strSignatureMirror = subprocess.check_output(astrCmd)
                 aucSignature = array.array('B', strSignatureMirror)
@@ -4207,7 +4225,7 @@ class HbootImage:
         strNumberOfHashes = tChunkNode.getAttribute('entries')
         if len(strNumberOfHashes) != 0:
             ulNumberOfHashes = int(strNumberOfHashes, 0)
-            if (ulNumberOfHashes < 1) or (ulNumberOfHashes > 8):
+            if (ulNumberOfHashes < 1) or (ulNumberOfHashes > 16):
                 raise Exception(
                     'The number of hashes is invalid: %d' % ulNumberOfHashes
                 )
@@ -4515,7 +4533,7 @@ class HbootImage:
                 os.close(iFile)
 
                 # Write the DER key to the temporary file.
-                tFile = open(strPathKeypair, 'wt')
+                tFile = open(strPathKeypair, 'wb')
                 tFile.write(strKeyDER)
                 tFile.close()
 
@@ -4532,7 +4550,8 @@ class HbootImage:
                         '-keyform', 'DER',
                         '-sha384'
                     ]
-                    astrCmd.extend(self.__cfg_openssloptions)
+                    if self.__cfg_openssloptions:
+                        astrCmd.extend(self.__cfg_openssloptions)
                     astrCmd.append(strPathSignatureInputData)
                     strEccSignature = subprocess.check_output(astrCmd)
                     aucEccSignature = array.array('B', strEccSignature)
@@ -4546,11 +4565,14 @@ class HbootImage:
                         'dgst',
                         '-sign', strPathKeypair,
                         '-keyform', 'DER',
-                        '-sigopt', 'rsa_padding_mode:pss',
-                        '-sigopt', 'rsa_pss_saltlen:-1',
                         '-sha384'
                     ]
-                    astrCmd.extend(self.__cfg_openssloptions)
+                    if self.__cfg_openssloptions:
+                        astrCmd.extend(self.__cfg_openssloptions)
+                    if not self.__fOpensslRandOff:
+                        astrCmd.extend([
+                            '-sigopt', 'rsa_padding_mode:pss',
+                            '-sigopt', 'rsa_pss_saltlen:-1'])
                     astrCmd.append(strPathSignatureInputData)
                     strSignatureMirror = subprocess.check_output(astrCmd)
                     aucSignature = array.array('B', strSignatureMirror)
@@ -4632,7 +4654,7 @@ class HbootImage:
 
         tChunkAttributes['fIsFinished'] = True
         tChunkAttributes['atData'] = aulChunk
-        tChunkAttributes['aulHash'] = None
+        tChunkAttributes['aulHash'] = array.array('I', strHash)
 
     def __build_chunk_daxz(self, tChunkAttributes, atParserState, uiChunkIndex, atAllChunks):
         tChunkNode = tChunkAttributes['tNode']

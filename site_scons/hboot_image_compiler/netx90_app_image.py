@@ -54,17 +54,19 @@ class AppImage:
     __XmlKeyromContents = None
     __cfg_openssl = 'openssl'
     __cfg_openssloptions = None
+    __fOpensslRandOff = False
 
-    def __init__(self, tEnv, strNetxType, astrIncludePaths, atKnownFiles, ulSDRamSplitOffset):
+    def __init__(self, tEnv, strNetxType, astrIncludePaths, atKnownFiles, ulSDRamSplitOffset, strOpensslExe, fOpensslRandOff):
         self.__tEnv = tEnv
         self.__astrIncludePaths = astrIncludePaths
         self.__atKnownFiles = atKnownFiles
         self.__ulSDRamSplitOffset = ulSDRamSplitOffset
         self.__strNetxType = strNetxType
 
-        self.__cfg_openssl = 'openssl'
+        self.__cfg_openssl = strOpensslExe
         # No SSL options yet.
         self.__cfg_openssloptions = []
+        self.__fOpensslRandOff = fOpensslRandOff
 
     def segments_init(self):
         self.__tElfSegments = {}
@@ -695,7 +697,8 @@ class AppImage:
         tProcess = subprocess.Popen(
             astrCmd,
             stdin=subprocess.PIPE,
-            stdout=subprocess.PIPE
+            stdout=subprocess.PIPE,
+			shell=True
         )
         (strStdout, strStdErr) = tProcess.communicate(strKeyDER)
         if tProcess.returncode != 0:
@@ -719,7 +722,7 @@ class AppImage:
 
             # Extract the public exponent.
             tReExp = re.compile(
-                '^%s\s+(\d+)\s+\(0x([0-9a-fA-F]+)\)$' % strMatchExponent,
+                '^%s\s+(\d+)\s+\(0x([0-9a-fA-F]+)\)' % strMatchExponent,
                 re.MULTILINE
             )
             tMatch = tReExp.search(strStdout)
@@ -1039,7 +1042,7 @@ class AppImage:
         os.close(iFile)
 
         # Write the DER key to the temporary file.
-        tFile = open(strPathKeypair, 'wt')
+        tFile = open(strPathKeypair, 'wb')
         tFile.write(strKeyDER)
         tFile.close()
 
@@ -1076,11 +1079,14 @@ class AppImage:
                 'dgst',
                 '-sign', strPathKeypair,
                 '-keyform', 'DER',
-                '-sigopt', 'rsa_padding_mode:pss',
-                '-sigopt', 'rsa_pss_saltlen:-1',
                 '-sha384'
             ]
-            astrCmd.extend(self.__cfg_openssloptions)
+            if self.__cfg_openssloptions:
+                astrCmd.extend(self.__cfg_openssloptions)
+            if not self.__fOpensslRandOff:
+                astrCmd.extend([
+                    '-sigopt', 'rsa_padding_mode:pss',
+                    '-sigopt', 'rsa_pss_saltlen:-1'])
             astrCmd.append(strPathSignatureInputData)
             strSignatureMirror = subprocess.check_output(astrCmd)
             aucSignature = array.array('B', strSignatureMirror)
@@ -1697,6 +1703,23 @@ if __name__ == '__main__':
         default=False,
         help='be verbose'
     )
+    tParser.add_argument(
+        '--openssl-exe',
+        dest='strOpensslExe',
+        required=False,
+        default='openssl',
+        metavar='PATH',
+        help='Add individual OpenSSL Path.'
+    )
+    tParser.add_argument(
+        '--openssl-rand-off',
+        dest='fOpensslRandOff',
+        required=False,
+        default=False,
+        action='store_const', const=True,
+        metavar='SSLRAND',
+        help='Set openssl randomization true or false.'
+    )
     tArgs = tParser.parse_args()
 
     # Use a default logging level of "WARNING". Change it to "DEBUG" in
@@ -1742,7 +1765,7 @@ if __name__ == '__main__':
     }
 
     ulSDRamSplitOffset = int(tArgs.strSDRamSplitOffset, 0)
-    tAppImg = AppImage(tEnv, tArgs.strNetxType, tArgs.astrIncludePaths, atKnownFiles, ulSDRamSplitOffset)
+    tAppImg = AppImage(tEnv, tArgs.strNetxType, tArgs.astrIncludePaths, atKnownFiles, ulSDRamSplitOffset, tArgs.strOpensslExe, tArgs.fOpensslRandOff)
     if tArgs.strKeyRomPath is not None:
         tAppImg.read_keyrom(tArgs.strKeyRomPath)
     
