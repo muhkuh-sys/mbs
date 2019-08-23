@@ -8,9 +8,9 @@ import hboot_image
 
 
 tParser = argparse.ArgumentParser(usage='usage: hboot_image [options]')
-tParser.add_argument('-n', '--netx-type',
+tGroupe = tParser.add_mutually_exclusive_group(required=True)
+tGroupe.add_argument('-n', '--netx-type',
                      dest='strNetxType',
-                     required=True,
                      choices=[
                          'NETX56',
                          'NETX90',
@@ -23,6 +23,20 @@ tParser.add_argument('-n', '--netx-type',
                      ],
                      metavar='NETX',
                      help='Build the image for netx type NETX.')
+tGroupe.add_argument('--netx-type-public',
+                     dest='strNetxType',
+                     choices=[
+                         'netx90',
+                         'netx90_rev0',
+                         'netx90_rev1',
+                         'netx90_mpw',
+                         'NETX56',
+                         'NETX4000_RELAXED',
+                         'NETX4000',
+                         'NETX4100'						 
+                     ],
+                     metavar='NETX',
+                     help='Build the image for netx type public NETX.')
 tParser.add_argument('-c', '--objcopy',
                      dest='strObjCopy',
                      required=False,
@@ -120,10 +134,22 @@ atDefaultPatchTables = {
     'NETX4000': 'hboot_netx4000_patch_table.xml',
     'NETX4100': 'hboot_netx4000_patch_table.xml'
 }
+
+if tArgs.strNetxType == 'netx90':
+    strNetxType = 'NETX90B'
+elif tArgs.strNetxType == 'netx90_rev0':
+    strNetxType = 'NETX90'
+elif tArgs.strNetxType == 'netx90_rev1':
+    strNetxType = 'NETX90B'
+elif tArgs.strNetxType == 'netx90_mpw':
+    strNetxType = 'NETX90_MPW'
+else:
+    strNetxType = tArgs.strNetxType
+	
 if tArgs.strPatchTablePath is None:
     tArgs.strPatchTablePath = os.path.join(
         os.path.dirname(os.path.dirname(os.path.realpath(__file__))),
-        atDefaultPatchTables[tArgs.strNetxType]
+        atDefaultPatchTables[strNetxType]
     )
 
 # Parse all alias definitions.
@@ -187,7 +213,7 @@ tEnv = {'OBJCOPY': tArgs.strObjCopy,
 
 tCompiler = hboot_image.HbootImage(
     tEnv,
-    tArgs.strNetxType,
+    strNetxType,
     defines=atDefinitions,
     includes=tArgs.astrIncludePaths,
     known_files=atKnownFiles,
