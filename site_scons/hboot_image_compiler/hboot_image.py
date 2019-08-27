@@ -261,7 +261,7 @@ class HbootImage:
             self.__cPatchDefinitions.read_patch_definition(strPatchDefinition)
 
         self.__cSnippetLibrary = snippet_library.SnippetLibrary(
-            '.sniplib.dblite',
+            ':memory:',
             astrSnippetSearchPaths,
             debug=self.__fVerbose
         )
