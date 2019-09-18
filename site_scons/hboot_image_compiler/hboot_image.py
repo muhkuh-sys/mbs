@@ -2388,15 +2388,14 @@ class HbootImage:
         # "priv:".
         iKeyTyp_1ECC_2RSA = None
         atAttr = None
-        if string.find(strStdout, 'modulus:') != -1:
+        strMatchExponent = 'publicExponent:'
+        strMatchModulus = 'modulus:'
+        if fIsPublicKey is True:
+            strMatchExponent = 'Exponent:'
+            strMatchModulus = 'Modulus:'
+        if string.find(strStdout, strMatchModulus) != -1:
             # Looks like this is an RSA key.
             iKeyTyp_1ECC_2RSA = 2
-
-            strMatchExponent = 'publicExponent:'
-            strMatchModulus = 'modulus:'
-            if fIsPublicKey is True:
-                strMatchExponent = 'Exponent:'
-                strMatchModulus = 'Modulus:'
 
             # Extract the public exponent.
             tReExp = re.compile(
@@ -3105,7 +3104,7 @@ class HbootImage:
             os.close(iFile)
 
             # Write the DER key to the temporary file.
-            tFile = open(strPathKeypair, 'wt')
+            tFile = open(strPathKeypair, 'wb')
             tFile.write(strKeyDER)
             tFile.close()
 
@@ -3119,11 +3118,14 @@ class HbootImage:
                 'dgst',
                 '-sign', strPathKeypair,
                 '-keyform', 'DER',
-                '-sigopt', 'rsa_padding_mode:pss',
-                '-sigopt', 'rsa_pss_saltlen:-1',
                 '-sha384'
             ]
-            astrCmd.extend(self.__cfg_openssloptions)
+            if self.__cfg_openssloptions:
+                astrCmd.extend(self.__cfg_openssloptions)
+            if not self.__fOpensslRandOff:
+                astrCmd.extend([
+                    '-sigopt', 'rsa_padding_mode:pss',
+                    '-sigopt', 'rsa_pss_saltlen:-1'])
             astrCmd.append(strPathSignatureInputData)
             strSignature = subprocess.check_output(astrCmd)
 
@@ -3274,7 +3276,7 @@ class HbootImage:
             os.close(iFile)
 
             # Write the DER key to the temporary file.
-            tFile = open(strPathKeypair, 'wt')
+            tFile = open(strPathKeypair, 'wb')
             tFile.write(strKeyDER)
             tFile.close()
 
@@ -3288,11 +3290,14 @@ class HbootImage:
                 'dgst',
                 '-sign', strPathKeypair,
                 '-keyform', 'DER',
-                '-sigopt', 'rsa_padding_mode:pss',
-                '-sigopt', 'rsa_pss_saltlen:-1',
                 '-sha384'
             ]
-            astrCmd.extend(self.__cfg_openssloptions)
+            if self.__cfg_openssloptions:
+                astrCmd.extend(self.__cfg_openssloptions)
+            if not self.__fOpensslRandOff:
+                astrCmd.extend([
+                    '-sigopt', 'rsa_padding_mode:pss',
+                    '-sigopt', 'rsa_pss_saltlen:-1'])
             astrCmd.append(strPathSignatureInputData)
             strSignature = subprocess.check_output(astrCmd)
 
@@ -3469,7 +3474,7 @@ class HbootImage:
             os.close(iFile)
 
             # Write the DER key to the temporary file.
-            tFile = open(strPathKeypair, 'wt')
+            tFile = open(strPathKeypair, 'wb')
             tFile.write(strKeyDER)
             tFile.close()
 
@@ -3483,11 +3488,14 @@ class HbootImage:
                 'dgst',
                 '-sign', strPathKeypair,
                 '-keyform', 'DER',
-                '-sigopt', 'rsa_padding_mode:pss',
-                '-sigopt', 'rsa_pss_saltlen:-1',
                 '-sha384'
             ]
-            astrCmd.extend(self.__cfg_openssloptions)
+            if self.__cfg_openssloptions:
+                astrCmd.extend(self.__cfg_openssloptions)
+            if not self.__fOpensslRandOff:
+                astrCmd.extend([
+                    '-sigopt', 'rsa_padding_mode:pss',
+                    '-sigopt', 'rsa_pss_saltlen:-1'])
             astrCmd.append(strPathSignatureInputData)
             strSignature = subprocess.check_output(astrCmd)
 
@@ -3699,7 +3707,7 @@ class HbootImage:
             os.close(iFile)
 
             # Write the DER key to the temporary file.
-            tFile = open(strPathKeypair, 'wt')
+            tFile = open(strPathKeypair, 'wb')
             tFile.write(strKeyDER)
             tFile.close()
 
@@ -3713,11 +3721,14 @@ class HbootImage:
                 'dgst',
                 '-sign', strPathKeypair,
                 '-keyform', 'DER',
-                '-sigopt', 'rsa_padding_mode:pss',
-                '-sigopt', 'rsa_pss_saltlen:-1',
                 '-sha384'
             ]
-            astrCmd.extend(self.__cfg_openssloptions)
+            if self.__cfg_openssloptions:
+                astrCmd.extend(self.__cfg_openssloptions)
+            if not self.__fOpensslRandOff:
+                astrCmd.extend([
+                    '-sigopt', 'rsa_padding_mode:pss',
+                    '-sigopt', 'rsa_pss_saltlen:-1'])
             astrCmd.append(strPathSignatureInputData)
             strSignature = subprocess.check_output(astrCmd)
 
