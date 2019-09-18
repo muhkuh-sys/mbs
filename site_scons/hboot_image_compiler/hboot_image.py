@@ -10,6 +10,7 @@ import os
 import os.path
 import re
 import string
+import platform
 import subprocess
 import tempfile
 import xml.dom.minidom
@@ -2372,12 +2373,19 @@ class HbootImage:
         ]
         if fIsPublicKey is True:
             astrCmd.append('-pubin')
-        tProcess = subprocess.Popen(
-            astrCmd,
-            stdin=subprocess.PIPE,
-            stdout=subprocess.PIPE,
-			shell=True
-        )
+        if platform.system() == 'Windows':
+            tProcess = subprocess.Popen(
+                astrCmd,
+                stdin=subprocess.PIPE,
+                stdout=subprocess.PIPE,
+                shell=True
+            )
+        else:
+          tProcess = subprocess.Popen(
+                astrCmd,
+                stdin=subprocess.PIPE,
+                stdout=subprocess.PIPE
+            )
         (strStdout, strStdErr) = tProcess.communicate(strKeyDER)
         if tProcess.returncode != 0:
             raise Exception('OpenSSL failed with return code %d.' %
