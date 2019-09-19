@@ -1,5 +1,25 @@
 # -*- coding: utf-8 -*-
 
+# ***************************************************************************
+# *   Copyright (C) 2019 by Hilscher GmbH                                   *
+# *   netXsupport@hilscher.com                                              *
+# *                                                                         *
+# *   This program is free software; you can redistribute it and/or modify  *
+# *   it under the terms of the GNU General Public License as published by  *
+# *   the Free Software Foundation; either version 2 of the License, or     *
+# *   (at your option) any later version.                                   *
+# *                                                                         *
+# *   This program is distributed in the hope that it will be useful,       *
+# *   but WITHOUT ANY WARRANTY; without even the implied warranty of        *
+# *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         *
+# *   GNU General Public License for more details.                          *
+# *                                                                         *
+# *   You should have received a copy of the GNU General Public License     *
+# *   along with this program; if not, write to the                         *
+# *   Free Software Foundation, Inc.,                                       *
+# *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
+# ***************************************************************************
+
 import array
 import ast
 import base64
@@ -175,22 +195,22 @@ class HbootImage:
                 atOpensslOptions = tValue
 
             elif strKey == 'opensslexe':
-			    strCfgOpenssl = tValue
-				
+                strCfgOpenssl = tValue
+
             elif strKey == 'opensslrandoff':
-			    fOpensslRandOff = bool(tValue)
+                fOpensslRandOff = bool(tValue)
 
         # Set the default search path if nothing was specified.
         if len(astrSnippetSearchPaths) == 0:
             astrSnippetSearchPaths = ['sniplib']
 
         self.__fVerbose = fVerbose
-		
+
         self.__fOpensslRandOff = fOpensslRandOff
 
         # Do not override anything in the pre-calculated header yet.
         self.__atHeaderOverride = [None] * 16
-        
+
         # Add info to be used by the flasher to the header of the boot image.
         self.__fSetFlasherParameters = False
 
@@ -208,10 +228,10 @@ class HbootImage:
 
         # Set the OpenSSL options.
         self.__cfg_openssloptions = atOpensslOptions
-		
-		# Set the OpenSSL Path.
+
+        # Set the OpenSSL Path.
         self.__cfg_openssl = strCfgOpenssl
-		
+
         if self.__fVerbose:
             print('[HBootImage] Configuration: netX type = %s' % strNetxType)
             print('[HBootImage] Configuration: patch definitions = "%s"' %
@@ -563,33 +583,32 @@ class HbootImage:
                 for tNode in atIncludeNodes:
                     self.__preprocess_include(tNode)
 
-
     BUS_SPI = 1
     BUS_IFlash = 2
     atDeviceMapping_netx4000 = {
-        'SQIROM0':{'bus':BUS_SPI, 'unit':0, 'chip_select':0},
-        'SQIROM1':{'bus':BUS_SPI, 'unit':1, 'chip_select':0},
+        'SQIROM0': {'bus': BUS_SPI, 'unit': 0, 'chip_select': 0},
+        'SQIROM1': {'bus': BUS_SPI, 'unit': 1, 'chip_select': 0},
         }
-    
+
     atDeviceMapping_netx90 = {
-        'INTFLASH':{'bus':BUS_IFlash, 'unit':3, 'chip_select':0},
-        'SQIROM':  {'bus':BUS_SPI,    'unit':0, 'chip_select':0},
+        'INTFLASH': {'bus': BUS_IFlash, 'unit': 3, 'chip_select': 0},
+        'SQIROM': {'bus': BUS_SPI,    'unit': 0, 'chip_select': 0},
         }
-    
+
     ROMLOADER_CHIPTYP_NETX4000_RELAXED     = 8
     ROMLOADER_CHIPTYP_NETX90_MPW           = 10
     ROMLOADER_CHIPTYP_NETX4000_FULL        = 11
     ROMLOADER_CHIPTYP_NETX4100_SMALL       = 12
     ROMLOADER_CHIPTYP_NETX90               = 13
     ROMLOADER_CHIPTYP_NETX90B              = 14 
-    
+
     atChipTypeMapping = {
-        'NETX90':           { 'chip_type':ROMLOADER_CHIPTYP_NETX90,            'dev_mapping':atDeviceMapping_netx90},
-        'NETX90B':          { 'chip_type':ROMLOADER_CHIPTYP_NETX90B,           'dev_mapping':atDeviceMapping_netx90},
-        'NETX90_MPW':       { 'chip_type':ROMLOADER_CHIPTYP_NETX90_MPW,        'dev_mapping':atDeviceMapping_netx90},
-        'NETX4000_RELAXED': { 'chip_type':ROMLOADER_CHIPTYP_NETX4000_RELAXED,  'dev_mapping':atDeviceMapping_netx4000},
-        'NETX4000':         { 'chip_type':ROMLOADER_CHIPTYP_NETX4000_FULL,     'dev_mapping':atDeviceMapping_netx4000},
-        'NETX4100':         { 'chip_type':ROMLOADER_CHIPTYP_NETX4100_SMALL,    'dev_mapping':atDeviceMapping_netx4000},
+        'NETX90':           {'chip_type': ROMLOADER_CHIPTYP_NETX90,            'dev_mapping': atDeviceMapping_netx90},
+        'NETX90B':          {'chip_type': ROMLOADER_CHIPTYP_NETX90B,           'dev_mapping': atDeviceMapping_netx90},
+        'NETX90_MPW':       {'chip_type': ROMLOADER_CHIPTYP_NETX90_MPW,        'dev_mapping': atDeviceMapping_netx90},
+        'NETX4000_RELAXED': {'chip_type': ROMLOADER_CHIPTYP_NETX4000_RELAXED,  'dev_mapping': atDeviceMapping_netx4000},
+        'NETX4000':         {'chip_type': ROMLOADER_CHIPTYP_NETX4000_FULL,     'dev_mapping': atDeviceMapping_netx4000},
+        'NETX4100':         {'chip_type': ROMLOADER_CHIPTYP_NETX4100_SMALL,    'dev_mapping': atDeviceMapping_netx4000},
     }
 
     # Insert information for use by the flasher:
@@ -608,16 +627,15 @@ class HbootImage:
         ucChiptype = tChipMap['chip_type']
         tDevMap = tChipMap['dev_mapping']
         if self.__strDevice not in tDevMap:
-            raise Exception ("Cannot set flasher parameters for device %s" % self.__strDevice)
+            raise Exception("Cannot set flasher parameters for device %s" % self.__strDevice)
         tDevInfo = tDevMap[self.__strDevice]
-        
+
         ulFlashInfo = 1 * ucChiptype + 0x100 * tDevInfo['bus'] + 0x10000 * tDevInfo['unit'] + 0x1000000 * tDevInfo['chip_select']
         ulFlashOffset = self.__ulStartOffset 
-        
+
         aBootBlock[5] = ulFlashInfo
         aBootBlock[2] = ulFlashOffset
-        
-    
+
     def __build_standard_header(self, atChunks):
 
         ulMagicCookie = None
@@ -768,8 +786,7 @@ class HbootImage:
             self.__fSetFlasherParameters = False
         else:
             raise Exception("Incorrect value of <Header> attribute 'set_flasher_parameters': %s" % strFlashInfo)
-        
-        
+
         # Loop over all child nodes.
         for tValueNode in tOptionsNode.childNodes:
             if tValueNode.nodeType == tValueNode.ELEMENT_NODE:
@@ -967,7 +984,7 @@ class HbootImage:
         # Extract the binary.
         tBinFile, strBinFileName = tempfile.mkstemp()
         os.close(tBinFile)
-        
+
         astrCmd = [
             self.__tEnv['OBJCOPY'],
             '--output-target=binary'
@@ -978,7 +995,7 @@ class HbootImage:
         astrCmd.append(strAbsFilePath)
         astrCmd.append(strBinFileName)
         #subprocess.check_call(astrCmd)
-        
+
         try:
             subprocess.check_call(astrCmd)        
         except Exception as e:
@@ -986,7 +1003,6 @@ class HbootImage:
             print(astrCmd) 
             print(e) 
             raise
-            
 
         # Get the application data.
         tBinFile = open(strBinFileName, 'rb')
@@ -1251,12 +1267,11 @@ class HbootImage:
         # Build the chunk
         ulTagId = self.__get_tag_id('R', 'E', 'G', 'I')
         self.__wrap_chunk(tChunkAttributes, ulTagId, aulData)
-    
-    
+
     def __get_firewall_contents(self, tChunkNode, atEntries):  
         # Get the data block.
         self.__get_data_contents(tChunkNode, atEntries, False)
-    
+
     def __serialize_firewall_chunk(self, atEntries, aulData):
         # Convert the padded data to an array.
         strData = atEntries['data']
@@ -1278,7 +1293,6 @@ class HbootImage:
         # Build the chunk
         ulTagId = self.__get_tag_id('F', 'R', 'W', 'L')
         self.__wrap_chunk(tChunkAttributes, ulTagId, aulData)
-        
 
     def __get_data_contents(self, tDataNode, atData, fWantLoadAddress):
         strData = None
@@ -1492,7 +1506,7 @@ class HbootImage:
                                 if strDataString is None:
                                     raise Exception('No text in node "String" '
                                                     ' found!')
-                                
+
                                 astrData.append(strDataString)
 
                             elif tConcatNode.localName == 'UInt32':
@@ -1563,11 +1577,11 @@ class HbootImage:
                                     tConcatNode
                                 )
                                 astrData.append(strDataChunk)
-                                
+
                             else:
                                 raise Exception('Unexpected node: %s' 
                                     % (tConcatNode.localName))
-                                    
+
                     strData = ''.join(astrData)
 
                 else:
@@ -5384,7 +5398,7 @@ class HbootImage:
                 raise Exception(
                     'The start offset in the <HBootImage> tag must be a multiple of 4: %d' % ulStartOffset
                 )
-            
+
         self.__ulStartOffset = ulStartOffset
 
         # Get the size and value for a padding. Default to 0 bytes of 0xff.
@@ -5590,7 +5604,7 @@ class HbootImage:
 
             # Generate the standard header.
             atHeaderStandard = self.__build_standard_header(atChunks)
-            
+
             # Insert flasher parameters if selected.
             if self.__fSetFlasherParameters == True:
                 self.__set_flasher_parameters(atHeaderStandard)
