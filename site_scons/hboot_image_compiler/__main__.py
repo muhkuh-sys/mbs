@@ -25,9 +25,11 @@ import os.path
 import re
 
 import hboot_image
+import hboot_image_version
 
 
-tParser = argparse.ArgumentParser(usage='usage: hboot_image [options]')
+tParser = argparse.ArgumentParser(usage='hboot_image [options]')
+tParser.add_argument('--version', action='version', version=hboot_image_version.VERSION_STRING)
 tGroupe = tParser.add_mutually_exclusive_group(required=True)
 tGroupe.add_argument('-n', '--netx-type',
                      dest='strNetxType',
