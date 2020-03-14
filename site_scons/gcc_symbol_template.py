@@ -46,7 +46,7 @@ def gccsymboltemplate_action(target, source, env):
 
     # Read the template.
     tTemplateFilename = env['GCCSYMBOLTEMPLATE_TEMPLATE']
-    if isinstance(tTemplateFilename, basestring):
+    if isinstance(tTemplateFilename, str):
         strTemplateFilename = tTemplateFilename
     else:
         # Assume this is a file.
@@ -56,23 +56,37 @@ def gccsymboltemplate_action(target, source, env):
     tFile.close()
 
     # Search and replace the special "%EXECUTION_ADDRESS%".
-    strExecutionAddress = '0x%08x' % elf_support.get_exec_address(env, strSourcePath)
-    strTemplate = string.replace(strTemplate, '${%EXECUTION_ADDRESS%}', strExecutionAddress)
+    strExecutionAddress = '0x%08x' % elf_support.get_exec_address(
+        env,
+        strSourcePath
+    )
+    strTemplate = string.replace(
+        strTemplate,
+        '${%EXECUTION_ADDRESS%}',
+        strExecutionAddress
+    )
 
     # Search and replace the special "%LOAD_ADDRESS%".
     atSegments = elf_support.get_segment_table(env, strSourcePath)
     strLoadAddress = '0x%08x' % elf_support.get_load_address(atSegments)
-    strTemplate = string.replace(strTemplate, '${%LOAD_ADDRESS%}', strLoadAddress)
+    strTemplate = string.replace(
+        strTemplate,
+        '${%LOAD_ADDRESS%}',
+        strLoadAddress
+    )
 
     # Search and replace the special "%PROGRAM_DATA%".
     # This operation is expensive, only get the binary data if the template
     # really contains the placeholder.
-    if string.find(strTemplate, '${%PROGRAM_DATA%}')!=-1:
+    if string.find(strTemplate, '${%PROGRAM_DATA%}') != -1:
         # The template really contains the placeholder.
         tBinFile = env['GCCSYMBOLTEMPLATE_BINFILE']
         if (tBinFile == '') or (tBinFile is None):
-            raise Exception('The template requests the program data, but GCCSYMBOLTEMPLATE_BINFILE is not set.')
-        elif isinstance(tBinFile, basestring):
+            raise Exception(
+                'The template requests the program data, but '
+                'GCCSYMBOLTEMPLATE_BINFILE is not set.'
+            )
+        elif isinstance(tBinFile, str):
             strBinFileName = tBinFile
         else:
             strBinFileName = tBinFile.get_path()
@@ -90,7 +104,11 @@ def gccsymboltemplate_action(target, source, env):
         # Join the hex lines with newlines.
         strHexDump = '\n'.join(astrHexLines)
 
-        strTemplate = string.replace(strTemplate, '${%PROGRAM_DATA%}', strHexDump)
+        strTemplate = string.replace(
+            strTemplate,
+            '${%PROGRAM_DATA%}',
+            strHexDump
+        )
 
     # Replace all symbols in the template.
     strResult = string.Template(strTemplate).safe_substitute(atSymbols)
@@ -106,7 +124,7 @@ def gccsymboltemplate_action(target, source, env):
 def gccsymboltemplate_emitter(target, source, env):
     # Make the target depend on the parameter.
     tTemplateFilename = env['GCCSYMBOLTEMPLATE_TEMPLATE']
-    if isinstance(tTemplateFilename, basestring):
+    if isinstance(tTemplateFilename, str):
         SCons.Script.Depends(
             target,
             SCons.Script.File(tTemplateFilename)
@@ -117,8 +135,8 @@ def gccsymboltemplate_emitter(target, source, env):
             tTemplateFilename
         )
     tBinData = env['GCCSYMBOLTEMPLATE_BINFILE']
-    if tBinData!='' and tBinData is not None:
-        if isinstance(tBinData, basestring):
+    if tBinData != '' and tBinData is not None:
+        if isinstance(tBinData, str):
             SCons.Script.Depends(
                 target,
                 SCons.Script.File(tBinData)

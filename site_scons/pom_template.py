@@ -49,7 +49,7 @@ def pom_template_string(target, source, env):
 
 
 def ApplyToEnv(env):
-    #----------------------------------------------------------------------------
+    # ------------------------------------------------------------------------
     #
     # Add POMTemplate builder.
     #
@@ -57,6 +57,13 @@ def ApplyToEnv(env):
     env['POM_TEMPLATE_ARTIFACT'] = ''
     env['POM_TEMPLATE_VERSION'] = ''
     env['POM_TEMPLATE_PACKAGING'] = ''
-    pom_template_act = SCons.Action.Action(pom_template_action, pom_template_string)
-    pom_template_bld = SCons.Script.Builder(action=pom_template_act, emitter=pom_template_emitter, single_source=1)
+    pom_template_act = SCons.Action.Action(
+        pom_template_action,
+        pom_template_string
+    )
+    pom_template_bld = SCons.Script.Builder(
+        action=pom_template_act,
+        emitter=pom_template_emitter,
+        single_source=1
+    )
     env['BUILDERS']['POMTemplate'] = pom_template_bld

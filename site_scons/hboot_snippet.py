@@ -22,7 +22,11 @@ def hboot_snippet_action(target, source, env):
         strDescription = str(tDescription)
 
     # Create a new XML document.
-    tXml = xml.dom.minidom.getDOMImplementation().createDocument(None, 'HBootSnippet', None)
+    tXml = xml.dom.minidom.getDOMImplementation().createDocument(
+        None,
+        'HBootSnippet',
+        None
+    )
     # Get the root element.
     tNodeRoot = tXml.documentElement
 
@@ -72,7 +76,9 @@ def hboot_snippet_action(target, source, env):
                 tDefault = atAttributes['default']
                 if tDefault is not None:
                     tNodeParameterEntry.setAttribute('default', str(tDefault))
-            tNodeParameterEntry.appendChild(tXml.createTextNode(str(atAttributes['help'])))
+            tNodeParameterEntry.appendChild(
+                tXml.createTextNode(str(atAttributes['help']))
+            )
             tNodeParameterList.appendChild(tNodeParameterEntry)
         tNodeRoot.appendChild(tNodeParameterList)
 
@@ -86,7 +92,13 @@ def hboot_snippet_action(target, source, env):
 
     # Write the result to the target file.
     tOutputFile = open(target[0].get_path(), 'wt')
-    tXml.writexml(tOutputFile, indent='', addindent='\t', newl='\n', encoding='utf-8')
+    tXml.writexml(
+        tOutputFile,
+        indent='',
+        addindent='\t',
+        newl='\n',
+        encoding='utf-8'
+    )
     tOutputFile.close()
 
     return 0
@@ -98,7 +110,10 @@ def hboot_snippet_emitter(target, source, env):
         if isinstance(tValue, SCons.Node.FS.File):
             env.Depends(target, tValue)
         else:
-            env.Depends(target, SCons.Node.Python.Value('%s:%s' % (strKey, str(tValue))))
+            env.Depends(
+                target,
+                SCons.Node.Python.Value('%s:%s' % (strKey, str(tValue)))
+            )
 
     return target, source
 
@@ -110,6 +125,13 @@ def hboot_snippet_string(target, source, env):
 def ApplyToEnv(env):
     # Add HBootSnippet builder.
     env['PARAMETER'] = {}
-    hboot_snippet_act = SCons.Action.Action(hboot_snippet_action, hboot_snippet_string)
-    hboot_snippet_bld = SCons.Script.Builder(action=hboot_snippet_act, emitter=hboot_snippet_emitter, suffix='.xml')
+    hboot_snippet_act = SCons.Action.Action(
+        hboot_snippet_action,
+        hboot_snippet_string
+    )
+    hboot_snippet_bld = SCons.Script.Builder(
+        action=hboot_snippet_act,
+        emitter=hboot_snippet_emitter,
+        suffix='.xml'
+    )
     env['BUILDERS']['HBootSnippet'] = hboot_snippet_bld

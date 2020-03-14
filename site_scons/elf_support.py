@@ -28,6 +28,7 @@ import subprocess
 # NOTE: this is only for debug.
 import datetime
 
+
 def run_cmd(aCmd, stdout=subprocess.PIPE):
     strOutput = None
     try:
@@ -35,19 +36,33 @@ def run_cmd(aCmd, stdout=subprocess.PIPE):
         strOutput = proc.communicate()[0]
     except Exception as e:
         print("Failed to call external program:")
-        print(aCmd) 
-        print(e) 
+        print(aCmd)
+        print(e)
         raise
     return strOutput
+
 
 def get_segment_table(env, strFileName, astrSegmentsToConsider=None):
     atSegments = []
     aCmd = [env['OBJDUMP'], '-h', '-w', strFileName]
     strOutput = run_cmd(aCmd)
-        
-    for match_obj in re.finditer('[ \t]*([0-9]+)[ \t]+([^ \t]+)[ \t]+([0-9a-fA-F]+)[ \t]+([0-9a-fA-F]+)[ \t]+([0-9a-fA-F]+)[ \t]+([0-9a-fA-F]+)[ \t]+([0-9*]+)[ \t]+([a-zA-Z ,]+)', strOutput):
+
+    for match_obj in re.finditer(
+        r'[ \t]*([0-9]+)'
+        r'[ \t]+([^ \t]+)'
+        r'[ \t]+([0-9a-fA-F]+)'
+        r'[ \t]+([0-9a-fA-F]+)'
+        r'[ \t]+([0-9a-fA-F]+)'
+        r'[ \t]+([0-9a-fA-F]+)'
+        r'[ \t]+([0-9*]+)'
+        r'[ \t]+([a-zA-Z ,]+)',
+        strOutput
+    ):
         strName = match_obj.group(2)
-        if (astrSegmentsToConsider is None) or (strName in astrSegmentsToConsider):
+        if(
+            astrSegmentsToConsider is None or
+            strName in astrSegmentsToConsider
+        ):
             uiAlign = eval(match_obj.group(7))
             astrFlags = match_obj.group(8).split(', ')
             atSegments.append(dict({
@@ -62,14 +77,22 @@ def get_segment_table(env, strFileName, astrSegmentsToConsider=None):
             }))
     return atSegments
 
+
 def segment_get_name(tSegment):
     return tSegment['name']
 
+
 def segment_get_size(tSegment):
     return tSegment['size']
-    
+
+
 def segment_is_loadable(tSegment):
-    return ('CONTENTS' in tSegment['flags']) and ('ALLOC' in tSegment['flags']) and ('LOAD' in tSegment['flags'])
+    return(
+        'CONTENTS' in tSegment['flags'] and
+        'ALLOC' in tSegment['flags'] and
+        'LOAD' in tSegment['flags']
+    )
+
 
 def get_symbol_table(env, strFileName):
     aCmd = [env['READELF'], '--symbols', '--wide', strFileName]
@@ -77,7 +100,16 @@ def get_symbol_table(env, strFileName):
 
     atSymbols = dict({})
 
-    reSymbol = re.compile('\s+\d+:\s([0-9a-fA-F]+)\s+[0-9a-fA-F]+\s+\w+\s+GLOBAL\s+\w+\s+\d+\s+([\S]+)')
+    reSymbol = re.compile(
+        r'\s+\d+:'
+        r'\s([0-9a-fA-F]+)'
+        r'\s+[0-9a-fA-F]+'
+        r'\s+\w+'
+        r'\s+GLOBAL'
+        r'\s+\w+'
+        r'\s+\d+'
+        r'\s+([\S]+)'
+    )
 
     for strLine in strOutput.split(os.linesep):
         tObj = reSymbol.match(strLine)
@@ -97,13 +129,28 @@ def get_debug_structure(env, strFileName):
     time_start = datetime.datetime.now()
 
     # Add all information to an XML file.
-    atDebugInfo = dict({'name': None, 'abbrev': None, 'children': [], 'attributes': dict({})})
+    atDebugInfo = dict({
+        'name': None,
+        'abbrev': None,
+        'children': [],
+        'attributes': dict({})
+    })
 
     # Prepare the regular expressions for the elements.
-    reElement = re.compile('\s+<([0-9]+)><([0-9a-f]+)>: Abbrev Number: (\d+) \(DW_TAG_(\w+)\)')
-    reAttribute_Str = re.compile('\s+<([0-9a-f]+)>\s+DW_AT_(\w+)\s*:\s+\(indirect string, offset: 0x[0-9a-f]+\):\s+(.+)')
-    reAttribute_Link = re.compile('\s+<([0-9a-f]+)>\s+DW_AT_(\w+)\s*:\s+<0x([0-9a-f]+)>')
-    reAttribute = re.compile('\s+<([0-9a-f]+)>\s+DW_AT_(\w+)\s*:\s+(.+)')
+    reElement = re.compile(
+        r'\s+<([0-9]+)><([0-9a-f]+)>: Abbrev Number: (\d+) \(DW_TAG_(\w+)\)'
+    )
+    reAttribute_Str = re.compile(
+        r'\s+<([0-9a-f]+)>'
+        r'\s+DW_AT_(\w+)\s*:'
+        r'\s+\(indirect string, offset: 0x[0-9a-f]+\):\s+(.+)'
+    )
+    reAttribute_Link = re.compile(
+        r'\s+<([0-9a-f]+)>\s+DW_AT_(\w+)\s*:\s+<0x([0-9a-f]+)>'
+    )
+    reAttribute = re.compile(
+        r'\s+<([0-9a-f]+)>\s+DW_AT_(\w+)\s*:\s+(.+)'
+    )
 
     # This is a list of all parent nodes. It supports a maximum depth of 64.
     atParentNode = []
@@ -130,7 +177,14 @@ def get_debug_structure(env, strFileName):
             atParentNode = atParentNode[0:uiNodeLevel+1]
 
             # Create the new element.
-            atNodeData = dict({'name': strName, 'id': ulNodeId, 'attributes': dict({'abbrev': ulAbbrev}), 'children': []})
+            atNodeData = dict({
+                'name': strName,
+                'id': ulNodeId,
+                'attributes': dict({
+                    'abbrev': ulAbbrev
+                }),
+                'children': []
+            })
             tParentNode['children'].append(atNodeData)
 
             # Append the new element to the list of parent elements.
@@ -159,7 +213,11 @@ def get_debug_structure(env, strFileName):
     print('Time used:', str(time_end-time_start))
 
 #    # Write the XML tree to a test file.
-#    astrXml = xml.etree.ElementTree.tostringlist(tXml.getroot(), encoding='UTF-8', method="xml")
+#    astrXml = xml.etree.ElementTree.tostringlist(
+#        tXml.getroot(),
+#        encoding='UTF-8',
+#        method="xml"
+#    )
 #    tFile = open('/tmp/test.xml', 'wt')
 #    tFile.write('\n'.join(astrXml))
 #    tFile.close()
@@ -167,7 +225,7 @@ def get_debug_structure(env, strFileName):
     return atDebugInfo
 
 
-s_reLocation = re.compile('\d+ byte block: \d+ ([0-9a-f]+)')
+s_reLocation = re.compile(r'\d+ byte block: \d+ ([0-9a-f]+)')
 
 
 def __iter_debug_info(tNode, atDebugInfo, atSymbols):
@@ -190,7 +248,8 @@ def __iter_debug_info(tNode, atDebugInfo, atSymbols):
             # Generate a symbol with the size of the structure.
             strMemberName = 'SIZEOF_' + strStructureName
             if ('declaration' in tAttr) and (tAttr['declaration'] == '1'):
-                # This is just a declaration. Ignore it, there is a complete definition somewhere else.
+                # This is just a declaration. Ignore it, there is a complete
+                # definition somewhere else.
                 pass
             else:
                 atSymbols[strMemberName] = tAttr['byte_size']
@@ -204,7 +263,12 @@ def __iter_debug_info(tNode, atDebugInfo, atSymbols):
                         if (strLoc is not None) and (strName is not None):
                             tObj = s_reLocation.match(strLoc)
                             if tObj is not None:
-                                strMemberName = 'OFFSETOF_' + strStructureName + '_' + strName
+                                strMemberName = (
+                                    'OFFSETOF_' +
+                                    strStructureName +
+                                    '_' +
+                                    strName
+                                )
                                 ulOffset = int(tObj.group(1), 16)
                                 atSymbols[strMemberName] = ulOffset
     else:
@@ -232,8 +296,13 @@ def get_macro_definitions(env, strFileName):
     # FIXME: Macro extraction should respect different files.
     # NOTE: This matches only macros without parameter.
     areMacro = [
-        re.compile('\s+DW_MACINFO_define - lineno : \d+ macro : (\w+)\s+(.*)'),
-        re.compile('\s+DW_MACRO_GNU_define_indirect - lineno : \d+ macro : (\w+)\s+(.*)')
+        re.compile(
+            r'\s+DW_MACINFO_define - lineno : \d+ macro : (\w+)\s+(.*)'
+        ),
+        re.compile(
+            r'\s+DW_MACRO_GNU_define_indirect - lineno : \d+ '
+            r'macro : (\w+)\s+(.*)'
+        )
     ]
     # Loop over all lines in the ".debug_macinfo" section.
     for strLine in strOutput.split(os.linesep):
@@ -247,14 +316,18 @@ def get_macro_definitions(env, strFileName):
                 # Does the macro already exist?
                 if strName in atMergedMacros:
                     # Yes, it exists already. Is the value the same?
-                    if not(atMergedMacros[strName] is None) and (atMergedMacros[strName] != strValue):
-                        # The macro exists more than one time with different values. Now that's a problem.
+                    if(
+                        atMergedMacros[strName] is not None and
+                        atMergedMacros[strName] != strValue
+                    ):
+                        # The macro exists more than one time with different
+                        # values. Now that's a problem.
                         atMergedMacros[strName] = None
                 else:
                     atMergedMacros[strName] = strValue
 
     time_end = datetime.datetime.now()
-    print('Time used:', str(time_end-time_start))
+    print('Time used:', str(time_end - time_start))
 
     return atMergedMacros
 
@@ -265,8 +338,14 @@ def get_load_address(atSegments):
 
     # Loop over all segments.
     for tSegment in atSegments:
-        # Get the segment with the lowest 'lma' entry which has also the flags 'CONTENTS', 'ALLOC' and 'LOAD'.
-        if (tSegment['lma'] < ulLowestLma) and ('CONTENTS' in tSegment['flags']) and ('ALLOC' in tSegment['flags']) and ('LOAD' in tSegment['flags']):
+        # Get the segment with the lowest 'lma' entry which has also the
+        # flags 'CONTENTS', 'ALLOC' and 'LOAD'.
+        if(
+            tSegment['lma'] < ulLowestLma and
+            'CONTENTS' in tSegment['flags'] and
+            'ALLOC' in tSegment['flags'] and
+            'LOAD' in tSegment['flags']
+        ):
             ulLowestLma = tSegment['lma']
 
     if ulLowestLma == 0x100000000:
@@ -281,8 +360,13 @@ def get_estimated_bin_size(atSegments):
 
     # Loop over all segments.
     for tSegment in atSegments:
-        # Get the segment with the biggest offset to ulLoadAddress which has also the flags 'CONTENTS', 'ALLOC' and 'LOAD'.
-        if ('CONTENTS' in tSegment['flags']) and ('ALLOC' in tSegment['flags']) and ('LOAD' in tSegment['flags']):
+        # Get the segment with the biggest offset to ulLoadAddress which has
+        # also the flags 'CONTENTS', 'ALLOC' and 'LOAD'.
+        if(
+            'CONTENTS' in tSegment['flags'] and
+            'ALLOC' in tSegment['flags'] and
+            'LOAD' in tSegment['flags']
+        ):
             ulOffset = tSegment['lma'] + tSegment['size'] - ulLoadAddress
             if ulOffset > ulBiggestOffset:
                 ulBiggestOffset = ulOffset
@@ -293,20 +377,34 @@ def get_estimated_bin_size(atSegments):
 def get_exec_address(env, strElfFileName):
     # Get the start address.
     # Try the global symbol first, then fall back to the file header.
-    # The global symbol is better, as it holds not only the plain address, but also thumb information.
+    # The global symbol is better, as it holds not only the plain address, but
+    # also thumb information.
     # The address from the file header does not have any thumb information.
     tResult = None
     aCmd0 = [env['READELF'], '--syms', strElfFileName]
     proc = subprocess.Popen(aCmd0, stdout=subprocess.PIPE)
     strOutput0 = proc.communicate()[0]
-    match_obj = re.search('\s+\d+:\s+([0-9a-fA-F]+)\s+\d+\s+\w+\s+GLOBAL\s+DEFAULT\s+\d+\s+start', strOutput0)
+    match_obj = re.search(
+        r'\s+\d+:'
+        r'\s+([0-9a-fA-F]+)'
+        r'\s+\d+'
+        r'\s+\w+'
+        r'\s+GLOBAL'
+        r'\s+DEFAULT'
+        r'\s+\d+'
+        r'\s+start',
+        strOutput0
+    )
     if match_obj is not None:
         tResult = int(match_obj.group(1), 16)
     else:
         aCmd1 = [env['READELF'], '--file-header', strElfFileName]
         proc = subprocess.Popen(aCmd1, stdout=subprocess.PIPE)
         strOutput1 = proc.communicate()[0]
-        match_obj = re.search('Entry point address:\s+0x([0-9a-fA-F]+)', strOutput1)
+        match_obj = re.search(
+            r'Entry point address:\s+0x([0-9a-fA-F]+)',
+            strOutput1
+        )
         if match_obj is not None:
             tResult = int(match_obj.group(1), 16)
         else:

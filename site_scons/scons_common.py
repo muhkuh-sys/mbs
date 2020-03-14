@@ -87,6 +87,7 @@ def display_build_status():
         print("!!! FAILED !!!!")
         print("!!!!!!!!!!!!!!!")
 
+
 atexit.register(display_build_status)
 
 
@@ -190,7 +191,7 @@ def set_build_path(env, build_path, source_path, sources):
     astrSourcesInBuiltdir = []
     for strPath in sources:
         # Does the path start with the source path?
-        if strPath[:len(source_path)]==source_path:
+        if strPath[:len(source_path)] == source_path:
             # Yes -> replace it with the build path.
             strBuildPath = build_path + strPath[len(source_path):]
         else:

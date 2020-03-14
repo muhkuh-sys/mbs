@@ -43,11 +43,15 @@ def patch_image(strInputFile, strOutputFile, fVerbose=False):
     #     4 bytes of application data.
     # In total this is 516 bytes.
     if sizInputImage < 516:
-        raise Exception('The input image is too small. It must have at least 516 bytes.')
+        raise Exception(
+            'The input image is too small. It must have at least 516 bytes.'
+        )
 
     # The input image must be a multiple of DWORDS.
     if (sizInputImage % 4) != 0:
-        raise Exception('The size of the input image is not a multiple of DWORDS.')
+        raise Exception(
+            'The size of the input image is not a multiple of DWORDS.'
+        )
 
     # Parse the HBOOT header as 32bit elements.
     aulHBoot = array.array('I')
@@ -63,16 +67,21 @@ def patch_image(strInputFile, strOutputFile, fVerbose=False):
     # chip type is always netx 90, but which variant?
     # bus/unit/chip select is always 2/2/0 (intflash 2)
     # The offset is always 0.
-    ucChipType = 13 # netx 90
+    ucChipType = 13  # netx 90
     ucBus = 2
     ucUnit = 2
     ucCs = 0
-    ulFlashDevice = 1 * ucChipType + 0x100 * ucBus + 0x10000 * ucUnit + 0x1000000 * ucCs
+    ulFlashDevice = (
+        1 * ucChipType +
+        0x100 * ucBus +
+        0x10000 * ucUnit +
+        0x1000000 * ucCs
+    )
     ulFlashOffset = 0
-    
+
     aulHBoot[0x01] = ulFlashOffset
     aulHBoot[0x05] = ulFlashDevice
-    
+
     # Set the new length.
     # This is the complete file size except the CM4 header (448 bytes) and the
     # APP HBOOT header (64 bytes). The remaining size if converted from bytes
@@ -122,7 +131,11 @@ def patch_image(strInputFile, strOutputFile, fVerbose=False):
 if __name__ == '__main__':
     import argparse
 
-    tParser = argparse.ArgumentParser(description='Patch the header information in a netX90 APP IFLASH image.')
+    tParser = argparse.ArgumentParser(
+        description=(
+            'Patch the header information in a netX90 APP IFLASH image.'
+        )
+    )
     tParser.add_argument('-v', '--verbose',
                          dest='fVerbose',
                          required=False,

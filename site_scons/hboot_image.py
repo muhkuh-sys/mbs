@@ -16,7 +16,7 @@ def __get_clean_known_files(atKnownFiles):
     for strKey, tFile in atKnownFiles.items():
         # The file must be either a string, a SCons.Node.FS.File object or a
         # SCons.Node.NodeList object.
-        if isinstance(tFile, basestring):
+        if isinstance(tFile, str):
             strFile = tFile
         elif isinstance(tFile, SCons.Node.FS.File):
             strFile = tFile.get_path()
@@ -41,10 +41,16 @@ def __get_clean_known_files(atKnownFiles):
 
 def __hboot_get_patch_table(env):
     strPatchDefinition = None
-    if ('HBOOTIMAGE_PATCH_DEFINITION' in env) and (env['HBOOTIMAGE_PATCH_DEFINITION'] is not None):
+    if(
+        'HBOOTIMAGE_PATCH_DEFINITION' in env and
+        env['HBOOTIMAGE_PATCH_DEFINITION'] is not None
+    ):
         tPatchDefinition = env['HBOOTIMAGE_PATCH_DEFINITION']
-        if isinstance(tPatchDefinition, ListType) or isinstance(tPatchDefinition, SCons.Node.NodeList)==True:
-            if len(tPatchDefinition)!=1:
+        if(
+            isinstance(tPatchDefinition, ListType) or
+            isinstance(tPatchDefinition, SCons.Node.NodeList) is True
+        ):
+            if len(tPatchDefinition) != 1:
                 raise Exception('Too many sources for the patch definition.')
 
             tPatchDefinition = tPatchDefinition[0]
@@ -140,7 +146,8 @@ def __hboot_definition_scan(node, env, path):
                 verbose=fVerbose
             )
             astrDependencies = tCompiler.dependency_scan(strSrcFile)
-            # Translate the list of paths to a list of SCons.Node.FS.File objects.
+            # Translate the list of paths to a list of
+            # SCons.Node.FS.File objects.
             atDependencies = []
             for strFile in astrDependencies:
                 atDependencies.append(SCons.Script.File(strFile))

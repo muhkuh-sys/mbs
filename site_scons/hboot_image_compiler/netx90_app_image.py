@@ -22,7 +22,8 @@
 
 # Limitations:
 # No define mechanism (-D)
-# Limited alias mechanism (only for files), also used to replace segments and headeraddress
+# Limited alias mechanism (only for files), also used to replace segments
+# and headeraddress
 # No String datatype in concat.
 # One or two data blocks
 
@@ -59,25 +60,26 @@ class AppImage:
     # This is a dictionary of all resolved files.
     __atKnownFiles = None
 
-    # This is a two-layer dictionary mapping ELF file paths and segment names to
-    # an entry for each segment.
-    # It is used to keep track of which segments have been used in a boot image.
+    # This is a two-layer dictionary mapping ELF file paths and segment names
+    # to an entry for each segment. It is used to keep track of which segments
+    # have been used in a boot image.
     __tElfSegments = None
 
     # No data blocks yet.
     __atDataBlocks = None
-    
+
     # No SDRamOffset yet.
     __ulSDRamSplitOffset = None
 
     __strNetxType = None
-    
+
     __XmlKeyromContents = None
     __cfg_openssl = 'openssl'
     __cfg_openssloptions = None
     __fOpensslRandOff = False
 
-    def __init__(self, tEnv, strNetxType, astrIncludePaths, atKnownFiles, ulSDRamSplitOffset, strOpensslExe, fOpensslRandOff):
+    def __init__(self, tEnv, strNetxType, astrIncludePaths, atKnownFiles,
+                 ulSDRamSplitOffset, strOpensslExe, fOpensslRandOff):
         self.__tEnv = tEnv
         self.__astrIncludePaths = astrIncludePaths
         self.__atKnownFiles = atKnownFiles
@@ -91,8 +93,9 @@ class AppImage:
 
     def segments_init(self):
         self.__tElfSegments = {}
-        
-    # check if the segment list for ELF is already in the list and add it, if not.
+
+    # check if the segment list for ELF is already in the list and add it,
+    # if not.
     def segments_get_elf_segments(self, strElfPath):
         if strElfPath not in self.__tElfSegments:
             atSegmentsAll = elf_support.get_segment_table(
@@ -100,7 +103,7 @@ class AppImage:
                 strElfPath,
                 None
             )
-            
+
             # construct a name to segment mapping
             tSegments = {}
             for tSegment in atSegmentsAll:
@@ -113,40 +116,45 @@ class AppImage:
                         'used': False
                     }
                 tSegments[strName] = tEntry
-            
-            self.__tElfSegments[strElfPath]=tSegments
-            
+
+            self.__tElfSegments[strElfPath] = tSegments
+
         return self.__tElfSegments[strElfPath]
-            
+
     # mark a segment in an ELF file as used
     # todo: We only warn if the segment is not known in this ELF file.
     def segments_mark_used(self, strElfPath, strSegmentName):
         tSegments = self.segments_get_elf_segments(strElfPath)
         if strSegmentName in tSegments:
-            tSegments[strSegmentName]['used']=True
-            
+            tSegments[strSegmentName]['used'] = True
+
     # mark all segments of an ELF file as used
     def segments_mark_used_all(self, strElfPath):
         tSegments = self.segments_get_elf_segments(strElfPath)
         for tSegment in tSegments.values():
             tSegment['used'] = True
-        
-    
+
     # check if there are any unused segments which contain data
     def segments_check_unused(self):
         fUnusedSegments = False
         for strElfPath, tSegments in self.__tElfSegments.items():
             for tSegment in tSegments.values():
-                if tSegment['used'] != True:
+                if tSegment['used'] is not True:
                     if tSegment['size'] == 0:
-                        print("Info: Unused empty segment '%s' in %s" % (tSegment['name'], strElfPath))
+                        print("Info: Unused empty segment '%s' in %s" % (
+                            tSegment['name'],
+                            strElfPath
+                        ))
                     else:
-                        print("Warning: Unused segment '%s' in file %s" % (tSegment['name'], strElfPath))
+                        print("Warning: Unused segment '%s' in file %s" % (
+                            tSegment['name'],
+                            strElfPath
+                        ))
                         fUnusedSegments = True
-        if fUnusedSegments==False:
+        if fUnusedSegments is False:
             print("No unused segments found")
-        return fUnusedSegments 
-        
+        return fUnusedSegments
+
     def read_keyrom(self, strKeyromFile):
         # Read the keyrom file if specified.
         if strKeyromFile is not None:
@@ -157,11 +165,12 @@ class AppImage:
             self.__XmlKeyromContents = xml.etree.ElementTree.fromstring(strXml)
 
     # If strVal begins with the @ character:
-    # If the remainder of the string can be resolved as an alias, return the resolved value.
+    # If the remainder of the string can be resolved as an alias, return the
+    # resolved value.
     # If not, raise an error.
     # If strVal does not begin with the @ character, return strVal.
     def resolve_alias(self, strVal):
-        if len(strVal)>0 and strVal[0] == '@':
+        if len(strVal) > 0 and strVal[0] == '@':
             strAlias = strVal[1:]
             if strAlias in self.__atKnownFiles:
                 strVal = self.__atKnownFiles[strAlias]
@@ -169,24 +178,23 @@ class AppImage:
                 raise Exception('Missing definition for alias: %s' % strAlias)
 
         return strVal
-        
+
     # If strVal begins with the @ character:
-    # If the remainder of the string can be resolved as an alias, return the resolved value.
+    # If the remainder of the string can be resolved as an alias, return
+    # the resolved value.
     # If not, return the empty string.
     # If strVal does not begin with the @ character, return strVal.
     def safe_resolve_alias(self, strVal):
-        if len(strVal)>0 and strVal[0] == '@':
+        if len(strVal) > 0 and strVal[0] == '@':
             strAlias = strVal[1:]
             if strAlias in self.__atKnownFiles:
                 strVal = self.__atKnownFiles[strAlias]
             else:
                 strVal = ""
         return strVal
-        
+
     def is_alias(self, strVal):
-        return len(strVal)>0 and strVal[0] == '@'
-        
-        
+        return len(strVal) > 0 and strVal[0] == '@'
 
     def __find_file(self, strFilePath):
         strAbsFilePath = None
@@ -246,9 +254,11 @@ class AppImage:
         # Get the segment names to dump. It is a comma separated string.
         # This is optional. If no segment names are specified, all sections
         # with PROGBITS are dumped.
-        strSegmentsToDump = self.resolve_alias(tNode.getAttribute('segments').strip())
+        strSegmentsToDump = self.resolve_alias(
+            tNode.getAttribute('segments').strip()
+        )
         astrSegmentsToDump = None
-        if strSegmentsToDump==',':
+        if strSegmentsToDump == ',':
             # Note: astrSegmentsToDump must be empty, not None
             astrSegmentsToDump = []
         elif len(strSegmentsToDump) != 0:
@@ -256,9 +266,13 @@ class AppImage:
                 strSegment.strip() for strSegment in
                 string.split(strSegmentsToDump, ',')
             ]
-            print('Elf file: %s  Used segments: %s' % (strAbsFilePath, strSegmentsToDump))
+            print('Elf file: %s  Used segments: %s' % (
+                strAbsFilePath,
+                strSegmentsToDump
+            ))
         else:
-            print('Elf file: %s  Selecting segments automatically' % strAbsFilePath)
+            print('Elf file: %s  Selecting segments automatically' %
+                  strAbsFilePath)
 
         # Extract the segments.
         atSegments = elf_support.get_segment_table(
@@ -266,59 +280,66 @@ class AppImage:
             strAbsFilePath,
             astrSegmentsToDump
         )
-        
+
         print("%d segments found" % len(atSegments))
         for tSegment in atSegments:
             print(tSegment)
-        
+
         # atSegments is the list of segments contained in the elf file.
-        # astrSegmentsToDump is the list of names of the segments to dump (from the XML file).
-        
+        # astrSegmentsToDump is the list of names of the segments to
+        # dump (from the XML file).
+
         # If astrSegmentsToDump is not None and non-empty,
         # filter the segments and the list of segments to dump.
-        # 
+        #
         # For each segment name in astrSegmentsToDump:
-        # If the segment is not present in atSegments, print a warning and remove the name from astrSegmentsToDump.
-        # If the segment is in atSegments but its size is 0, warn and remove it from astrSegmentsToDump and atSegments.
-        # If the segment is in atSegments but not marked as loadable, warn and remove it from astrSegmentsToDump and atSegments.
-        
+        # If the segment is not present in atSegments, print a warning and
+        # remove the name from astrSegmentsToDump.
+        # If the segment is in atSegments but its size is 0, warn and remove
+        # it from astrSegmentsToDump and atSegments.
+        # If the segment is in atSegments but not marked as loadable, warn
+        # and remove it from astrSegmentsToDump and atSegments.
+
         # If astrSegmentsToDump is None:
         # Do we have to do anything?
-        
+
         if astrSegmentsToDump is not None:
             atName2Segment = dict({})
             astrSegments2 = []
             atSegments2 = []
-            
+
             # prepare a segment name to segment mapping from atSegments
             for tSegment in atSegments:
                 strName = elf_support.segment_get_name(tSegment)
-                atName2Segment[strName]=tSegment
-            
+                atName2Segment[strName] = tSegment
+
             for strName in astrSegmentsToDump:
                 if strName not in atName2Segment:
-                    print("Warning: Requested segment %s not found - ignoring" % strName )
+                    print("Warning: Requested segment %s not found "
+                          "- ignoring" % strName)
                 else:
                     tSegment = atName2Segment[strName]
-                    if 0 == elf_support.segment_get_size(tSegment):
-                        print("Warning: Requested segment %s is empty - ignoring" % strName )
+                    if elf_support.segment_get_size(tSegment) == 0:
+                        print("Warning: Requested segment %s is empty "
+                              "- ignoring" % strName)
                         self.segments_mark_used(strAbsFilePath, strName)
-                    elif False == elf_support.segment_is_loadable(tSegment):
-                        print("Warning: Requested segment %s is not loadable - ignoring" % strName )
+                    elif elf_support.segment_is_loadable(tSegment) is False:
+                        print("Warning: Requested segment %s is not loadable "
+                              "- ignoring" % strName)
                     else:
                         print("Found requested segment %s" % strName)
                         astrSegments2.append(strName)
                         atSegments2.append(tSegment)
                         self.segments_mark_used(strAbsFilePath, strName)
-                
-            astrSegmentsToDump = astrSegments2      
+
+            astrSegmentsToDump = astrSegments2
             atSegments = atSegments2
-        
+
         if len(atSegments) == 0:
             strData = ''
             pulLoadAddress = 0
             self.segments_mark_used_all(strAbsFilePath)
-            
+
         else:
             # Get the estimated binary size from the segments.
             ulEstimatedBinSize = elf_support.get_estimated_bin_size(atSegments)
@@ -326,7 +347,7 @@ class AppImage:
             if ulEstimatedBinSize >= 0x20000000:
                 raise Exception('The resulting file seems to extend '
                                 '512MBytes. Too scared to continue!')
-    
+
             strOverwriteAddress = tNode.getAttribute(
                 'overwrite_address'
             ).strip()
@@ -334,7 +355,7 @@ class AppImage:
                 pulLoadAddress = elf_support.get_load_address(atSegments)
             else:
                 pulLoadAddress = int(strOverwriteAddress, 0)
-    
+
             # Extract the binary.
             tBinFile, strBinFileName = tempfile.mkstemp()
             os.close(tBinFile)
@@ -348,12 +369,12 @@ class AppImage:
             astrCmd.append(strAbsFilePath)
             astrCmd.append(strBinFileName)
             subprocess.check_call(astrCmd)
-    
+
             # Get the application data.
             tBinFile = open(strBinFileName, 'rb')
             strData = tBinFile.read()
             tBinFile.close()
-    
+
             # Remove the temp file.
             os.remove(strBinFileName)
 
@@ -651,7 +672,7 @@ class AppImage:
                 else:
                     for strDataHex in string.split(strLine, ':'):
                         strDataHexStrip = string.strip(strDataHex)
-                        if len(strDataHexStrip)!=0:
+                        if len(strDataHexStrip) != 0:
                             strDataBin = binascii.unhexlify(strDataHexStrip)
                             aucData.append(ord(strDataBin))
 
@@ -659,7 +680,7 @@ class AppImage:
 
     def __openssl_cut_leading_zero(self, aucData):
         # Does the number start with "00" and is the third digit >= 8?
-        if aucData[0]==0x00 and aucData[1]>=0x80:
+        if aucData[0] == 0x00 and aucData[1] >= 0x80:
             # Remove the leading "00".
             aucData.pop(0)
 
@@ -668,8 +689,9 @@ class AppImage:
 
     def __openssl_uncompress_field(self, aucData):
         # The data must not be compressed.
-        if aucData[0]!=0x04:
-            raise Exception('The data is compressed. This is not supported yet.')
+        if aucData[0] != 0x04:
+            raise Exception('The data is compressed. '
+                            'This is not supported yet.')
         # Cut off the first byte.
         aucData.pop(0)
 
@@ -723,7 +745,7 @@ class AppImage:
                 shell=True
             )
         else:
-          tProcess = subprocess.Popen(
+            tProcess = subprocess.Popen(
                 astrCmd,
                 stdin=subprocess.PIPE,
                 stdout=subprocess.PIPE
@@ -750,7 +772,7 @@ class AppImage:
 
             # Extract the public exponent.
             tReExp = re.compile(
-                '^%s\s+(\d+)\s+\(0x([0-9a-fA-F]+)\)' % strMatchExponent,
+                r'^%s\s+(\d+)\s+\(0x([0-9a-fA-F]+)\)' % strMatchExponent,
                 re.MULTILINE
             )
             tMatch = tReExp.search(strStdout)
@@ -801,8 +823,12 @@ class AppImage:
                 )
                 for uiElementId, atAttr in __atKnownRsaSizes.iteritems():
                     strErr += (
-                        '  RSA%d: %d bytes modulo, %d bytes public exponent\n' %
-                        (atAttr['rsa'], atAttr['mod'], atAttr['exp'])
+                        '  RSA%d: %d bytes modulo, '
+                        '%d bytes public exponent\n' % (
+                            atAttr['rsa'],
+                            atAttr['mod'],
+                            atAttr['exp']
+                        )
                     )
                 raise Exception(strErr)
 
@@ -838,7 +864,10 @@ class AppImage:
             self.__openssl_cut_leading_zero(aucB)
             self.__openssl_convert_to_little_endian(aucB)
 
-            strData = self.__openssl_get_data_block(strStdout, 'Generator (uncompressed):')
+            strData = self.__openssl_get_data_block(
+                strStdout,
+                'Generator (uncompressed):'
+            )
             aucGen = array.array('B', strData)
             self.__openssl_uncompress_field(aucGen)
             aucGenX, aucGenY = self.__openssl_cut_in_half(aucGen)
@@ -850,13 +879,14 @@ class AppImage:
             self.__openssl_convert_to_little_endian(aucOrder)
 
             # Extract the cofactor.
-            tReExp = re.compile('^Cofactor:\s+(\d+)\s+\(0x([0-9a-fA-F]+)\)$', re.MULTILINE)
+            tReExp = re.compile(r'^Cofactor:\s+(\d+)\s+\(0x([0-9a-fA-F]+)\)$',
+                                re.MULTILINE)
             tMatch = tReExp.search(strStdout)
             if tMatch is None:
                 raise Exception('Can not find cofactor!')
-            ulCofactor = long(tMatch.group(1))
-            ulCofactorHex = long(tMatch.group(2), 16)
-            if ulCofactor!=ulCofactorHex:
+            ulCofactor = int(tMatch.group(1))
+            ulCofactorHex = int(tMatch.group(2), 16)
+            if ulCofactor != ulCofactorHex:
                 raise Exception('Decimal version differs from hex version!')
 
             __atKnownEccSizes = {
@@ -1028,7 +1058,7 @@ class AppImage:
         #   4 bytes length
         #  56 bytes binding
         #  48 bytes hash
-        #----------------------
+        # ----------------------
         # 112 bytes or
         #  28 DWORDs
 
@@ -1099,7 +1129,10 @@ class AppImage:
             aucEccSignature = array.array('B', strEccSignature)
 
             # Parse the signature.
-            aucSignature = self.__openssl_ecc_get_signature(aucEccSignature, sizKeyInDwords * 4)
+            aucSignature = self.__openssl_ecc_get_signature(
+                aucEccSignature,
+                sizKeyInDwords * 4
+            )
 
         elif iKeyTyp_1ECC_2RSA == 2:
             astrCmd = [
@@ -1130,53 +1163,81 @@ class AppImage:
 
         return aulChunk
 
-    ROMLOADER_CHIPTYP_NETX90_MPW           = 10
-    ROMLOADER_CHIPTYP_NETX90               = 13
-    ROMLOADER_CHIPTYP_NETX90B              = 14 
-        
+    ROMLOADER_CHIPTYP_NETX90_MPW = 10
+    ROMLOADER_CHIPTYP_NETX90 = 13
+    ROMLOADER_CHIPTYP_NETX90B = 14
+
     atChipTypeMapping = {
         # These names are for compatibility with the COM side HBoot image tool
-        # 'NETX90':     ROMLOADER_CHIPTYP_NETX90,    
-        # 'NETX90B':    ROMLOADER_CHIPTYP_NETX90B,   
+        # 'NETX90':     ROMLOADER_CHIPTYP_NETX90,
+        # 'NETX90B':    ROMLOADER_CHIPTYP_NETX90B,
         # 'NETX90_MPW': ROMLOADER_CHIPTYP_NETX90_MPW,
         # These names are for compatibility with the netx 90 HWConfig tool.
-        'netx90':     ROMLOADER_CHIPTYP_NETX90B,  # Alias for the latest chip revision.
-        'netx90_rev0':ROMLOADER_CHIPTYP_NETX90,
-        'netx90_rev1':ROMLOADER_CHIPTYP_NETX90B,
+        'netx90': ROMLOADER_CHIPTYP_NETX90B,  # Alias for the latest chip
+                                              # revision.
+        'netx90_rev0': ROMLOADER_CHIPTYP_NETX90,
+        'netx90_rev1': ROMLOADER_CHIPTYP_NETX90B,
         'netx90_mpw': ROMLOADER_CHIPTYP_NETX90_MPW,
     }
-        
+
     BUS_SPI = 1
     BUS_IFlash = 2
     atDeviceMapping_netx90 = [
-        {'name': 'INTFLASH2', 'start': 0x00000000, 'end': 0x0007ffff, 'bus':BUS_IFlash, 'unit':2, 'chip_select':0},
-        {'name': 'SQIROM',    'start': 0x64000000, 'end': 0x67ffffff, 'bus':BUS_SPI,    'unit':0, 'chip_select':0},
-        ]
-    
+        {
+            'name': 'INTFLASH2',
+            'start': 0x00000000,
+            'end': 0x0007ffff,
+            'bus': BUS_IFlash,
+            'unit': 2,
+            'chip_select': 0
+        },
+        {
+            'name': 'SQIROM',
+            'start': 0x64000000,
+            'end': 0x67ffffff,
+            'bus': BUS_SPI,
+            'unit': 0,
+            'chip_select': 0
+        },
+    ]
+
     # Insert information for use by the flasher:
     # chip type, target flash device and flash offset.
     def __set_flasher_parameters(self, aulHBoot, ulHeaderAddress):
         if self.__strNetxType not in self.atChipTypeMapping:
-            raise Exception("Cannot set flasher parameters for chip type %s" % self.__strNetxType)
+            raise Exception("Cannot set flasher parameters for chip type %s" %
+                            self.__strNetxType)
         ucChipType = self.atChipTypeMapping[self.__strNetxType]
-    
+
         tDevInfo = None
         for tDev in self.atDeviceMapping_netx90:
-            if tDev['start'] <= ulHeaderAddress and ulHeaderAddress <= tDev['end']:
-               tDevInfo = tDev
-               break
-               
-        if tDevInfo == None:
-            raise Exception('No device found for header address 0x%08x' % ulHeaderAddress) 
-        
-        print ('Found flash device %s for address 0x%08x' % (tDevInfo['name'], ulHeaderAddress))
+            if(
+                tDev['start'] <= ulHeaderAddress and
+                ulHeaderAddress <= tDev['end']
+            ):
+                tDevInfo = tDev
+                break
 
-        ulFlashDevice = 1 * ucChipType + 0x100 * tDevInfo['bus'] + 0x10000 * tDevInfo['unit'] + 0x1000000 * tDevInfo['chip_select']
+        if tDevInfo is None:
+            raise Exception('No device found for header address 0x%08x' %
+                            ulHeaderAddress)
+
+        print('Found flash device %s for address 0x%08x' % (
+            tDevInfo['name'],
+            ulHeaderAddress
+        ))
+
+        ulFlashDevice = (
+            1 * ucChipType +
+            0x100 * tDevInfo['bus'] +
+            0x10000 * tDevInfo['unit'] +
+            0x1000000 * tDevInfo['chip_select']
+        )
         ulFlashOffset = ulHeaderAddress
-        
+
         aulHBoot[0x01] = ulFlashOffset
         aulHBoot[0x05] = ulFlashDevice
-        
+
     def patch_first_data_block(self):
         sizDataBlocks = len(self.__atDataBlocks)
         tAttr = self.__atDataBlocks[0]
@@ -1221,7 +1282,7 @@ class AppImage:
 
         # Offset 5+1: set the destination device and offset for the flasher.
         ulHeaderAddress = self.__atDataBlocks[0]['headeraddress']
-        self.__set_flasher_parameters(aulHBoot, ulHeaderAddress)        
+        self.__set_flasher_parameters(aulHBoot, ulHeaderAddress)
 
         # Create a SHA384 hash over the cm4 vectors, the complete application
         # and all other blocks.
@@ -1280,19 +1341,21 @@ class AppImage:
         if tAttr['destination'] == tAttr['headeraddress'] + 64:
             aulHBoot[3] = 0
         # Is the block in the SDRAM?
-        elif (tAttr['destination'] >= 0x10000000) and (tAttr['destination'] < 0x20000000):
+        elif(
+            tAttr['destination'] >= 0x10000000 and
+            tAttr['destination'] < 0x20000000
+        ):
             aulHBoot[3] = tAttr['destination'] + self.__ulSDRamSplitOffset
         else:
             aulHBoot[3] = 0
-            
 
         # Set the data size in DWORDs.
         aulHBoot[4] = len(tAttr['data'])
 
         # Offset 5+1: set the destination device and offset for the flasher.
         ulHeaderAddress = tAttr['headeraddress']
-        self.__set_flasher_parameters(aulHBoot, ulHeaderAddress)        
-        
+        self.__set_flasher_parameters(aulHBoot, ulHeaderAddress)
+
         # Set the signature.
         aulHBoot[6] = 0x41505041
 
@@ -1314,8 +1377,8 @@ class AppImage:
 
         tAttr['header'] = aulHBoot
 
-    # If the output file name is omitted, there must not be a segment list specified.
-    # The segment list attribute must be either 
+    # If the output file name is omitted, there must not be a segment list
+    # specified. The segment list attribute must be either
     # - absent
     # - empty
     # - ","
@@ -1325,24 +1388,25 @@ class AppImage:
     # - or contains an alias that can be resolved,
     # raise an error.
     def data_node_check_no_segments(self, tNodeData):
-        #print("*** data_node_check_no_segments *****")
+        # print("*** data_node_check_no_segments *****")
         for tNodeChild in tNodeData.childNodes:
-            #print (tNodeChild.localName)
+            # print (tNodeChild.localName)
             if tNodeChild.localName == 'File':
                 strVal = tNodeChild.getAttribute('segments').strip()
                 strVal2 = self.safe_resolve_alias(strVal)
-                #print("segments: %s -> %s" % (strVal, strVal2))
-                if len(strVal2)>0 and strVal2!=',':
-                    #print("Exception")
+                # print("segments: %s -> %s" % (strVal, strVal2))
+                if len(strVal2) > 0 and strVal2 != ',':
+                    # print("Exception")
                     # Error, no segment list should be supplied
-                    raise Exception ('Output filename is empty but a segment list is specified')
-                #else:
+                    raise Exception('Output filename is empty but a segment '
+                                    'list is specified')
+                # else:
                 #    print("Accept")
-        
+
     def process_app_image(self, strSourcePath, astrDestinationPaths):
         # No data blocks yet.
         self.__atDataBlocks = []
-        
+
         self.segments_init()
 
         tXml = xml.dom.minidom.parse(strSourcePath)
@@ -1352,67 +1416,86 @@ class AppImage:
 
         # Loop over all data elements.
         tNodeAsig = None
-        
+
         # Offset into the list of output file paths
         iDestPathIndex = 0
-        
+
         for tNodeChild in tNodeRoot.childNodes:
             if tNodeChild.localName == 'data':
                 if iDestPathIndex >= len(astrDestinationPaths):
-                    print('Skipping data node because no output file name is supplied')
+                    print('Skipping data node because no output file name '
+                          'is supplied')
                     self.data_node_check_no_segments(tNodeChild)
-                                                
+
                 elif astrDestinationPaths[iDestPathIndex] == '':
                     iDestPathIndex = iDestPathIndex + 1
                     print('destination path: %d >%s<' % (iDestPathIndex, ''))
-                    print('Skipping data node because output file name is empty')
+                    print('Skipping data node because output file name '
+                          'is empty')
                     self.data_node_check_no_segments(tNodeChild)
-                                        
+
                 else:
-                    strDesinationPath = astrDestinationPaths[iDestPathIndex] 
+                    strDesinationPath = astrDestinationPaths[iDestPathIndex]
                     iDestPathIndex = iDestPathIndex + 1
-                    print('destination path: %d >%s<' % (iDestPathIndex, strDesinationPath))
-                    
+                    print('destination path: %d >%s<' % (
+                        iDestPathIndex,
+                        strDesinationPath
+                    ))
+
                     # Get one data block.
-                    strData, pulLoadAddress = self.__get_data_contents(tNodeChild)
+                    strData, pulLoadAddress = self.__get_data_contents(
+                        tNodeChild
+                    )
                     # The input image must be a multiple of DWORDS.
                     if (len(strData) % 4) != 0:
                         raise Exception(
-                            'The size of the input image is not a multiple of DWORDS.'
+                            'The size of the input image is not a '
+                            'multiple of DWORDS.'
                         )
                     # Convert the data to an array.
                     aulData = array.array('I')
                     aulData.fromstring(strData)
-                    
+
                     # Get the header address.
                     if tNodeChild.hasAttribute('headeraddress') is not True:
                         raise Exception('Missing "headeraddress" attribute.')
-                    strHeaderAddress = self.resolve_alias(tNodeChild.getAttribute('headeraddress'))
+                    strHeaderAddress = self.resolve_alias(
+                        tNodeChild.getAttribute('headeraddress')
+                    )
                     ulHeaderAddress = int(strHeaderAddress, 0)
                     if ulHeaderAddress is None:
                         raise Exception(
                             'Failed to parse number: "%s".',
                             strHeaderAddress
                         )
-    
+
                     # Get the padding.
                     ulPaddingPreSize = 0
                     ucPaddingPreValue = 0xff
-                    strPaddingPreSize = tNodeChild.getAttribute('padding_pre_size')
+                    strPaddingPreSize = tNodeChild.getAttribute(
+                        'padding_pre_size'
+                    )
                     if len(strPaddingPreSize) != 0:
                         ulPaddingPreSize = int(strPaddingPreSize, 0)
                         if ulPaddingPreSize < 0:
                             raise Exception(
-                                'The padding pre size is invalid: %d' % ulPaddingPreSize
+                                'The padding pre size is invalid: %d' %
+                                ulPaddingPreSize
                             )
-                    strPaddingPreValue = tNodeChild.getAttribute('padding_pre_value')
+                    strPaddingPreValue = tNodeChild.getAttribute(
+                        'padding_pre_value'
+                    )
                     if len(strPaddingPreValue) != 0:
                         ucPaddingPreValue = int(strPaddingPreValue, 0)
-                        if (ucPaddingPreValue < 0) or (ucPaddingPreValue > 0xff):
+                        if(
+                            ucPaddingPreValue < 0 or
+                            ucPaddingPreValue > 0xff
+                        ):
                             raise Exception(
-                                'The padding pre value is invalid: %d' % ucPaddingPreValue
+                                'The padding pre value is invalid: %d' %
+                                ucPaddingPreValue
                             )
-    
+
                     tAttr = {
                         'prePaddingSize': ulPaddingPreSize,
                         'prePaddingValue': ucPaddingPreValue,
@@ -1441,9 +1524,10 @@ class AppImage:
                 '%d output files specified, but only %d were used' %
                 (len(astrDestinationPaths), iDestPathIndex)
                 )
-                
-        # Check if any loadable segments recorded for the elf file(s) have not been used
-        if True == self.segments_check_unused():
+
+        # Check if any loadable segments recorded for the elf file(s)
+        # have not been used
+        if self.segments_check_unused() is True:
             raise Exception('There are unused segments containing data')
 
         # The first header must have a header address of 0x00000000.
@@ -1454,13 +1538,13 @@ class AppImage:
                 '0x00000000, but it has 0x%08x.' %
                 tFirstAttr['headeraddress']
             )
-            
+
         # Build headers for all data blocks after the first one.
         for sizIdx in range(1, sizDataBlocks):
             self.build_header(sizIdx)
 
         # Patch the first data block.
-        self.patch_first_data_block()            
+        self.patch_first_data_block()
 
         # Append ASIG thing to the last block if requested.
         if tNodeAsig is not None:
@@ -1478,7 +1562,10 @@ class AppImage:
             ulPrePaddingSize = tAttr['prePaddingSize']
             ucPrePaddingValue = tAttr['prePaddingValue']
             if ulPrePaddingSize != 0:
-                aucPrePad = array.array('B', [ucPrePaddingValue] * ulPrePaddingSize)
+                aucPrePad = array.array(
+                    'B',
+                    [ucPrePaddingValue] * ulPrePaddingSize
+                )
                 aucPrePad.tofile(tFile)
 
             aucData = tAttr['header']
@@ -1555,7 +1642,7 @@ def __app_image_action(target, source, env):
     tAppImage = AppImage(env, astrIncludePaths, atKnownFiles)
     if strKeyRomPath is not None:
         tAppImage.read_keyrom(strKeyRomPath)
-    
+
     tAppImage.process_app_image(
         strSourcePath,
         astrDestinationPaths
@@ -1572,7 +1659,7 @@ def __app_image_emitter(target, source, env):
             for strId, strPath in atKnownFiles.items():
                 env.Depends(
                     target,
-                    env.File(strPath)
+                    SCons.Script.File(strPath)
                 )
                 env.Depends(
                     target,
@@ -1596,7 +1683,7 @@ def __app_image_emitter(target, source, env):
         if strKeyRomPath is not None and len(strKeyRomPath) != 0:
             env.Depends(
                 target,
-                env.File(strKeyRomPath)
+                SCons.Script.File(strKeyRomPath)
             )
 
     fVerbose = False
@@ -1658,9 +1745,9 @@ if __name__ == '__main__':
             # 'NETX90B',
             # 'NETX90_MPW',
             # For compatibility with HWConfig tool
-            'netx90',  # Alias for the latest chip revision, currently rev. 1 
+            'netx90',  # Alias for the latest chip revision, currently rev. 1
             'netx90_mpw',
-            'netx90_rev0', 
+            'netx90_rev0',
             'netx90_rev1',
         ],
         metavar='NETX',
@@ -1793,15 +1880,23 @@ if __name__ == '__main__':
     }
 
     ulSDRamSplitOffset = int(tArgs.strSDRamSplitOffset, 0)
-    tAppImg = AppImage(tEnv, tArgs.strNetxType, tArgs.astrIncludePaths, atKnownFiles, ulSDRamSplitOffset, tArgs.strOpensslExe, tArgs.fOpensslRandOff)
+    tAppImg = AppImage(
+        tEnv,
+        tArgs.strNetxType,
+        tArgs.astrIncludePaths,
+        atKnownFiles,
+        ulSDRamSplitOffset,
+        tArgs.strOpensslExe,
+        tArgs.fOpensslRandOff
+    )
     if tArgs.strKeyRomPath is not None:
         tAppImg.read_keyrom(tArgs.strKeyRomPath)
-    
-    #print ("===================================")
-    #print ("Number of destination paths: %d" % (len(tArgs.astrOutputFiles)))
-    #for strDesinationPath in tArgs.astrOutputFiles: 
+
+    # print ("===================================")
+    # print ("Number of destination paths: %d" % (len(tArgs.astrOutputFiles)))
+    # for strDesinationPath in tArgs.astrOutputFiles:
     #    print('>%s<' % strDesinationPath)
-    #print ("===================================")
+    # print ("===================================")
 
     tAppImg.process_app_image(
         tArgs.strInputFile,

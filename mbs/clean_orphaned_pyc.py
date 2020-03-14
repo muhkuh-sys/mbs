@@ -14,7 +14,7 @@ import os.path
 
 def cleanup(strPath, fVerbose=True, fDryRun=True):
     if fVerbose is True:
-        print 'Scanning "%s" for orphaned ".pyc" files.' % (strPath)
+        print('Scanning "%s" for orphaned ".pyc" files.' % (strPath))
 
     # Scan the selected path recursively for all ".py" and ".pyc" files.
     astrPy = set()
@@ -41,13 +41,13 @@ def cleanup(strPath, fVerbose=True, fDryRun=True):
     iOrphanedFiles = len(atDiff)
     if iOrphanedFiles == 0:
         if fVerbose is True:
-            print 'No oprhaned ".pyc" files.'
+            print('No oprhaned ".pyc" files.')
     else:
         if fVerbose is True:
             strPlural = ''
             if iOrphanedFiles > 1:
                 strPlural = 's'
-            print '%d orphaned file%s found:' % (iOrphanedFiles, strPlural)
+            print('%d orphaned file%s found:' % (iOrphanedFiles, strPlural))
 
         strAction = 'Found'
         if fDryRun is not True:
@@ -56,7 +56,7 @@ def cleanup(strPath, fVerbose=True, fDryRun=True):
         for strAbsBase in atDiff:
             strAbs = strAbsBase + '.pyc'
             if fVerbose is True:
-                print '  %s %s' % (strAction, strAbs)
+                print('  %s %s' % (strAction, strAbs))
 
             if fDryRun is not True:
                 os.remove(strAbs)

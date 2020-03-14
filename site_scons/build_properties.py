@@ -84,7 +84,7 @@ def PrintSummary():
 
     strHelp = _g_build_properties.GenerateHelpText(_g_env_help)
     astrLines = strHelp.splitlines(True)
-    astrHelpComments = ['# ' + strLine for strLine in astrLines];
+    astrHelpComments = ['# ' + strLine for strLine in astrLines]
     print('Build properties:')
     print('Copy the next lines to a file named "build.properties" to modify '
           'them.')

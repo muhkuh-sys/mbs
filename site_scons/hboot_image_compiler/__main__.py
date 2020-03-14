@@ -29,7 +29,11 @@ import hboot_image_version
 
 
 tParser = argparse.ArgumentParser(usage='hboot_image [options]')
-tParser.add_argument('--version', action='version', version=hboot_image_version.VERSION_STRING)
+tParser.add_argument(
+    '--version',
+    action='version',
+    version=hboot_image_version.VERSION_STRING
+)
 tGroupe = tParser.add_mutually_exclusive_group(required=True)
 tGroupe.add_argument('-n', '--netx-type',
                      dest='strNetxType',
@@ -55,7 +59,7 @@ tGroupe.add_argument('--netx-type-public',
                          'NETX56',
                          'NETX4000_RELAXED',
                          'NETX4000',
-                         'NETX4100'						 
+                         'NETX4100'
                      ],
                      metavar='NETX',
                      help='Build the image for netx type public NETX.')
@@ -134,7 +138,7 @@ tParser.add_argument('--openssl-exe',
 tParser.add_argument('--openssl-rand-off',
                      dest='fOpensslRandOff',
                      required=False,
-					 default=False,
+                     default=False,
                      action='store_const', const=True,
                      metavar='SSLRAND',
                      help='Set openssl randomization true or false.')
@@ -167,7 +171,7 @@ elif tArgs.strNetxType == 'netx90_mpw':
     strNetxType = 'NETX90_MPW'
 else:
     strNetxType = tArgs.strNetxType
-	
+
 if tArgs.strPatchTablePath is None:
     tArgs.strPatchTablePath = os.path.join(
         os.path.dirname(os.path.dirname(os.path.realpath(__file__))),
@@ -244,8 +248,8 @@ tCompiler = hboot_image.HbootImage(
     sniplibs=tArgs.astrSnipLib,
     keyrom=tArgs.strKeyRomPath,
     openssloptions=tArgs.astrOpensslOptions,
-	opensslexe=tArgs.strOpensslExe,
-	opensslrandoff=tArgs.fOpensslRandOff
+    opensslexe=tArgs.strOpensslExe,
+    opensslrandoff=tArgs.fOpensslRandOff
 )
 tCompiler.parse_image(tArgs.strInputFile)
 tCompiler.write(tArgs.strOutputFile)

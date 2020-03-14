@@ -86,7 +86,7 @@ class PlatformDetect:
 
         # Try to parse the output of the 'lscpu' command.
         strOutput = subprocess.check_output(['lscpu'])
-        tMatch = re.search('Architecture: *(\S+)', strOutput)
+        tMatch = re.search(r'Architecture: *(\S+)', strOutput)
         if tMatch is None:
             raise Exception('Failed to get the CPU architecture with "lscpu".')
 

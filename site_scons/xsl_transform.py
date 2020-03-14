@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-#-------------------------------------------------------------------------#
+# ----------------------------------------------------------------------- #
 #   Copyright (C) 2013 by Christoph Thelen                                #
 #   doc_bacardi@users.sourceforge.net                                     #
 #                                                                         #
@@ -17,7 +17,7 @@
 #   along with this program; if not, write to the                         #
 #   Free Software Foundation, Inc.,                                       #
 #   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             #
-#-------------------------------------------------------------------------#
+# ----------------------------------------------------------------------- #
 
 import xslt
 
@@ -26,72 +26,77 @@ import os.path
 
 import SCons
 import SCons.Node.FS
-from SCons.Script import *
-
+import SCons.Script
 
 
 xslt_include_re = re.compile(r'<xsl:include\s+href="(\S+)"\s*/>', re.M)
 
-def xslt_scan(node, env, path):
-	contents = node.get_text_contents()
-	astrIncludes = xslt_include_re.findall(contents)
-	
-	astrInc = []
-	for strInc in astrIncludes:
-		if os.path.isabs(strInc):
-			strIncPath = strInc
-		else:
-			strIncPath = os.path.abspath(os.path.join(os.path.dirname(node.get_path()), strInc))
-		astrInc.append(strIncPath)
-	return env.File(astrInc)
 
+def xslt_scan(node, env, path):
+    contents = node.get_text_contents()
+    astrIncludes = xslt_include_re.findall(contents)
+
+    astrInc = []
+    for strInc in astrIncludes:
+        if os.path.isabs(strInc):
+            strIncPath = strInc
+        else:
+            strIncPath = os.path.abspath(
+                os.path.join(
+                    os.path.dirname(node.get_path()),
+                    strInc
+                )
+            )
+        astrInc.append(strIncPath)
+    return SCons.Script.File(astrInc)
 
 
 def xslt_action(target, source, env):
-	tProc = xslt.XSLTProcessor()
-	tProc.setStylesheet(source[1].get_path())
-	astrMsgs = []
-	strResult = tProc.transform(source[0].get_path(), messages=astrMsgs)
-	
-	# Show all messages.
-	for strMsg in astrMsgs:
-		print '[MSG]: %s' % strMsg
-	
-	# Write the transformed data to the target file.
-	file_target = open(target[0].get_path(), 'wt')
-	file_target.write(strResult)
-	file_target.close()
-	
-	return 0
+    tProc = xslt.XSLTProcessor()
+    tProc.setStylesheet(source[1].get_path())
+    astrMsgs = []
+    strResult = tProc.transform(source[0].get_path(), messages=astrMsgs)
+
+    # Show all messages.
+    for strMsg in astrMsgs:
+        print('[MSG]: %s' % strMsg)
+
+    # Write the transformed data to the target file.
+    file_target = open(target[0].get_path(), 'wt')
+    file_target.write(strResult)
+    file_target.close()
+
+    return 0
 
 
 def xslt_emitter(target, source, env):
-	# The list of sources must contain exactly 2 elements.
-	# The first one is the XML file.
-	# The second one is the XSLT file.
-	if len(source)!=2:
-		raise Exception('The XSLT builder needs exactly 2 sources: the XML file and the XSLT file.')
-	
-	return target, source
+    # The list of sources must contain exactly 2 elements.
+    # The first one is the XML file.
+    # The second one is the XSLT file.
+    if len(source) != 2:
+        raise Exception('The XSLT builder needs exactly 2 sources: the XML '
+                        'file and the XSLT file.')
+
+    return target, source
 
 
 def xslt_string(target, source, env):
-	return 'XSLT %s' % target[0].get_path()
+    return 'XSLT %s' % target[0].get_path()
 
 
 def ApplyToEnv(env):
-	#----------------------------------------------------------------------------
-	#
-	# Add xslt builder.
-	#
-	
-	xslt_act = SCons.Action.Action(xslt_action, xslt_string)
-	xslt_bld = Builder(action=xslt_act, emitter=xslt_emitter)
-	env['BUILDERS']['XSLT'] = xslt_bld
-	
-	# Add the XSLT scanner.
-	xslt_scanner = Scanner(function = xslt_scan, skeys = ['.xsl', '.xslt'])
-	env.Append(SCANNERS = xslt_scanner)
+    # ---------------------------------------------------------------------------
+    #
+    # Add xslt builder.
+    #
 
+    xslt_act = SCons.Action.Action(xslt_action, xslt_string)
+    xslt_bld = SCons.Script.Builder(action=xslt_act, emitter=xslt_emitter)
+    env['BUILDERS']['XSLT'] = xslt_bld
 
-
+    # Add the XSLT scanner.
+    xslt_scanner = SCons.Scanner.Scanner(
+        function=xslt_scan,
+        skeys=['.xsl', '.xslt']
+    )
+    env.Append(SCANNERS=xslt_scanner)

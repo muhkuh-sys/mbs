@@ -57,7 +57,10 @@ class OptionCompiler:
         # Loop over all children.
         for tTextNode in tDataNode.childNodes:
             # Is this a node element with the name 'Options'?
-            if (tTextNode.nodeType == tDataNode.TEXT_NODE) or (tTextNode.nodeType == tDataNode.CDATA_SECTION_NODE):
+            if(
+                tTextNode.nodeType == tDataNode.TEXT_NODE or
+                tTextNode.nodeType == tDataNode.CDATA_SECTION_NODE
+            ):
                 atText.append(tTextNode.data)
         # Join all text chunks.
         strText = ''.join(atText)
@@ -73,7 +76,10 @@ class OptionCompiler:
             ulValue = self.__parse_numeric_expression(strElement)
 
             # Generate the data entry.
-            atBytes = [chr((ulValue >> (iCnt << 3)) & 0xff) for iCnt in range(0, uiElementSizeInBytes)]
+            atBytes = [
+                chr((ulValue >> (iCnt << 3)) & 0xff)
+                for iCnt in range(0, uiElementSizeInBytes)
+            ]
             atData.append(''.join(atBytes))
         return ''.join(atData)
 
@@ -84,7 +90,10 @@ class OptionCompiler:
         # Loop over all children.
         for tTextNode in tDataNode.childNodes:
             # Is this a node element with the name 'Options'?
-            if (tTextNode.nodeType == tTextNode.TEXT_NODE) or (tTextNode.nodeType == tTextNode.CDATA_SECTION_NODE):
+            if(
+                tTextNode.nodeType == tTextNode.TEXT_NODE or
+                tTextNode.nodeType == tTextNode.CDATA_SECTION_NODE
+            ):
                 atText.append(tTextNode.data)
         # Join all text chunks.
         strText = ''.join(atText)
@@ -115,12 +124,15 @@ class OptionCompiler:
                     raise Exception('The line contains more than one colon!')
                 else:
                     if len(atTmp[0]) == 0:
-                        raise Exception('The line contains no data before the colon!')
+                        raise Exception(
+                            'The line contains no data before the colon!'
+                        )
 
                     # The line contains a label definition.
                     strLabelName = atTmp[0]
                     if strLabelName in atLabels:
-                        raise Exception('Label double defined: %s' % strLabelName)
+                        raise Exception('Label double defined: %s' %
+                                        strLabelName)
                     atLabels[strLabelName] = ulAddress
 
                     if len(atTmp[1]) != 0:
@@ -158,21 +170,37 @@ class OptionCompiler:
                 if tNode.localName == 'WritePhy':
                     strValue = tNode.getAttribute('register')
                     tAstNode = ast.parse(strValue, mode='eval')
-                    tAstResolved = self.__cPatchDefinitions.resolve_constants(tAstNode)
-                    ucRegister = eval(compile(tAstResolved, 'lala', mode='eval'))
+                    tAstResolved = self.__cPatchDefinitions.resolve_constants(
+                        tAstNode
+                    )
+                    ucRegister = eval(compile(
+                        tAstResolved,
+                        'lala',
+                        mode='eval'
+                    ))
 
                     strValue = tNode.getAttribute('data')
                     tAstNode = ast.parse(strValue, mode='eval')
-                    tAstResolved = self.__cPatchDefinitions.resolve_constants(tAstNode)
+                    tAstResolved = self.__cPatchDefinitions.resolve_constants(
+                        tAstNode
+                    )
                     ulData = eval(compile(tAstResolved, 'lala', mode='eval'))
 
                     if (ucRegister < 0) or (ucRegister > 0xff):
-                        raise Exception('Invalid register for WritePhy: 0x%02x' % ucRegister)
+                        raise Exception(
+                            'Invalid register for WritePhy: 0x%02x' %
+                            ucRegister
+                        )
                     if (ulData < 0) or (ulData > 0xffffffff):
-                        raise Exception('Invalid data for WritePhy: 0x%08x' % ulData)
+                        raise Exception('Invalid data for WritePhy: 0x%08x' %
+                                        ulData)
 
                     # Append the new element.
-                    atDdrMacro.append(chr(self.__cPatchDefinitions.m_atConstants['DDR_SETUP_COMMAND_WritePhy']))
+                    atDdrMacro.append(chr(
+                        self.__cPatchDefinitions.m_atConstants[
+                            'DDR_SETUP_COMMAND_WritePhy'
+                        ]
+                    ))
                     atDdrMacro.append(chr(ucRegister))
                     atDdrMacro.append(chr(ulData & 0xff))
                     atDdrMacro.append(chr((ulData >> 8) & 0xff))
@@ -182,21 +210,37 @@ class OptionCompiler:
                 elif tNode.localName == 'WriteCtrl':
                     strValue = tNode.getAttribute('register')
                     tAstNode = ast.parse(strValue, mode='eval')
-                    tAstResolved = self.__cPatchDefinitions.resolve_constants(tAstNode)
-                    ucRegister = eval(compile(tAstResolved, 'lala', mode='eval'))
+                    tAstResolved = self.__cPatchDefinitions.resolve_constants(
+                        tAstNode
+                    )
+                    ucRegister = eval(compile(
+                        tAstResolved,
+                        'lala',
+                        mode='eval'
+                    ))
 
                     strValue = tNode.getAttribute('data')
                     tAstNode = ast.parse(strValue, mode='eval')
-                    tAstResolved = self.__cPatchDefinitions.resolve_constants(tAstNode)
+                    tAstResolved = self.__cPatchDefinitions.resolve_constants(
+                        tAstNode
+                    )
                     ulData = eval(compile(tAstResolved, 'lala', mode='eval'))
 
                     if (ucRegister < 0) or (ucRegister > 0xff):
-                        raise Exception('Invalid register for WritePhy: 0x%02x' % ucRegister)
+                        raise Exception(
+                            'Invalid register for WritePhy: 0x%02x' %
+                            ucRegister
+                        )
                     if (ulData < 0) or (ulData > 0xffffffff):
-                        raise Exception('Invalid data for WritePhy: 0x%08x' % ulData)
+                        raise Exception('Invalid data for WritePhy: 0x%08x' %
+                                        ulData)
 
                     # Append the new element.
-                    atDdrMacro.append(chr(self.__cPatchDefinitions.m_atConstants['DDR_SETUP_COMMAND_WriteCtrl']))
+                    atDdrMacro.append(chr(
+                        self.__cPatchDefinitions.m_atConstants[
+                            'DDR_SETUP_COMMAND_WriteCtrl'
+                        ]
+                    ))
                     atDdrMacro.append(chr(ucRegister))
                     atDdrMacro.append(chr(ulData & 0xff))
                     atDdrMacro.append(chr((ulData >> 8) & 0xff))
@@ -206,14 +250,21 @@ class OptionCompiler:
                 elif tNode.localName == 'Delay':
                     strValue = tNode.getAttribute('ticks')
                     tAstNode = ast.parse(strValue, mode='eval')
-                    tAstResolved = self.__cPatchDefinitions.resolve_constants(tAstNode)
+                    tAstResolved = self.__cPatchDefinitions.resolve_constants(
+                        tAstNode
+                    )
                     ulTicks = eval(compile(tAstResolved, 'lala', mode='eval'))
 
                     if (ulTicks < 0) or (ulTicks > 0xffffffff):
-                        raise Exception('Invalid value for Delay: 0x%08x' % ulTicks)
+                        raise Exception('Invalid value for Delay: 0x%08x' %
+                                        ulTicks)
 
                     # Append the new element.
-                    atDdrMacro.append(chr(self.__cPatchDefinitions.m_atConstants['DDR_SETUP_COMMAND_DelayTicks']))
+                    atDdrMacro.append(chr(
+                        self.__cPatchDefinitions.m_atConstants[
+                            'DDR_SETUP_COMMAND_DelayTicks'
+                        ]
+                    ))
                     atDdrMacro.append(chr(ulTicks & 0xff))
                     atDdrMacro.append(chr((ulTicks >> 8) & 0xff))
                     atDdrMacro.append(chr((ulTicks >> 16) & 0xff))
@@ -222,35 +273,57 @@ class OptionCompiler:
                 elif tNode.localName == 'PollPhy':
                     strValue = tNode.getAttribute('register')
                     tAstNode = ast.parse(strValue, mode='eval')
-                    tAstResolved = self.__cPatchDefinitions.resolve_constants(tAstNode)
-                    ucRegister = eval(compile(tAstResolved, 'lala', mode='eval'))
+                    tAstResolved = self.__cPatchDefinitions.resolve_constants(
+                        tAstNode
+                    )
+                    ucRegister = eval(compile(
+                        tAstResolved,
+                        'lala',
+                        mode='eval'
+                    ))
 
                     strValue = tNode.getAttribute('mask')
                     tAstNode = ast.parse(strValue, mode='eval')
-                    tAstResolved = self.__cPatchDefinitions.resolve_constants(tAstNode)
+                    tAstResolved = self.__cPatchDefinitions.resolve_constants(
+                        tAstNode
+                    )
                     ulMask = eval(compile(tAstResolved, 'lala', mode='eval'))
 
                     strValue = tNode.getAttribute('data')
                     tAstNode = ast.parse(strValue, mode='eval')
-                    tAstResolved = self.__cPatchDefinitions.resolve_constants(tAstNode)
+                    tAstResolved = self.__cPatchDefinitions.resolve_constants(
+                        tAstNode
+                    )
                     ulData = eval(compile(tAstResolved, 'lala', mode='eval'))
 
                     strValue = tNode.getAttribute('ticks')
                     tAstNode = ast.parse(strValue, mode='eval')
-                    tAstResolved = self.__cPatchDefinitions.resolve_constants(tAstNode)
+                    tAstResolved = self.__cPatchDefinitions.resolve_constants(
+                        tAstNode
+                    )
                     ulTicks = eval(compile(tAstResolved, 'lala', mode='eval'))
 
                     if (ucRegister < 0) or (ucRegister > 0xff):
-                        raise Exception('Invalid register for WritePhy: 0x%02x' % ucRegister)
+                        raise Exception(
+                            'Invalid register for WritePhy: 0x%02x' %
+                            ucRegister
+                        )
                     if (ulMask < 0) or (ulMask > 0xffffffff):
-                        raise Exception('Invalid mask for WritePhy: 0x%08x' % ulMask)
+                        raise Exception('Invalid mask for WritePhy: 0x%08x' %
+                                        ulMask)
                     if (ulData < 0) or (ulData > 0xffffffff):
-                        raise Exception('Invalid data for WritePhy: 0x%08x' % ulData)
+                        raise Exception('Invalid data for WritePhy: 0x%08x' %
+                                        ulData)
                     if (ulTicks < 0) or (ulTicks > 0xffffffff):
-                        raise Exception('Invalid value for Delay: 0x%08x' % ulTicks)
+                        raise Exception('Invalid value for Delay: 0x%08x' %
+                                        ulTicks)
 
                     # Append the new element.
-                    atDdrMacro.append(chr(self.__cPatchDefinitions.m_atConstants['DDR_SETUP_COMMAND_PollPhy']))
+                    atDdrMacro.append(chr(
+                        self.__cPatchDefinitions.m_atConstants[
+                            'DDR_SETUP_COMMAND_PollPhy'
+                        ]
+                    ))
                     atDdrMacro.append(chr(ucRegister))
                     atDdrMacro.append(chr(ulMask & 0xff))
                     atDdrMacro.append(chr((ulMask >> 8) & 0xff))
@@ -268,35 +341,57 @@ class OptionCompiler:
                 elif tNode.localName == 'PollCtrl':
                     strValue = tNode.getAttribute('register')
                     tAstNode = ast.parse(strValue, mode='eval')
-                    tAstResolved = self.__cPatchDefinitions.resolve_constants(tAstNode)
-                    ucRegister = eval(compile(tAstResolved, 'lala', mode='eval'))
+                    tAstResolved = self.__cPatchDefinitions.resolve_constants(
+                        tAstNode
+                    )
+                    ucRegister = eval(compile(
+                        tAstResolved,
+                        'lala',
+                        mode='eval'
+                    ))
 
                     strValue = tNode.getAttribute('mask')
                     tAstNode = ast.parse(strValue, mode='eval')
-                    tAstResolved = self.__cPatchDefinitions.resolve_constants(tAstNode)
+                    tAstResolved = self.__cPatchDefinitions.resolve_constants(
+                        tAstNode
+                    )
                     ulMask = eval(compile(tAstResolved, 'lala', mode='eval'))
 
                     strValue = tNode.getAttribute('data')
                     tAstNode = ast.parse(strValue, mode='eval')
-                    tAstResolved = self.__cPatchDefinitions.resolve_constants(tAstNode)
+                    tAstResolved = self.__cPatchDefinitions.resolve_constants(
+                        tAstNode
+                    )
                     ulData = eval(compile(tAstResolved, 'lala', mode='eval'))
 
                     strValue = tNode.getAttribute('ticks')
                     tAstNode = ast.parse(strValue, mode='eval')
-                    tAstResolved = self.__cPatchDefinitions.resolve_constants(tAstNode)
+                    tAstResolved = self.__cPatchDefinitions.resolve_constants(
+                        tAstNode
+                    )
                     ulTicks = eval(compile(tAstResolved, 'lala', mode='eval'))
 
                     if (ucRegister < 0) or (ucRegister > 0xff):
-                        raise Exception('Invalid register for WritePhy: 0x%02x' % ucRegister)
+                        raise Exception(
+                            'Invalid register for WritePhy: 0x%02x' %
+                            ucRegister
+                        )
                     if (ulMask < 0) or (ulMask > 0xffffffff):
-                        raise Exception('Invalid mask for WritePhy: 0x%08x' % ulMask)
+                        raise Exception('Invalid mask for WritePhy: 0x%08x' %
+                                        ulMask)
                     if (ulData < 0) or (ulData > 0xffffffff):
-                        raise Exception('Invalid data for WritePhy: 0x%08x' % ulData)
+                        raise Exception('Invalid data for WritePhy: 0x%08x' %
+                                        ulData)
                     if (ulTicks < 0) or (ulTicks > 0xffffffff):
-                        raise Exception('Invalid value for Delay: 0x%08x' % ulTicks)
+                        raise Exception('Invalid value for Delay: 0x%08x' %
+                                        ulTicks)
 
                     # Append the new element.
-                    atDdrMacro.append(chr(self.__cPatchDefinitions.m_atConstants['DDR_SETUP_COMMAND_PollCtrl']))
+                    atDdrMacro.append(chr(
+                        self.__cPatchDefinitions.m_atConstants[
+                            'DDR_SETUP_COMMAND_PollCtrl'
+                        ]
+                    ))
                     atDdrMacro.append(chr(ucRegister))
                     atDdrMacro.append(chr(ulMask & 0xff))
                     atDdrMacro.append(chr((ulMask >> 8) & 0xff))
@@ -312,7 +407,8 @@ class OptionCompiler:
                     atDdrMacro.append(chr((ulTicks >> 24) & 0xff))
 
                 else:
-                    raise Exception('Unknown child node: %s' % tNode.localName)
+                    raise Exception('Unknown child node: %s' %
+                                    tNode.localName)
 
         # Combine all macro data.
         strDdrMacro = ''.join(atDdrMacro)
@@ -377,14 +473,21 @@ class OptionCompiler:
                         # Get all data elements.
                         atData = self.__getOptionData(tOptionNode)
 
-                        # To make things easier this routine expects only one element.
+                        # To make things easier this routine expects only
+                        # one element.
                         if len(atData) != 1:
-                            raise Exception('A RAW element must have only one child element. This is just a limitation of the parser, so improve it if you really need it.')
+                            raise Exception(
+                                'A RAW element must have only one child '
+                                'element. This is just a limitation of the '
+                                'parser, so improve it if you really need '
+                                'it.'
+                            )
 
                         # The data size must fit into 1 byte.
                         sizElement = len(atData[0])
                         if sizElement > 255:
-                            raise Exception('The RAW tag does not accept more than 255 bytes.')
+                            raise Exception('The RAW tag does not accept '
+                                            'more than 255 bytes.')
 
                         ucOptionValue = 0xfe
                         atOptionData.append(chr(ucOptionValue))
@@ -394,7 +497,11 @@ class OptionCompiler:
                         atOptionData.extend(atData[0])
 
                     else:
-                        atOptionDesc = self.__cPatchDefinitions.get_patch_definition(strOptionId)
+                        atOptionDesc = (
+                            self.__cPatchDefinitions.get_patch_definition(
+                                strOptionId
+                            )
+                        )
                         ulOptionValue = atOptionDesc['value']
                         atElements = atOptionDesc['elements']
 
@@ -404,7 +511,15 @@ class OptionCompiler:
                         # Compare the data elements with the element sizes.
                         sizElements = len(atElements)
                         if len(atData) != sizElements:
-                            raise Exception('The number of data elements for the option %s differs. The model requires %d, but %d were found.' % (strOptionId, sizElements, len(atData)))
+                            raise Exception(
+                                'The number of data elements for the option '
+                                '%s differs. The model requires %d, but %d '
+                                'were found.' % (
+                                    strOptionId,
+                                    sizElements,
+                                    len(atData)
+                                )
+                            )
 
                         atOptionData.append(chr(ulOptionValue))
 
@@ -414,13 +529,46 @@ class OptionCompiler:
                             (strElementId, ulSize, ulType) = atElements[iCnt]
                             if ulType == 0:
                                 if sizElement != ulSize:
-                                    raise Exception('The length of the data element %s for the option %s differs. The model requires %d bytes, but %d were found.' % (strElementId, strOptionId, ulSize, sizElement))
+                                    raise Exception(
+                                        'The length of the data element %s '
+                                        'for the option %s differs. The '
+                                        'model requires %d bytes, but %d '
+                                        'were found.' % (
+                                            strElementId,
+                                            strOptionId,
+                                            ulSize,
+                                            sizElement
+                                        )
+                                    )
                             elif ulType == 1:
                                 if sizElement >= ulSize:
-                                    raise Exception('The length of the data element %s for the option %s exceeds the available space. The model reserves %d bytes, which must include a length information, but %d were found.' % (strElementId, strOptionId, ulSize, sizElement))
+                                    raise Exception(
+                                        'The length of the data element %s '
+                                        'for the option %s exceeds the '
+                                        'available space. The model reserves '
+                                        '%d bytes, which must include a '
+                                        'length information, but %d were '
+                                        'found.' % (
+                                            strElementId,
+                                            strOptionId,
+                                            ulSize,
+                                            sizElement
+                                        )
+                                    )
                             elif ulType == 2:
                                 if sizElement > ulSize:
-                                    raise Exception('The length of the data element %s for the option %s exceeds the available space. The model reserves %d bytes, but %d were found.' % (strElementId, strOptionId, ulSize, sizElement))
+                                    raise Exception(
+                                        'The length of the data element %s '
+                                        'for the option %s exceeds the '
+                                        'available space. The model reserves '
+                                        '%d bytes, but %d were '
+                                        'found.' % (
+                                            strElementId,
+                                            strOptionId,
+                                            ulSize,
+                                            sizElement
+                                        )
+                                    )
                             else:
                                 raise Exception('Unknown Type %d' % ulType)
 
@@ -437,12 +585,15 @@ class OptionCompiler:
                             elif ulType == 2:
                                 # Add 16 bit size information.
                                 atOptionData.append(chr(sizElement & 0xff))
-                                atOptionData.append(chr((sizElement >> 8) & 0xff))
+                                atOptionData.append(chr(
+                                    (sizElement >> 8) & 0xff
+                                ))
                                 atOptionData.extend(atData[iCnt])
                             else:
                                 raise Exception('Unknown Type %d' % ulType)
                 else:
-                    raise Exception('Unexpected node: %s' % tOptionNode.localName)
+                    raise Exception('Unexpected node: %s' %
+                                    tOptionNode.localName)
 
         return ''.join(atOptionData)
 
@@ -451,7 +602,8 @@ class OptionCompiler:
         self.__strOptions = ''
 
         if not isinstance(tSource, xml.dom.minidom.Node):
-            raise Exception('The input must be of the type xml.dom.minidom.Node, but it is not!')
+            raise Exception('The input must be of the type '
+                            'xml.dom.minidom.Node, but it is not!')
 
         self.__strOptions = self.__processChunkOptions(tSource)
 

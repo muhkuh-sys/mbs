@@ -44,7 +44,10 @@ class RewriteName(ast.NodeTransformer):
         if node.id in self.__atConstants:
             tValue = self.__atConstants[node.id]
             tNode = ast.copy_location(ast.Num(n=tValue), node)
-        elif (self.__atTemporaryConstants is not None) and (node.id in self.__atTemporaryConstants):
+        elif(
+            self.__atTemporaryConstants is not None and
+            node.id in self.__atTemporaryConstants
+        ):
             tValue = self.__atTemporaryConstants[node.id]
             tNode = ast.copy_location(ast.Num(n=tValue), node)
         else:
@@ -82,17 +85,24 @@ class PatchDefinitions:
         # Loop over all children.
         for tOptionsNode in tXml.documentElement.childNodes:
             # Is this a node element with the name 'Options'?
-            if (tOptionsNode.nodeType == tOptionsNode.ELEMENT_NODE) and (tOptionsNode.localName == 'Options'):
+            if(
+                tOptionsNode.nodeType == tOptionsNode.ELEMENT_NODE and
+                tOptionsNode.localName == 'Options'
+            ):
                 # Loop over all children.
                 for tOptionNode in tOptionsNode.childNodes:
                     # Is this a node element with the name 'Options'?
-                    if (tOptionNode.nodeType == tOptionNode.ELEMENT_NODE) and (tOptionNode.localName == 'Option'):
+                    if(
+                        tOptionNode.nodeType == tOptionNode.ELEMENT_NODE and
+                        tOptionNode.localName == 'Option'
+                    ):
                         # Get the ID.
                         strOptionId = tOptionNode.getAttribute('id')
                         if strOptionId == '':
                             raise Exception('Missing id attribute!')
                         if strOptionId in self.m_atPatchDefinitions:
-                            raise Exception('ID %s double defined!' % strOptionId)
+                            raise Exception('ID %s double defined!' %
+                                            strOptionId)
 
                         strOptionValue = tOptionNode.getAttribute('value')
                         if strOptionValue == '':
@@ -101,49 +111,63 @@ class PatchDefinitions:
 
                         # Loop over all children.
                         atElements = []
-                        for tElementNode in tOptionNode.childNodes:
+                        for tElmNode in tOptionNode.childNodes:
                             # Is this a node element with the name 'Element'?
-                            if (tElementNode.nodeType == tElementNode.ELEMENT_NODE) and (tElementNode.localName == 'Element'):
+                            if(
+                                tElmNode.nodeType == tElmNode.ELEMENT_NODE and
+                                tElmNode.localName == 'Element'
+                            ):
                                 # Get the ID.
-                                strElementId = tElementNode.getAttribute('id')
+                                strElementId = tElmNode.getAttribute('id')
                                 if strElementId == '':
                                     raise Exception('Missing id attribute!')
 
                                 # Get the size attribute.
-                                strSize = tElementNode.getAttribute('size')
+                                strSize = tElmNode.getAttribute('size')
                                 if strSize == '':
                                     raise Exception('Missing size attribute!')
                                 ulSize = int(strSize, 0)
 
                                 # Get the type attribute.
-                                strType = tElementNode.getAttribute('type')
+                                strType = tElmNode.getAttribute('type')
                                 if strType == '':
                                     raise Exception('Missing type attribute!')
                                 ulType = int(strType, 0)
 
-                                atElements.append((strElementId, ulSize, ulType))
+                                atElements.append(
+                                    (strElementId, ulSize, ulType)
+                                )
                         atDesc = dict({})
                         atDesc['value'] = ulOptionValue
                         atDesc['elements'] = atElements
                         self.m_atPatchDefinitions[strOptionId] = atDesc
 
-            elif (tOptionsNode.nodeType == tOptionsNode.ELEMENT_NODE) and (tOptionsNode.localName == 'Definitions'):
+            elif(
+                tOptionsNode.nodeType == tOptionsNode.ELEMENT_NODE and
+                tOptionsNode.localName == 'Definitions'
+            ):
                 # Loop over all children.
-                for tDefinitionNode in tOptionsNode.childNodes:
-                    if (tDefinitionNode.nodeType == tDefinitionNode.ELEMENT_NODE) and (tDefinitionNode.localName == 'Definition'):
+                for tDefNode in tOptionsNode.childNodes:
+                    if(
+                        tDefNode.nodeType == tDefNode.ELEMENT_NODE and
+                        tDefNode.localName == 'Definition'
+                    ):
                         # Get the name.
-                        strDefinitionName = tDefinitionNode.getAttribute('name')
+                        strDefinitionName = tDefNode.getAttribute('name')
                         if strDefinitionName == '':
                             raise Exception('Missing name attribute!')
                         if strDefinitionName in self.m_atConstants:
-                            raise Exception('Name "%s" double defined!' % strDefinitionName)
+                            raise Exception('Name "%s" double defined!' %
+                                            strDefinitionName)
 
-                        strDefinitionValue = tDefinitionNode.getAttribute('value')
+                        strDefinitionValue = tDefNode.getAttribute(
+                            'value'
+                        )
                         if strDefinitionValue == '':
                             raise Exception('Missing value attribute!')
-                        ulDefinitionValue = int(strDefinitionValue, 0)
+                        ulDefValue = int(strDefinitionValue, 0)
 
-                        self.m_atConstants[strDefinitionName] = ulDefinitionValue
+                        self.m_atConstants[strDefinitionName] = ulDefValue
 
     def resolve_constants(self, tAstNode):
         return self.m_cAstConstResolver.visit(tAstNode)
