@@ -65,12 +65,12 @@ class OptionCompiler:
         # Join all text chunks.
         strText = ''.join(atText)
         # Split the text by comma.
-        atTextElements = string.split(strText, ',')
+        atTextElements = strText.split(',')
 
         # Process all data elements.
         atData = []
         for strElementRaw in atTextElements:
-            strElement = string.strip(strElementRaw)
+            strElement = strElementRaw.strip()
 
             # Parse the data.
             ulValue = self.__parse_numeric_expression(strElement)
@@ -99,11 +99,11 @@ class OptionCompiler:
         strText = ''.join(atText)
 
         # Split the text by newlines.
-        atLines = string.split(strText, '\n')
+        atLines = strText.split('\n')
         # Split the lines by comma.
         atRawElements = []
         for strLine in atLines:
-            atRawElements.extend(string.split(strLine, ','))
+            atRawElements.extend(strLine.split(','))
 
         # Loop over all lines.
         ulAddress = 0
@@ -111,10 +111,10 @@ class OptionCompiler:
         atElements = []
         for strRawElement in atRawElements:
             # Remove empty lines and comments.
-            strElement = string.strip(strRawElement)
+            strElement = strRawElement.strip()
             if (len(strElement) > 0) and (strElement[0] != '#'):
                 # Does the element contain a colon?
-                atTmp = string.split(strElement, ':')
+                atTmp = strElement.split(':')
                 if len(atTmp) == 1:
                     # The line does not contain a colon.
                     # This counts as one byte.
@@ -138,7 +138,7 @@ class OptionCompiler:
                     if len(atTmp[1]) != 0:
                         # The line contains also data.
                         ulAddress += 1
-                        atElements.append(string.strip(atTmp[0]))
+                        atElements.append(atTmp[0].strip())
 
         # Set the labels as temporary constants.
         self.__cPatchDefinitions.setTemporaryConstants(atLabels)

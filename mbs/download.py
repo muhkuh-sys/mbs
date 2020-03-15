@@ -1,4 +1,7 @@
-import urllib2
+try:
+    from urllib.request import urlopen
+except ImportError:
+    from urllib2 import urlopen
 import progress
 
 
@@ -13,7 +16,7 @@ def download_to_file(strUrl, strFile):
     sizDownloaded = 0
 
     try:
-        aSocket = urllib2.urlopen(strUrl)
+        aSocket = urlopen(strUrl)
         aInfo = aSocket.info()
         try:
             sizTotal = int(aInfo['content-length'])

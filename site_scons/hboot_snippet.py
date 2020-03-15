@@ -69,7 +69,7 @@ def hboot_snippet_action(target, source, env):
     if 'parameter' in atParameter:
         # Yes -> append a "ParameterList" node.
         tNodeParameterList = tXml.createElement('ParameterList')
-        for strName, atAttributes in atParameter['parameter'].iteritems():
+        for strName, atAttributes in atParameter['parameter'].items():
             tNodeParameterEntry = tXml.createElement('Parameter')
             tNodeParameterEntry.setAttribute('name', str(strName))
             if 'default' in atAttributes:
@@ -83,7 +83,7 @@ def hboot_snippet_action(target, source, env):
         tNodeRoot.appendChild(tNodeParameterList)
 
     # Load the contents of the source file.
-    strInput = source[0].get_contents()
+    strInput = source[0].get_contents().decode("utf-8", "replace")
 
     # Add a "Snippet" node.
     tNodeSnippet = tXml.createElement('Snippet')
@@ -106,7 +106,7 @@ def hboot_snippet_action(target, source, env):
 
 def hboot_snippet_emitter(target, source, env):
     # Depend on all values for the template.
-    for strKey, tValue in env['PARAMETER'].iteritems():
+    for strKey, tValue in env['PARAMETER'].items():
         if isinstance(tValue, SCons.Node.FS.File):
             env.Depends(target, tValue)
         else:

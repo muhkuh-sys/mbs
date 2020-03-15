@@ -50,7 +50,7 @@ import pom_template
 import svnversion
 import uuencode
 import version
-import xsl_transform
+#import xsl_transform
 
 
 # ---------------------------------------------------------------------------
@@ -95,7 +95,7 @@ def find_first_tool(strToolPattern):
     strToolName = None
 
     tPattern = re.compile(strToolPattern)
-    for strKey in SCons.Script.TOOLS.iterkeys():
+    for strKey in SCons.Script.TOOLS:
         tMatch = re.search(tPattern, strKey)
         if tMatch is not None:
             strToolName = strKey
@@ -165,7 +165,7 @@ def CreateEnvironment(env, astrToolPatterns=None):
     svnversion.ApplyToEnv(tEnvNew)
     uuencode.ApplyToEnv(tEnvNew)
     version.ApplyToEnv(tEnvNew)
-    xsl_transform.ApplyToEnv(tEnvNew)
+#    xsl_transform.ApplyToEnv(tEnvNew)
 
     # Add the reference to the list of environments.
     if env is not None:
@@ -233,7 +233,7 @@ def create_compiler_environment(
     aCmd.extend(aOptAttributesCommon)
     aCmd.append('-print-multi-lib')
     proc = subprocess.Popen(aCmd, stdout=subprocess.PIPE)
-    strOutput = proc.communicate()[0]
+    strOutput = proc.communicate()[0].decode("utf-8", "replace")
     for match_obj in re.finditer(
         '^([^;]+);@?([^\r\n\t ]+)',
         strOutput,

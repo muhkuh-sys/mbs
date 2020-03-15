@@ -72,7 +72,7 @@ class ArchiveBuildInformation:
     def getAllPathFilePairs(self):
         # Return a list with
         atPathFilePairs = []
-        for strPath, atFileList in self.atContents.iteritems():
+        for strPath, atFileList in self.atContents.items():
             for tObj in atFileList:
                 atPathFilePairs.append([strPath, tObj])
         return atPathFilePairs
@@ -86,7 +86,7 @@ class ArchiveBuildInformation:
                 zipfile.ZIP_DEFLATED
             )
             # Add all source files.
-            for strPath, atFileList in self.atContents.iteritems():
+            for strPath, atFileList in self.atContents.items():
                 for tObj in atFileList:
                     strSourceName = tObj.get_path()
                     strArchiveName = os.path.join(

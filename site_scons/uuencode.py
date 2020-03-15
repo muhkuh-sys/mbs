@@ -21,7 +21,6 @@
 
 import uu
 from string import Template
-from types import ListType
 
 import SCons
 
@@ -35,7 +34,7 @@ def uuencode_action(target, source, env):
     else:
         tElfFile = env['UUE_ELF']
         if(
-            isinstance(tElfFile, ListType) or
+            isinstance(tElfFile, list) or
             isinstance(tElfFile, SCons.Node.NodeList)
         ):
             strElfFileName = tElfFile[0].get_path()

@@ -49,7 +49,7 @@ def build_artifact_version_strings(env):
                         '--always',
                         '--dirty=+']
                     )
-                    strGitId = string.strip(strOutput)
+                    strGitId = strOutput.decode("utf-8", "replace").strip()
                     tMatch = re.match(r'v(\d+\.\d+\.\d+)$', strGitId)
                     if tMatch is not None:
                         # This is a repository which is exactly on a tag.
@@ -77,11 +77,11 @@ def artifact_version_action(target, source, env):
     })
 
     # Read the template.
-    tTemplate = Template(source[0].get_contents())
+    tTemplate = Template(source[0].get_contents().decode("utf-8", "replace"))
 
     # Read the destination (if exists).
     try:
-        dst_oldtxt = target[0].get_contents()
+        dst_oldtxt = target[0].get_contents().decode("utf-8", "replace")
     except IOError:
         dst_oldtxt = ''
 

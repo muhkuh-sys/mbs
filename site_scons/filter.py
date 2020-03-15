@@ -31,11 +31,11 @@ def filter_action(target, source, env):
         atSubstitutions = {}
 
     # Read the template.
-    tTemplate = string.Template(source[0].get_contents())
+    tTemplate = string.Template(source[0].get_contents().decode("utf-8", "replace"))
 
     # Read the destination (if exists).
     try:
-        dst_oldtxt = target[0].get_contents()
+        dst_oldtxt = target[0].get_contents().decode("utf-8", "replace")
     except IOError:
         dst_oldtxt = ''
 
@@ -45,7 +45,7 @@ def filter_action(target, source, env):
 
     # Replace @ID@.
     for strKey, tValue in atSubstitutions.items():
-        dst_newtxt = string.replace(dst_newtxt, '@%s@' % strKey, tValue)
+        dst_newtxt = dst_newtxt.replace('@%s@' % strKey, tValue)
 
     # Write the target file only if the current text differs from the file
     # contents.

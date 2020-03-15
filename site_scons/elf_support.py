@@ -33,7 +33,7 @@ def run_cmd(aCmd, stdout=subprocess.PIPE):
     strOutput = None
     try:
         proc = subprocess.Popen(aCmd, stdout=stdout)
-        strOutput = proc.communicate()[0]
+        strOutput = proc.communicate()[0].decode("utf-8", "replace")
     except Exception as e:
         print("Failed to call external program:")
         print(aCmd)
@@ -124,7 +124,7 @@ def get_symbol_table(env, strFileName):
 def get_debug_structure(env, strFileName):
     aCmd = [env['READELF'], '--debug-dump=info', strFileName]
     proc = subprocess.Popen(aCmd, stdout=subprocess.PIPE)
-    strOutput = proc.communicate()[0]
+    strOutput = proc.communicate()[0].decode("utf-8", "replace")
 
     time_start = datetime.datetime.now()
 
@@ -286,7 +286,7 @@ def get_debug_symbols(env, strFileName):
 def get_macro_definitions(env, strFileName):
     aCmd = [env['READELF'], '--debug-dump=macro', strFileName]
     proc = subprocess.Popen(aCmd, stdout=subprocess.PIPE)
-    strOutput = proc.communicate()[0]
+    strOutput = proc.communicate()[0].decode("utf-8", "replace")
 
     time_start = datetime.datetime.now()
 
@@ -383,7 +383,7 @@ def get_exec_address(env, strElfFileName):
     tResult = None
     aCmd0 = [env['READELF'], '--syms', strElfFileName]
     proc = subprocess.Popen(aCmd0, stdout=subprocess.PIPE)
-    strOutput0 = proc.communicate()[0]
+    strOutput0 = proc.communicate()[0].decode("utf-8", "replace")
     match_obj = re.search(
         r'\s+\d+:'
         r'\s+([0-9a-fA-F]+)'
@@ -400,7 +400,7 @@ def get_exec_address(env, strElfFileName):
     else:
         aCmd1 = [env['READELF'], '--file-header', strElfFileName]
         proc = subprocess.Popen(aCmd1, stdout=subprocess.PIPE)
-        strOutput1 = proc.communicate()[0]
+        strOutput1 = proc.communicate()[0].decode("utf-8", "replace")
         match_obj = re.search(
             r'Entry point address:\s+0x([0-9a-fA-F]+)',
             strOutput1

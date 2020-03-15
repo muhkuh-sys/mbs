@@ -86,7 +86,7 @@ def patch_image(strInputFile, strOutputFile, fVerbose=False):
     # This is the complete file size except the CM4 header (448 bytes) and the
     # APP HBOOT header (64 bytes). The remaining size if converted from bytes
     # to DWORDS.
-    sizApplicationInDwords = (sizInputImage - 512) / 4
+    sizApplicationInDwords = int((sizInputImage - 512) / 4)
     aulHBoot[4] = sizApplicationInDwords
 
     # Create a SHA384 hash over the cm4 vectors and the complete application

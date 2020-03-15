@@ -3,7 +3,6 @@
 
 import hboot_image_compiler.hboot_image
 
-from types import ListType
 import os.path
 
 import SCons.Script
@@ -47,7 +46,7 @@ def __hboot_get_patch_table(env):
     ):
         tPatchDefinition = env['HBOOTIMAGE_PATCH_DEFINITION']
         if(
-            isinstance(tPatchDefinition, ListType) or
+            isinstance(tPatchDefinition, list) or
             isinstance(tPatchDefinition, SCons.Node.NodeList) is True
         ):
             if len(tPatchDefinition) != 1:

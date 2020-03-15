@@ -264,7 +264,7 @@ class AppImage:
         elif len(strSegmentsToDump) != 0:
             astrSegmentsToDump = [
                 strSegment.strip() for strSegment in
-                string.split(strSegmentsToDump, ',')
+                strSegmentsToDump.split(',')
             ]
             print('Elf file: %s  Used segments: %s' % (
                 strAbsFilePath,
@@ -467,7 +467,7 @@ class AppImage:
                     if strDataUint is None:
                         raise Exception('No text in node "UInt32" found!')
 
-                    astrNumbers = string.split(strDataUint)
+                    astrNumbers = strDataUint.split()
                     aulNumbers = array.array('I')
                     for strNumber in astrNumbers:
                         ulNumber = int(strNumber, 0)
@@ -491,7 +491,7 @@ class AppImage:
                     if strDataUint is None:
                         raise Exception('No text in node "UInt16" found!')
 
-                    astrNumbers = string.split(strDataUint)
+                    astrNumbers = strDataUint.split()
                     ausNumbers = array.array('H')
                     for strNumber in astrNumbers:
                         usNumber = int(strNumber, 0)
@@ -515,7 +515,7 @@ class AppImage:
                     if strDataUint is None:
                         raise Exception('No text in node "UInt8" found!')
 
-                    astrNumbers = string.split(strDataUint)
+                    astrNumbers = strDataUint.split()
                     aucNumbers = array.array('B')
                     for strNumber in astrNumbers:
                         ucNumber = int(strNumber, 0)
@@ -567,7 +567,7 @@ class AppImage:
                                     raise Exception('No text in node '
                                                     '"UInt32" found!')
 
-                                astrNumbers = string.split(strDataUint)
+                                astrNumbers = strDataUint.split()
                                 aulNumbers = array.array('I')
                                 for strNumber in astrNumbers:
                                     ulNumber = int(strNumber, 0)
@@ -586,7 +586,7 @@ class AppImage:
                                     raise Exception('No text in node '
                                                     '"UInt16" found!')
 
-                                astrNumbers = string.split(strDataUint)
+                                astrNumbers = strDataUint.split()
                                 ausNumbers = array.array('H')
                                 for strNumber in astrNumbers:
                                     usNumber = int(strNumber, 0)
@@ -605,7 +605,7 @@ class AppImage:
                                     raise Exception('No text in node "UInt8" '
                                                     ' found!')
 
-                                astrNumbers = string.split(strDataUint)
+                                astrNumbers = strDataUint.split()
                                 aucNumbers = array.array('B')
                                 for strNumber in astrNumbers:
                                     ucNumber = int(strNumber, 0)
@@ -661,7 +661,7 @@ class AppImage:
         tReData = re.compile('^[0-9a-fA-F]{2}(:[0-9a-fA-F]{2})*:?$')
         iState = 0
         for strLine in iter(strStdout.splitlines()):
-            strLine = string.strip(strLine)
+            strLine = strLine.strip()
             if iState == 0:
                 if strLine == strID:
                     iState = 1
@@ -670,8 +670,8 @@ class AppImage:
                 if tMatch is None:
                     break
                 else:
-                    for strDataHex in string.split(strLine, ':'):
-                        strDataHexStrip = string.strip(strDataHex)
+                    for strDataHex in strLine.split(':'):
+                        strDataHexStrip = strDataHex.strip()
                         if len(strDataHexStrip) != 0:
                             strDataBin = binascii.unhexlify(strDataHexStrip)
                             aucData.append(ord(strDataBin))
@@ -760,7 +760,7 @@ class AppImage:
         # "priv:".
         iKeyTyp_1ECC_2RSA = None
         atAttr = None
-        if string.find(strStdout, 'modulus:') != -1:
+        if strStdout.find('modulus:') != -1:
             # Looks like this is an RSA key.
             iKeyTyp_1ECC_2RSA = 2
 
@@ -806,7 +806,7 @@ class AppImage:
             sizMod = len(aucMod)
             sizExp = len(aucExp)
             uiId = None
-            for uiElementId, atAttr in __atKnownRsaSizes.iteritems():
+            for uiElementId, atAttr in __atKnownRsaSizes.items():
                 if (sizMod == atAttr['mod']) and (sizExp == atAttr['exp']):
                     uiId = uiElementId + 1
                     break
@@ -821,7 +821,7 @@ class AppImage:
                         sizExp
                     )
                 )
-                for uiElementId, atAttr in __atKnownRsaSizes.iteritems():
+                for uiElementId, atAttr in __atKnownRsaSizes.items():
                     strErr += (
                         '  RSA%d: %d bytes modulo, '
                         '%d bytes public exponent\n' % (
@@ -838,7 +838,7 @@ class AppImage:
                 'exp': aucExp
             }
 
-        elif string.find(strStdout, 'priv:') != -1:
+        elif strStdout.find('priv:') != -1:
             # Looks like this is an ECC key.
             iKeyTyp_1ECC_2RSA = 1
 
@@ -905,7 +905,7 @@ class AppImage:
             sizGy = len(aucGenY)
             sizN = len(aucOrder)
             uiId = None
-            for uiElementId, sizNumbers in __atKnownEccSizes.iteritems():
+            for uiElementId, sizNumbers in __atKnownEccSizes.items():
                 if(
                     (sizNumbers == sizD) and
                     (sizNumbers == sizQx) and

@@ -45,11 +45,11 @@ def svnversion_action(target, source, env):
     })
 
     # Read the template.
-    tTemplate = Template(source[0].get_contents())
+    tTemplate = Template(source[0].get_contents().decode("utf-8", "replace"))
 
     # Read the destination (if exists).
     try:
-        dst_oldtxt = target[0].get_contents()
+        dst_oldtxt = target[0].get_contents().decode("utf-8", "replace")
     except IOError:
         dst_oldtxt = ''
 

@@ -58,7 +58,7 @@ def build_version_strings(strProjectRootPath, strGit, strMercurial,
                 strOutput, strError = tProcess.communicate()
                 if tProcess.returncode != 0:
                     raise Exception('git failed!')
-                strGitId = string.strip(strOutput)
+                strGitId = strOutput.decode("utf-8", "replace").strip()
                 tMatch = re.match(r'[0-9a-f]{12}\+?$', strGitId)
                 if tMatch is not None:
                     # This is a repository with no tags.
@@ -136,7 +136,7 @@ def build_version_strings(strProjectRootPath, strGit, strMercurial,
                 strOutput, strError = tProcess.communicate()
                 if tProcess.returncode != 0:
                     raise Exception('git failed!')
-                strProjectVersionVCSURL = string.strip(strOutput)
+                strProjectVersionVCSURL = strOutput.decode("utf-8", "replace").strip()
             except subprocess.CalledProcessError:
                 pass
 
@@ -155,7 +155,7 @@ def build_version_strings(strProjectRootPath, strGit, strMercurial,
                 strOutput, strError = tProcess.communicate()
                 if tProcess.returncode != 0:
                     raise Exception('hg failed!')
-                strHgId = string.strip(strOutput)
+                strHgId = strOutput.decode("utf-8", "replace").strip()
                 strProjectVersionVcsVersion = strHgId
                 strProjectVersionVCS = (
                     strProjectVersionVcsSystem + strProjectVersionVcsVersion
@@ -182,7 +182,7 @@ def build_version_strings(strProjectRootPath, strGit, strMercurial,
                     strOutput, strError = tProcess.communicate()
                     if tProcess.returncode != 0:
                         raise Exception('hg failed!')
-                    strHgDate = string.strip(strOutput)
+                    strHgDate = strOutput.decode("utf-8", "replace").strip()
                     tMatch = re.match(r'(\d+)\s+([+-]?\d+)', strHgDate)
                     if tMatch is not None:
                         tTimeStamp = datetime.datetime.fromtimestamp(
@@ -312,11 +312,11 @@ def version_action(target, source, env):
     })
 
     # Read the template.
-    tTemplate = string.Template(source[0].get_contents())
+    tTemplate = string.Template(source[0].get_contents().decode("utf-8", "replace"))
 
     # Read the destination (if exists).
     try:
-        dst_oldtxt = target[0].get_contents()
+        dst_oldtxt = target[0].get_contents().decode("utf-8", "replace")
     except IOError:
         dst_oldtxt = ''
 

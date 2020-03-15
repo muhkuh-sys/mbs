@@ -218,7 +218,7 @@ def process_package(aCfg, aTool):
 
     # Does the package have a machine placeholder?
     strPackage = aTool['package']
-    if string.find(strPackage, '${machine}') > -1:
+    if strPackage.find('${machine}') > -1:
         # Get the machine name and possible alternatives.
         tPlatform = PlatformDetect()
         tPlatform.detect()

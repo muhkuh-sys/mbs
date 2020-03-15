@@ -256,7 +256,7 @@ def bootblock_action(target, source, env):
 
     # Apply source options.
     if isinstance(env['BOOTBLOCK_SRC'], dict):
-        for offset, value in env['BOOTBLOCK_SRC'].iteritems():
+        for offset, value in env['BOOTBLOCK_SRC'].items():
             uiOffset = int(offset)
             ulValue = int(value)
             if uiOffset < 0 or uiOffset > 16:
@@ -280,7 +280,7 @@ def bootblock_action(target, source, env):
 
     # Apply destination options.
     if isinstance(env['BOOTBLOCK_DST'], dict):
-        for offset, value in env['BOOTBLOCK_DST'].iteritems():
+        for offset, value in env['BOOTBLOCK_DST'].items():
             uiOffset = int(offset)
             ulValue = int(value)
             if uiOffset < 0 or uiOffset > 16:

@@ -37,13 +37,11 @@ class PlatformDetect:
         strEnvProcessorArchitecture = None
         strEnvProcessorArchiteW6432 = None
         if 'PROCESSOR_ARCHITECTURE' in os.environ:
-            strEnvProcessorArchitecture = string.lower(
-                os.environ['PROCESSOR_ARCHITECTURE']
-            )
+            strEnvProcessorArchitecture = \
+            os.environ['PROCESSOR_ARCHITECTURE'].lower()
         if 'PROCESSOR_ARCHITEW6432' in os.environ:
-            strEnvProcessorArchiteW6432 = string.lower(
-                os.environ['PROCESSOR_ARCHITEW6432']
-            )
+            strEnvProcessorArchiteW6432 = \
+            os.environ['PROCESSOR_ARCHITEW6432'].lower()
         # See here for details: https://blogs.msdn.microsoft.com/david.wang/
         # 2006/03/27/howto-detect-process-bitness/
         if((strEnvProcessorArchitecture == 'amd64') or
@@ -67,7 +65,7 @@ class PlatformDetect:
 
         # Try to parse the output of the 'getconf LONG_BIT' command.
         strOutput = subprocess.check_output(['getconf', 'LONG_BIT'])
-        strOutputStrip = string.strip(strOutput)
+        strOutputStrip = strOutput.strip()
         if strOutputStrip == '32':
             strCpuArchitecture = 'x86'
         elif strOutputStrip == '64':
@@ -85,7 +83,7 @@ class PlatformDetect:
         }
 
         # Try to parse the output of the 'lscpu' command.
-        strOutput = subprocess.check_output(['lscpu'])
+        strOutput = subprocess.check_output(['lscpu']).decode("utf-8", "replace")
         tMatch = re.search(r'Architecture: *(\S+)', strOutput)
         if tMatch is None:
             raise Exception('Failed to get the CPU architecture with "lscpu".')
@@ -109,7 +107,7 @@ class PlatformDetect:
         for strLine in tFile:
             tMatch = re.match('DISTRIB_ID=(.+)', strLine)
             if tMatch is not None:
-                strDistributionId = string.lower(tMatch.group(1))
+                strDistributionId = tMatch.group(1).lower()
             tMatch = re.match('DISTRIB_RELEASE=(.+)', strLine)
             if tMatch is not None:
                 strDistributionVersion = tMatch.group(1)

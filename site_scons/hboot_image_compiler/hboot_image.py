@@ -37,9 +37,9 @@ import xml.dom.minidom
 import xml.etree.ElementTree
 
 import elf_support
-import option_compiler
-import patch_definitions
-import snippet_library
+from . import option_compiler
+from . import patch_definitions
+from . import snippet_library
 
 
 class ResolveDefines(ast.NodeTransformer):
@@ -256,7 +256,7 @@ class HbootImage:
             if len(atKnownFiles) == 0:
                 print('[HBootImage] Configuration: No known files.')
             else:
-                for strKey, strPath in atKnownFiles.iteritems():
+                for strKey, strPath in atKnownFiles.items():
                     print(
                         '[HBootImage] Configuration: '
                         'Known file "%s" at "%s".' % (
@@ -268,7 +268,7 @@ class HbootImage:
             if len(atGlobalDefines) == 0:
                 print('[HBootImage] Configuration: No defines.')
             else:
-                for strKey, strValue in atGlobalDefines.iteritems():
+                for strKey, strValue in atGlobalDefines.items():
                     print(
                         '[HBootImage] Configuration: '
                         'Define %s=%s' % (
@@ -990,7 +990,7 @@ class HbootImage:
         if len(strSegmentsToDump) != 0:
             astrSegmentsToDump = [
                 strSegment.strip() for strSegment in
-                string.split(strSegmentsToDump, ',')
+                strSegmentsToDump.split(',')
             ]
 
         # Extract the segments.
@@ -1520,11 +1520,11 @@ class HbootImage:
                     if strDataUint is None:
                         raise Exception('No text in node "UInt32" found!')
 
-                    astrNumbers = string.split(strDataUint, ',')
+                    astrNumbers = strDataUint.split(',')
                     aulNumbers = array.array('I')
                     for strNumber in astrNumbers:
                         ulNum = self.__parse_numeric_expression(
-                            string.strip(strNumber)
+                            strNumber.strip()
                         )
                         aulNumbers.append(ulNum)
 
@@ -1547,11 +1547,11 @@ class HbootImage:
                     if strDataUint is None:
                         raise Exception('No text in node "UInt16" found!')
 
-                    astrNumbers = string.split(strDataUint, ',')
+                    astrNumbers = strDataUint.split(',')
                     ausNumbers = array.array('H')
                     for strNumber in astrNumbers:
                         usNum = self.__parse_numeric_expression(
-                            string.strip(strNumber)
+                            strNumber.strip()
                         )
                         ausNumbers.append(usNum)
 
@@ -1574,11 +1574,11 @@ class HbootImage:
                     if strDataUint is None:
                         raise Exception('No text in node "UInt8" found!')
 
-                    astrNumbers = string.split(strDataUint, ',')
+                    astrNumbers = strDataUint.split(',')
                     aucNumbers = array.array('B')
                     for strNumber in astrNumbers:
                         ucNum = self.__parse_numeric_expression(
-                            string.strip(strNumber)
+                            strNumber.strip()
                         )
                         aucNumbers.append(ucNum)
 
@@ -1654,11 +1654,11 @@ class HbootImage:
                                     raise Exception('No text in node '
                                                     '"UInt32" found!')
 
-                                astrNumbers = string.split(strDataUint, ',')
+                                astrNumbers = strDataUint.split(',')
                                 aulNumbers = array.array('I')
                                 for strNumber in astrNumbers:
                                     ulNum = self.__parse_numeric_expression(
-                                        string.strip(strNumber)
+                                        strNumber.strip()
                                     )
                                     aulNumbers.append(ulNum)
 
@@ -1675,11 +1675,11 @@ class HbootImage:
                                     raise Exception('No text in node '
                                                     '"UInt16" found!')
 
-                                astrNumbers = string.split(strDataUint, ',')
+                                astrNumbers = strDataUint.split(',')
                                 ausNumbers = array.array('H')
                                 for strNumber in astrNumbers:
                                     usNum = self.__parse_numeric_expression(
-                                        string.strip(strNumber)
+                                        strNumber.strip()
                                     )
                                     ausNumbers.append(usNum)
 
@@ -1696,11 +1696,11 @@ class HbootImage:
                                     raise Exception('No text in node "UInt8" '
                                                     ' found!')
 
-                                astrNumbers = string.split(strDataUint, ',')
+                                astrNumbers = strDataUint.split(',')
                                 aucNumbers = array.array('B')
                                 for strNumber in astrNumbers:
                                     ucNum = self.__parse_numeric_expression(
-                                        string.strip(strNumber)
+                                        strNumber.strip()
                                     )
                                     aucNumbers.append(ucNum)
 
@@ -2455,7 +2455,7 @@ class HbootImage:
         tReData = re.compile('^[0-9a-fA-F]{2}(:[0-9a-fA-F]{2})*:?$')
         iState = 0
         for strLine in iter(strStdout.splitlines()):
-            strLine = string.strip(strLine)
+            strLine = strLine.strip()
             if iState == 0:
                 if strLine == strID:
                     iState = 1
@@ -2464,8 +2464,8 @@ class HbootImage:
                 if tMatch is None:
                     break
                 else:
-                    for strDataHex in string.split(strLine, ':'):
-                        strDataHexStrip = string.strip(strDataHex)
+                    for strDataHex in strLine.split(':'):
+                        strDataHexStrip = strDataHex.strip()
                         if len(strDataHexStrip) != 0:
                             strDataBin = binascii.unhexlify(strDataHexStrip)
                             aucData.append(ord(strDataBin))
@@ -2559,7 +2559,7 @@ class HbootImage:
         if fIsPublicKey is True:
             strMatchExponent = 'Exponent:'
             strMatchModulus = 'Modulus:'
-        if string.find(strStdout, strMatchModulus) != -1:
+        if strStdout.find(strMatchModulus) != -1:
             # Looks like this is an RSA key.
             iKeyTyp_1ECC_2RSA = 2
 
@@ -2599,7 +2599,7 @@ class HbootImage:
             sizMod = len(aucMod)
             sizExp = len(aucExp)
             uiId = None
-            for uiElementId, atAttr in __atKnownRsaSizes.iteritems():
+            for uiElementId, atAttr in __atKnownRsaSizes.items():
                 if (sizMod == atAttr['mod']) and (sizExp == atAttr['exp']):
                     # Found the RSA type.
                     if(
@@ -2622,7 +2622,7 @@ class HbootImage:
                         sizExp
                     )
                 )
-                for uiElementId, atAttr in __atKnownRsaSizes.iteritems():
+                for uiElementId, atAttr in __atKnownRsaSizes.items():
                     strErr += (
                         '  RSA%d: %d bytes modulo, '
                         '%d bytes public exponent\n' % (
@@ -2639,7 +2639,7 @@ class HbootImage:
                 'exp': aucExp
             }
 
-        elif string.find(strStdout, 'priv:') != -1:
+        elif strStdout.find('priv:') != -1:
             # Looks like this is an ECC key.
             iKeyTyp_1ECC_2RSA = 1
 
@@ -2708,7 +2708,7 @@ class HbootImage:
             sizGy = len(aucGenY)
             sizN = len(aucOrder)
             uiId = None
-            for uiElementId, sizNumbers in __atKnownEccSizes.iteritems():
+            for uiElementId, sizNumbers in __atKnownEccSizes.items():
                 if(
                     (sizNumbers == sizD) and
                     (sizNumbers == sizQx) and
@@ -3948,12 +3948,12 @@ class HbootImage:
             # Get the comma separated list of devices.
             strDeviceList = tChunkNode.getAttribute('device')
             # Split the list by comma.
-            astrDeviceList = string.split(strDeviceList, ',')
+            astrDeviceList = strDeviceList.split(',')
             aucDevices = array.array('B')
             for strDevice in astrDeviceList:
                 # Parse the data.
                 ulDevice = self.__parse_numeric_expression(
-                    string.strip(strDevice)
+                    strDevice.strip()
                 )
                 if ulDevice < 0:
                     raise Exception('The device attribute does not accept a '
@@ -4923,7 +4923,7 @@ class HbootImage:
         tChunkAttributes['aulHash'] = array.array('I', strHash)
 
     def __string_to_bool(self, strBool):
-        strBool = string.upper(strBool)
+        strBool = strBool.upper()
         if(
             (strBool == 'TRUE') or
             (strBool == 'T') or

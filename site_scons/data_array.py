@@ -109,8 +109,7 @@ def dataarray_action(target, source, env):
     tFileTarget.close()
 
     # Write the header file.
-    strDefineName = string.replace(
-        string.upper(os.path.basename(target[1].get_path())),
+    strDefineName = os.path.basename(target[1].get_path()).upper().replace(
         '.',
         '_'
     )

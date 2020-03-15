@@ -38,10 +38,10 @@ def hash_action(target, source, env):
     strWorkingDir = os.path.dirname(target[0].get_path())
 
     # Create a new hash object with the requested algorithm.
-    astrHashIDs = string.split(env['HASH_ALGORITHM'], ',')
+    astrHashIDs = env['HASH_ALGORITHM'].split(',')
     for strHashName in astrHashIDs:
-        strHashID = string.lower(string.strip(strHashName))
-        strHashID_upper = string.upper(strHashID)
+        strHashID = strHashName.strip().lower()
+        strHashID_upper = strHashID.upper()
 
         try:
             tHashBase = hashlib.new(strHashID)
