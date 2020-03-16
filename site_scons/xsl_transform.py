@@ -62,7 +62,7 @@ def xslt_action(target, source, env):
         print('[MSG]: %s' % strMsg)
 
     # Write the transformed data to the target file.
-    file_target = open(target[0].get_path(), 'wt')
+    file_target = open(target[0].get_path(), 'wb')
     file_target.write(strResult)
     file_target.close()
 

@@ -50,7 +50,7 @@ import pom_template
 import svnversion
 import uuencode
 import version
-#import xsl_transform
+import xsl_transform
 
 
 # ---------------------------------------------------------------------------
@@ -165,7 +165,7 @@ def CreateEnvironment(env, astrToolPatterns=None):
     svnversion.ApplyToEnv(tEnvNew)
     uuencode.ApplyToEnv(tEnvNew)
     version.ApplyToEnv(tEnvNew)
-#    xsl_transform.ApplyToEnv(tEnvNew)
+    xsl_transform.ApplyToEnv(tEnvNew)
 
     # Add the reference to the list of environments.
     if env is not None:

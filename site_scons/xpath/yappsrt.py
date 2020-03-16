@@ -2,8 +2,8 @@
 #
 # This module is needed to run generated parsers.
 
-from string import join, count, find, rfind
 import re
+
 
 class SyntaxError(Exception):
     """When we run into an unexpected token, this is the exception to use"""
@@ -11,13 +11,18 @@ class SyntaxError(Exception):
         Exception.__init__(self)
         self.pos = pos
         self.msg = msg
+
     def __repr__(self):
-        if self.pos < 0: return "#<syntax-error>"
-        else: return "SyntaxError[@ char %s: %s]" % (repr(self.pos), self.msg)
+        if self.pos < 0:
+            return "#<syntax-error>"
+        else:
+            return "SyntaxError[@ char %s: %s]" % (repr(self.pos), self.msg)
+
 
 class NoMoreTokens(Exception):
     """Another exception object, for when we run out of tokens"""
     pass
+
 
 class Scanner:
     def __init__(self, patterns, ignore, input):
@@ -36,29 +41,37 @@ class Scanner:
         if patterns is not None:
             self.patterns = []
             for k, r in patterns:
-                self.patterns.append( (k, re.compile(r)) )
-        
+                self.patterns.append((k, re.compile(r)))
+
     def token(self, i, restrict=0):
         """Get the i'th token, and if i is one past the end, then scan
         for another token; restrict is a list of tokens that
         are allowed, or 0 for any token."""
-        if i == len(self.tokens): self.scan(restrict)
+        if i == len(self.tokens):
+            self.scan(restrict)
         if i < len(self.tokens):
             # Make sure the restriction is more restricted
             if restrict and self.restrictions[i]:
                 for r in restrict:
                     if r not in self.restrictions[i]:
-                        raise NotImplementedError("Unimplemented: restriction set changed")
+                        raise NotImplementedError(
+                            "Unimplemented: restriction set changed"
+                        )
             return self.tokens[i]
         raise NoMoreTokens()
-    
+
     def __repr__(self):
         """Print the last 10 tokens that have been scanned in"""
         output = ''
         for t in self.tokens[-10:]:
-            output = '%s\n  (@%s)  %s  =  %s' % (output,t[0],t[2],repr(t[3]))
+            output = '%s\n  (@%s)  %s  =  %s' % (
+                output,
+                t[0],
+                t[2],
+                repr(t[3])
+            )
         return output
-    
+
     def scan(self, restrict):
         """Should scan another token and add it to the list, self.tokens,
         and add the restriction to self.restrictions"""
@@ -77,12 +90,12 @@ class Scanner:
                     # We got a match that's better than the previous one
                     best_pat = p
                     best_match = len(m.group(0))
-                    
+
             # If we didn't find anything, raise an error
             if best_pat == '(error)' and best_match < 0:
                 msg = "Bad Token"
                 if restrict:
-                    msg = "Trying to find one of "+join(restrict,", ")
+                    msg = "Trying to find one of " + restrict.join(", ")
                 raise SyntaxError(self.pos, msg)
 
             # If we found something that isn't to be ignored, return it
@@ -101,17 +114,18 @@ class Scanner:
                 # This token should be ignored ..
                 self.pos = self.pos + best_match
 
+
 class Parser:
     def __init__(self, scanner):
         self._scanner = scanner
         self._pos = 0
-        
+
     def _peek(self, *types):
         """Returns the token type for lookahead; if there are any args
         then the list of args is the set of token types to allow"""
         tok = self._scanner.token(self._pos, types)
         return tok[2]
-        
+
     def _scan(self, type):
         """Returns the matched text, and moves to the next token"""
         tok = self._scanner.token(self._pos, [type])
@@ -121,29 +135,30 @@ class Parser:
         return tok[3]
 
 
-
 def print_error(input, err, scanner):
     """This is a really dumb long function to print error messages nicely."""
     p = err.pos
     # Figure out the line number
-    line = count(input[:p], '\n')
-    print err.msg+" on line "+repr(line+1)+":"
+    line = input[:p].count('\n')
+    print(err.msg + " on line " + repr(line + 1) + ":")
     # Now try printing part of the line
     text = input[max(p-80, 0):p+80]
     p = p - max(p-80, 0)
 
     # Strip to the left
-    i = rfind(text[:p], '\n')
-    j = rfind(text[:p], '\r')
-    if i < 0 or (0 <= j < i): i = j
+    i = text[:p].rfind('\n')
+    j = text[:p].rfind('\r')
+    if i < 0 or (0 <= j < i):
+        i = j
     if 0 <= i < p:
         p = p - i - 1
         text = text[i+1:]
 
     # Strip to the right
-    i = find(text,'\n', p)
-    j = find(text,'\r', p)
-    if i < 0 or (0 <= j < i): i = j
+    i = text.find('\n', p)
+    j = text.find('\r', p)
+    if i < 0 or (0 <= j < i):
+        i = j
     if i >= 0:
         text = text[:i]
 
@@ -154,21 +169,25 @@ def print_error(input, err, scanner):
         p = p - 7
 
     # Now print the string, along with an indicator
-    print '> ',text
-    print '> ',' '*p + '^'
-    print 'List of nearby tokens:', scanner
+    print('> ', text)
+    print('> ', ' '*p + '^')
+    print('List of nearby tokens:', scanner)
+
 
 def wrap_error_reporter(parser, rule):
     return_value = None
     try:
         return_value = getattr(parser, rule)()
-    except SyntaxError, s:
+    except SyntaxError as s:
         input = parser._scanner.input
         try:
             print_error(input, s, parser._scanner)
         except ImportError:
-            print 'Syntax Error',s.msg,'on line',1+count(input[:s.pos], '\n')
+            print('Syntax Error %s on line %d' % (
+                str(s.msg),
+                1 + input[:s.pos].count('\n')
+            ))
     except NoMoreTokens:
-        print 'Could not complete parsing; stopped around here:'
-        print parser._scanner
+        print('Could not complete parsing; stopped around here:')
+        print(parser._scanner)
     return return_value

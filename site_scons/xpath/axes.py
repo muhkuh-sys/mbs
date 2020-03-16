@@ -1,7 +1,7 @@
-from exceptions import *
+import xpath.exceptions
 
 import xml.dom
-from itertools import *
+import itertools
 
 #
 # XPath axes.
@@ -9,6 +9,7 @@ from itertools import *
 
 # Dictionary of all axis functions.
 axes = {}
+
 
 def axisfn(reverse=False, principal_node_type=xml.dom.Node.ELEMENT_NODE):
     """Axis function decorator.
@@ -25,9 +26,11 @@ def axisfn(reverse=False, principal_node_type=xml.dom.Node.ELEMENT_NODE):
         return f
     return decorate
 
+
 @axisfn()
 def child(node):
     return node.childNodes
+
 
 @axisfn()
 def descendant(node):
@@ -35,10 +38,12 @@ def descendant(node):
         for node in descendant_or_self(child):
             yield node
 
+
 @axisfn()
 def parent(node):
     if node.parentNode is not None:
         yield node.parentNode
+
 
 @axisfn(reverse=True)
 def ancestor(node):
@@ -46,17 +51,20 @@ def ancestor(node):
         node = node.parentNode
         yield node
 
+
 @axisfn()
 def following_sibling(node):
     while node.nextSibling is not None:
         node = node.nextSibling
         yield node
 
+
 @axisfn(reverse=True)
 def preceding_sibling(node):
     while node.previousSibling is not None:
         node = node.previousSibling
         yield node
+
 
 @axisfn()
 def following(node):
@@ -66,6 +74,7 @@ def following(node):
             for n in descendant_or_self(node):
                 yield n
         node = node.parentNode
+
 
 @axisfn(reverse=True)
 def preceding(node):
@@ -77,20 +86,26 @@ def preceding(node):
                 yield n
         node = node.parentNode
 
+
 @axisfn(principal_node_type=xml.dom.Node.ATTRIBUTE_NODE)
 def attribute(node):
     if node.attributes is not None:
         return (node.attributes.item(i)
-                for i in xrange(node.attributes.length))
+                for i in range(node.attributes.length))
     return ()
+
 
 @axisfn()
 def namespace(node):
-    raise XPathNotImplementedError("namespace axis is not implemented")
+    raise xpath.exceptions.XPathNotImplementedError(
+        "namespace axis is not implemented"
+    )
+
 
 @axisfn()
 def self(node):
     yield node
+
 
 @axisfn()
 def descendant_or_self(node):
@@ -99,6 +114,7 @@ def descendant_or_self(node):
         for node in descendant_or_self(child):
             yield node
 
+
 @axisfn(reverse=True)
 def ancestor_or_self(node):
-    return chain([node], ancestor(node))
+    return itertools.chain([node], ancestor(node))

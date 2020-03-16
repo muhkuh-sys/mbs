@@ -1,12 +1,12 @@
-from xpath.exceptions import *
 import xpath.exceptions
 import xpath.expr
 import xpath.parser
 import xpath.yappsrt
-import functions
+import xpath.functions
 
 __all__ = ['find', 'findnode', 'findvalue', 'XPathContext', 'XPath']
 __all__.extend((x for x in dir(xpath.exceptions) if not x.startswith('_')))
+
 
 def api(f):
     """Decorator for functions and methods that are part of the external
@@ -20,17 +20,18 @@ def api(f):
     def api_function(self, *args, **kwargs):
         try:
             return f(self, *args, **kwargs)
-        except XPathError, e:
+        except xpath.exceptions.XPathError as e:
             raise e
     api_function.__name__ = f.__name__
     api_function.__doc__ = f.__doc__
     return api_function
 
+
 class XPathContext(object):
-    functions = functions.xpath_functions
-    
+    functions = xpath.functions.xpath_functions
+
     def __init__(self, document=None, **kwargs):
-        self.namespaces = {None:None}
+        self.namespaces = {None: None}
         self.variables = {}
 
         if document is not None:
@@ -38,7 +39,7 @@ class XPathContext(object):
                 document = document.ownerDocument
             if document.documentElement is not None:
                 attrs = document.documentElement.attributes
-                for attr in (attrs.item(i) for i in xrange(attrs.length)):
+                for attr in (attrs.item(i) for i in range(attrs.length)):
                     if attr.name == 'xmlns':
                         self.namespaces[None] = attr.value
                     elif attr.name.startswith('xmlns:'):
@@ -53,7 +54,7 @@ class XPathContext(object):
         return dup
 
     def update(self, default_namespace=None, namespaces=None,
-                  variables=None, **kwargs):
+               variables=None, **kwargs):
         if namespaces is not None:
             self.namespaces = namespaces
         if default_namespace is not None:
@@ -79,6 +80,7 @@ class XPathContext(object):
     def findvalues(self, expr, node, **kwargs):
         return xpath.findvalues(expr, node, context=self, **kwargs)
 
+
 class XPath():
     _max_cache = 100
     _cache = {}
@@ -89,8 +91,8 @@ class XPath():
         try:
             parser = xpath.parser.XPath(xpath.parser.XPathScanner(str(expr)))
             self.expr = parser.XPath()
-        except xpath.yappsrt.SyntaxError, e:
-            raise XPathParseError(str(expr), e.pos, e.msg)
+        except xpath.yappsrt.SyntaxError as e:
+            raise xpath.exceptions.XPathParseError(str(expr), e.pos, e.msg)
 
     @classmethod
     def get(cls, s):
@@ -117,8 +119,10 @@ class XPath():
     @api
     def findnode(self, node, context=None, **kwargs):
         result = self.find(node, context, **kwargs)
-        if not xpath.expr.nodesetp(result):
-            raise XPathTypeError("expression is not a node-set")
+        if not xpath.tools.nodesetp(result):
+            raise xpath.exceptions.XPathTypeError(
+                "expression is not a node-set"
+            )
         if len(result) == 0:
             return None
         return result[0]
@@ -126,7 +130,7 @@ class XPath():
     @api
     def findvalue(self, node, context=None, **kwargs):
         result = self.find(node, context, **kwargs)
-        if xpath.expr.nodesetp(result):
+        if xpath.tools.nodesetp(result):
             if len(result) == 0:
                 return None
             result = xpath.tools.string(result, XPathContext())
@@ -135,8 +139,10 @@ class XPath():
     @api
     def findvalues(self, node, context=None, **kwargs):
         result = self.find(node, context, **kwargs)
-        if not xpath.expr.nodesetp(result):
-            raise XPathTypeError("expression is not a node-set")
+        if not xpath.tools.nodesetp(result):
+            raise xpath.exceptions.XPathTypeError(
+                "expression is not a node-set"
+            )
         return [xpath.expr.string_value(x) for x in result]
 
     def __repr__(self):
@@ -147,17 +153,21 @@ class XPath():
     def __str__(self):
         return str(self.expr)
 
+
 @api
 def find(expr, node, **kwargs):
     return XPath.get(expr).find(node, **kwargs)
+
 
 @api
 def findnode(expr, node, **kwargs):
     return XPath.get(expr).findnode(node, **kwargs)
 
+
 @api
 def findvalue(expr, node, **kwargs):
     return XPath.get(expr).findvalue(node, **kwargs)
+
 
 @api
 def findvalues(expr, node, **kwargs):
