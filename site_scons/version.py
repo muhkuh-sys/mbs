@@ -135,8 +135,9 @@ def build_version_strings(strProjectRootPath, strGit, strMercurial,
                 )
                 strOutput, strError = tProcess.communicate()
                 if tProcess.returncode != 0:
-                    raise Exception('git failed!')
-                strProjectVersionVCSURL = strOutput.decode("utf-8", "replace").strip()
+                    strProjectVersionVCSURL = ''
+                else:
+                    strProjectVersionVCSURL = strOutput.decode("utf-8", "replace").strip()
             except subprocess.CalledProcessError:
                 pass
 
