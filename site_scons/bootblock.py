@@ -187,7 +187,7 @@ def bootblock_action(target, source, env):
             uiPadBytes = 4 - uiPadBytes
             strBinFile += '\0' * uiPadBytes
         # Get the size of the evetually padded data.
-        ulApplicationDwordSize = len(strBinFile) / 4
+        ulApplicationDwordSize = int(len(strBinFile) / 4)
         aulApplicationData = array.array('I')
         aulApplicationData.fromstring(strBinFile)
 
