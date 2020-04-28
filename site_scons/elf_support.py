@@ -302,6 +302,10 @@ def get_macro_definitions(env, strFileName):
         re.compile(
             r'\s+DW_MACRO_GNU_define_indirect - lineno : \d+ '
             r'macro : (\w+)\s+(.*)'
+        ),
+        # match gcc 9.2 output
+        re.compile(
+            r'\s+DW_MACRO_define_strp - lineno : \d+ macro : (\w+)\s+(.*)'
         )
     ]
     # Loop over all lines in the ".debug_macinfo" section.
