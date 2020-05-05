@@ -31,7 +31,7 @@ def hexdump_action(target, source, env):
     sizMax = int(env['HEXDUMP_MAXSIZE'], 0)
 
     # Read the source data into an array.
-    strSourceData = source[0].get_contents().decode("utf-8", "replace")
+    strSourceData = source[0].get_contents()
     # A 0 for the maximum size means all data.
     if sizMax == 0:
         sizMax = len(strSourceData)
