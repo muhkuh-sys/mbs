@@ -54,7 +54,7 @@ class ProgressOutput:
         else:
             # Try to get a maximum of 20 lines at a maximum of 1MB dots.
             sizMaxLines = 20
-            sizDot = sizTotal / self.m_uiDotsPerLine / sizMaxLines
+            sizDot = round(sizTotal / self.m_uiDotsPerLine / sizMaxLines)
             if sizDot > 1024 * 1024:
                 sizDot = 1024 * 1024
             elif sizDot < 2048:
