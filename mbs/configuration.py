@@ -148,8 +148,8 @@ def create():
             os.path.expanduser('~/.mbs/depack')
         ),
         'repositories': [
-            'http://downloads.sourceforge.net/project/muhkuh/mbs',
-            'https://dl.bintray.com/muhkuh/Muhkuh'
+            'https://dl.bintray.com/muhkuh/Muhkuh',
+            'http://downloads.sourceforge.net/project/muhkuh/mbs'
         ],
         'filter': dict({
             'targets/site_scons/site_init.py': 'templates/site_init.py'
