@@ -1743,7 +1743,7 @@ class HbootImage:
         pulLoadAddress = atData['load_address']
 
         # Pad the application size to a multiple of DWORDs.
-        strPadding = chr(0x00) * ((4 - (len(strData) % 4)) & 3)
+        strPadding = b'\x00' * ((4 - (len(strData) % 4)) & 3)
         strChunk = strData + strPadding
 
         # Convert the padded data to an array.
