@@ -138,7 +138,7 @@ def build_version_strings(strProjectRootPath, strGit, strMercurial,
                     strProjectVersionVCSURL = ''
                 else:
                     strProjectVersionVCSURL = strOutput.decode("utf-8", "replace").strip()
-            except subprocess.CalledProcessError:
+            except Exception:
                 pass
 
     elif os.path.exists(os.path.join(strProjectRootPath, '.hg')):
