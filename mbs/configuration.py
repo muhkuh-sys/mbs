@@ -88,19 +88,7 @@ def read_project_config(strConfigPath, aCfg):
         # Add the complete version.
         aCfg['project_version'] = strVersion
 
-        strPath = tXml.findtext('paths/marker')
-        if strPath is not None:
-            aCfg['marker_path'] = os.path.abspath(os.path.expanduser(strPath))
-
-        strPath = tXml.findtext('paths/repository')
-        if strPath is not None:
-            aCfg['repository_path'] = os.path.abspath(
-                os.path.expanduser(strPath)
-            )
-
-        strPath = tXml.findtext('paths/depack')
-        if strPath is not None:
-            aCfg['depack_path'] = os.path.abspath(os.path.expanduser(strPath))
+        read_config_paths(aCfg, tXml)
 
         tElement = tXml.find('repositories')
         if tElement is not None:
