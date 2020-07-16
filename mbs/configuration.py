@@ -80,6 +80,16 @@ def read_project_config(strConfigPath, aCfg):
         tXml = xml.etree.ElementTree.ElementTree()
         tXml.parse(strConfigPath)
 
+        # Get the project group and module.
+        strGroup = tXml.getroot().get('group')
+        if strGroup is None:
+            raise Exception('The setup file does not specify a group.')
+        aCfg['project_group'] = strGroup
+        strModule = tXml.getroot().get('module')
+        if strModule is None:
+            raise Exception('The setup file does not specify a module.')
+        aCfg['project_module'] = strModule
+
         # Get the complete version.
         strVersion = tXml.findtext('project_version')
         # Check the version string.

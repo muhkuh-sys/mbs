@@ -29,6 +29,10 @@ def create_substitute_dict(aCfg, strMbsDir):
     # Get the scons path.
     strSconsPath = aCfg['scons_path']
 
+    # Get the project group and module.
+    strProjectGroup = aCfg['project_group']
+    strProjectModule = aCfg['project_module']
+
     # Get the project version.
     strProjectVersion = aCfg['project_version']
 
@@ -56,6 +60,8 @@ def create_substitute_dict(aCfg, strMbsDir):
         ),
         'PYTHON': sys.executable,
         'SCONS_DIR': strSconsPath,
+        'PROJECT_GROUP': strProjectGroup,
+        'PROJECT_MODULE': strProjectModule,
         'PROJECT_VERSION': strProjectVersion,
         'TOOLS': strTools,
         'MBS_DIR': strMbsDir

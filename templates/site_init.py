@@ -10,6 +10,10 @@ SCons.SConsign.DB_Name = 'targets/.sconsign'
 # Define where all the depacked tools are.
 TOOLS=${TOOLS}
 
+# Define the project group and module.
+PROJECT_GROUP='${PROJECT_GROUP}'
+PROJECT_MODULE='${PROJECT_MODULE}'
+
 # Define the project version.
 PROJECT_VERSION='${PROJECT_VERSION}'
 
