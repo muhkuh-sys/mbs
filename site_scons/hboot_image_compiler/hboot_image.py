@@ -2086,16 +2086,44 @@ class HbootImage:
                 if fBool is not None:
                     fApplyFirewallSettings = fBool
 
+
+            # enable bxlr-debug-function
+            # A bxlr_index is a address in memory, which is traversed before a exec-chunk is executed.
+            # You can activate this function in any exec-chunk. There are 16 bxlr-addresses.
+            # you can set a brakpoint to such addresses.
+            # ( 4bit ^= 16 bxlr-addresses).
+            fBxlrIndex = None
+            strIdx = tChunkNode.getAttribute('bxlr_index')
+            if len(strIdx) != 0:
+                # we hve a index, activate use of trampoline:
+                try:
+                    intIdx = int(strIdx, 0)
+                except BaseException as e:
+                    m = "In chunk idx %s: You have provided %s as a bxlr_index index. You are supposed to provide a number in range of [0,15]."
+                    raise BaseException(e, m)
+
+                if 0 <= intIdx < 16:  #  !(MSK_EXEC_CHUNK_FLAGS_BxLrIndex) && intIndex != 0
+                    fBxlrIndex = intIdx
+                else:
+                    m = "In chunk idx %s expected attribute 'bxlr_index' to be between 0 to 15. Your bxlr_index index is at %s" % (uiChunkIndex, intIdx)
+                    raise(BaseException(m))
+                # todo: Via a log message I would like to tell the user where to put the breakpoint for chunk ID XY.
+
             # Combine all flags.
             ulFlags = 0
             if fStartAppCpu is True:
-                ulFlags |= 1
+                ulFlags |= 0x00000001  # MSK_EXEC_CHUNK_FLAGS_StartAppCpu
             if fLockFirewallSettings is True:
-                ulFlags |= 2
+                ulFlags |= 0x00000002  # MSK_EXEC_CHUNK_FLAGS_LockFirewall
             if fActivateDebugging is True:
-                ulFlags |= 4
+                ulFlags |= 0x00000004  # MSK_EXEC_CHUNK_FLAGS_ActivateDebugging
             if fApplyFirewallSettings is True:
-                ulFlags |= 8
+                ulFlags |= 0x00000008  # MSK_EXEC_CHUNK_FLAGS_ApplyFirewallSettings
+            if fBxlrIndex is not None:
+                # activate bxlr-function
+                ulFlags |= 0x00000100
+                # keep in mind, this is not a flag. it is a 4-bit value representing the index of a bxlr
+                ulFlags |= fBxlrIndex << 4  # (MSK_EXEC_CHUNK_FLAGS_BxLrIndex) << SRT_EXEC_CHUNK_FLAGS_BxLrIndex
 
         aulChunk = array.array('I')
         aulChunk.append(self.__get_tag_id('E', 'X', 'E', 'C'))
