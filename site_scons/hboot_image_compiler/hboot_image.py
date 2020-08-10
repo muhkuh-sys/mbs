@@ -37,9 +37,9 @@ import xml.dom.minidom
 import xml.etree.ElementTree
 
 import elf_support
-from . import option_compiler
-from . import patch_definitions
-from . import snippet_library
+import option_compiler
+import patch_definitions
+import snippet_library
 
 
 class ResolveDefines(ast.NodeTransformer):
