@@ -32,14 +32,21 @@ import re
 import string
 import platform
 import subprocess
+import sys
 import tempfile
 import xml.dom.minidom
 import xml.etree.ElementTree
 
 import elf_support
-import option_compiler
-import patch_definitions
-import snippet_library
+
+if sys.version_info[0] == 2:
+    import option_compiler
+    import patch_definitions
+    import snippet_library
+elif sys.version_info[0]==3:
+    from . import option_compiler
+    from . import patch_definitions
+    from . import snippet_library
 
 
 class ResolveDefines(ast.NodeTransformer):
