@@ -1,5 +1,25 @@
 # -*- coding: utf-8 -*-
 
+# ***************************************************************************
+# *   Copyright (C) 2019 by Hilscher GmbH                                   *
+# *   netXsupport@hilscher.com                                              *
+# *                                                                         *
+# *   This program is free software; you can redistribute it and/or modify  *
+# *   it under the terms of the GNU General Public License as published by  *
+# *   the Free Software Foundation; either version 2 of the License, or     *
+# *   (at your option) any later version.                                   *
+# *                                                                         *
+# *   This program is distributed in the hope that it will be useful,       *
+# *   but WITHOUT ANY WARRANTY; without even the implied warranty of        *
+# *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         *
+# *   GNU General Public License for more details.                          *
+# *                                                                         *
+# *   You should have received a copy of the GNU General Public License     *
+# *   along with this program; if not, write to the                         *
+# *   Free Software Foundation, Inc.,                                       *
+# *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
+# ***************************************************************************
+
 import array
 import ast
 import base64
@@ -10,6 +30,7 @@ import os
 import os.path
 import re
 import string
+import platform
 import subprocess
 import tempfile
 import xml.dom.minidom
@@ -94,6 +115,7 @@ class HbootImage:
     __XmlKeyromContents = None
     __cfg_openssl = 'openssl'
     __cfg_openssloptions = None
+    __fOpensslRandOff = False
 
     # This is the revision for the netX10, netX51 and netX52 Secmem zone.
     __SECMEM_ZONE2_REV1_0 = 0x81
@@ -108,6 +130,7 @@ class HbootImage:
     __MAGIC_COOKIE_NETX90_ALT = 0xf3ad9e00
     __MAGIC_COOKIE_NETX90B = 0xf3beaf00
     __MAGIC_COOKIE_NETX90B_ALT = 0xf3ad9e00
+    __MAGIC_COOKIE_NETXXL_MPW = 0xf2beaf00
 
     __resolver = None
 
@@ -123,12 +146,14 @@ class HbootImage:
     def __init__(self, tEnv, strNetxType, **kwargs):
         strPatchDefinition = None
         strKeyromFile = None
+        strCfgOpenssl = "openssl"
         astrIncludePaths = []
         astrSnippetSearchPaths = []
         atKnownFiles = {}
         atGlobalDefines = {}
         atOpensslOptions = []
         fVerbose = False
+        fOpensslRandOff = False
 
         # Parse the kwargs.
         for strKey, tValue in iter(kwargs.items()):
@@ -169,14 +194,25 @@ class HbootImage:
             elif strKey == 'openssloptions':
                 atOpensslOptions = tValue
 
+            elif strKey == 'opensslexe':
+                strCfgOpenssl = tValue
+
+            elif strKey == 'opensslrandoff':
+                fOpensslRandOff = bool(tValue)
+
         # Set the default search path if nothing was specified.
         if len(astrSnippetSearchPaths) == 0:
             astrSnippetSearchPaths = ['sniplib']
 
         self.__fVerbose = fVerbose
 
+        self.__fOpensslRandOff = fOpensslRandOff
+
         # Do not override anything in the pre-calculated header yet.
         self.__atHeaderOverride = [None] * 16
+
+        # Add info to be used by the flasher to the header of the boot image.
+        self.__fSetFlasherParameters = False
 
         # No chunks yet.
         self.__atChunkData = None
@@ -192,6 +228,9 @@ class HbootImage:
 
         # Set the OpenSSL options.
         self.__cfg_openssloptions = atOpensslOptions
+
+        # Set the OpenSSL Path.
+        self.__cfg_openssl = strCfgOpenssl
 
         if self.__fVerbose:
             print('[HBootImage] Configuration: netX type = %s' % strNetxType)
@@ -243,7 +282,7 @@ class HbootImage:
             self.__cPatchDefinitions.read_patch_definition(strPatchDefinition)
 
         self.__cSnippetLibrary = snippet_library.SnippetLibrary(
-            '.sniplib.dblite',
+            ':memory:',
             astrSnippetSearchPaths,
             debug=self.__fVerbose
         )
@@ -544,6 +583,90 @@ class HbootImage:
                 for tNode in atIncludeNodes:
                     self.__preprocess_include(tNode)
 
+    BUS_SPI = 1
+    BUS_IFlash = 2
+    atDeviceMapping_netx4000 = {
+        'SQIROM0': {'bus': BUS_SPI, 'unit': 0, 'chip_select': 0},
+        'SQIROM1': {'bus': BUS_SPI, 'unit': 1, 'chip_select': 0},
+        }
+
+    atDeviceMapping_netx90 = {
+        'INTFLASH': {'bus': BUS_IFlash, 'unit': 3, 'chip_select': 0},
+        'SQIROM': {'bus': BUS_SPI,    'unit': 0, 'chip_select': 0},
+        }
+
+    ROMLOADER_CHIPTYP_NETX4000_RELAXED = 8
+    ROMLOADER_CHIPTYP_NETX90_MPW = 10
+    ROMLOADER_CHIPTYP_NETX4000_FULL = 11
+    ROMLOADER_CHIPTYP_NETX4100_SMALL = 12
+    ROMLOADER_CHIPTYP_NETX90 = 13
+    ROMLOADER_CHIPTYP_NETX90B = 14
+
+    atChipTypeMapping = {
+        'NETX90': {
+            'chip_type': ROMLOADER_CHIPTYP_NETX90,
+            'dev_mapping': atDeviceMapping_netx90
+        },
+        'NETX90B': {
+            'chip_type': ROMLOADER_CHIPTYP_NETX90B,
+            'dev_mapping': atDeviceMapping_netx90
+        },
+        'NETX90_MPW': {
+            'chip_type': ROMLOADER_CHIPTYP_NETX90_MPW,
+            'dev_mapping': atDeviceMapping_netx90
+        },
+        'NETX4000_RELAXED': {
+            'chip_type': ROMLOADER_CHIPTYP_NETX4000_RELAXED,
+            'dev_mapping': atDeviceMapping_netx4000
+        },
+        'NETX4000': {
+            'chip_type': ROMLOADER_CHIPTYP_NETX4000_FULL,
+            'dev_mapping': atDeviceMapping_netx4000
+        },
+        'NETX4100': {
+            'chip_type': ROMLOADER_CHIPTYP_NETX4100_SMALL,
+            'dev_mapping': atDeviceMapping_netx4000
+        },
+    }
+
+    # Insert information for use by the flasher:
+    # chip type, target flash device and flash offset.
+    #
+    # __strNetxType   is always set (mandatory command line arg),
+    #                 but may not be in the mapping.
+    # __strDevice     is always set, but may not be in the mapping.
+    # __ulStartOffset is always set and defaults to 0.
+    #
+    # This function is only called if selected
+    # by <Header set_flasher_parameters="true">
+    # -> Raise an error if the information can't be determined.
+    def __set_flasher_parameters(self, aBootBlock):
+        if self.__strNetxType not in self.atChipTypeMapping:
+            raise Exception(
+                "Cannot set flasher parameters for chip type %s" %
+                self.__strNetxType
+            )
+        tChipMap = self.atChipTypeMapping[self.__strNetxType]
+        ucChiptype = tChipMap['chip_type']
+        tDevMap = tChipMap['dev_mapping']
+        if self.__strDevice not in tDevMap:
+            raise Exception(
+                "Cannot set flasher parameters for device %s" %
+                self.__strDevice
+            )
+        tDevInfo = tDevMap[self.__strDevice]
+
+        ulFlashInfo = (
+            1 * ucChiptype +
+            0x100 * tDevInfo['bus'] +
+            0x10000 * tDevInfo['unit'] +
+            0x1000000 * tDevInfo['chip_select']
+        )
+        ulFlashOffset = self.__ulStartOffset
+
+        aBootBlock[5] = ulFlashInfo
+        aBootBlock[2] = ulFlashOffset
+
     def __build_standard_header(self, atChunks):
 
         ulMagicCookie = None
@@ -575,6 +698,12 @@ class HbootImage:
                 ulMagicCookie = self.__MAGIC_COOKIE_NETX90B_ALT
             else:
                 ulMagicCookie = self.__MAGIC_COOKIE_NETX90B
+            ulSignature = self.__get_tag_id('M', 'O', 'O', 'H')
+        elif self.__strNetxType == 'NETXXL_MPW':
+            if self.__tImageType == self.__IMAGE_TYPE_ALTERNATIVE:
+                raise Exception('The netXXL has no alternative images.')
+            else:
+                ulMagicCookie = self.__MAGIC_COOKIE_NETXXL_MPW
             ulSignature = self.__get_tag_id('M', 'O', 'O', 'H')
         else:
             raise Exception(
@@ -679,6 +808,20 @@ class HbootImage:
         return ulResult
 
     def __parse_header_options(self, tOptionsNode):
+        strFlashInfo = tOptionsNode.getAttribute('set_flasher_parameters')
+        if strFlashInfo == "":
+            self.__fSetFlasherParameters = False
+        elif strFlashInfo == "true":
+            self.__fSetFlasherParameters = True
+        elif strFlashInfo == "false":
+            self.__fSetFlasherParameters = False
+        else:
+            raise Exception(
+                "Incorrect value of <Header> attribute "
+                "'set_flasher_parameters': %s" %
+                strFlashInfo
+            )
+
         # Loop over all child nodes.
         for tValueNode in tOptionsNode.childNodes:
             if tValueNode.nodeType == tValueNode.ELEMENT_NODE:
@@ -742,7 +885,8 @@ class HbootImage:
             usCrc ^= ((usCrc & 0xff) << 4) << 1
         return usCrc
 
-    def __build_chunk_options(self, tChunkAttributes, atParserState, uiChunkIndex, atAllChunks):
+    def __build_chunk_options(self, tChunkAttributes, atParserState,
+                              uiChunkIndex, atAllChunks):
         tChunkNode = tChunkAttributes['tNode']
 
         atChunk = None
@@ -805,7 +949,8 @@ class HbootImage:
             elif(
                 (self.__strNetxType == 'NETX90_MPW') or
                 (self.__strNetxType == 'NETX90') or
-                (self.__strNetxType == 'NETX90B')
+                (self.__strNetxType == 'NETX90B') or
+                (self.__strNetxType == 'NETXXL_MPW')
             ):
                 # Pad the option chunk to 32 bit size.
                 strPadding = chr(0x00) * ((4 - (len(strData) % 4)) & 3)
@@ -875,6 +1020,7 @@ class HbootImage:
         # Extract the binary.
         tBinFile, strBinFileName = tempfile.mkstemp()
         os.close(tBinFile)
+
         astrCmd = [
             self.__tEnv['OBJCOPY'],
             '--output-target=binary'
@@ -884,7 +1030,15 @@ class HbootImage:
                 astrCmd.append('--only-section=%s' % strSegment)
         astrCmd.append(strAbsFilePath)
         astrCmd.append(strBinFileName)
-        subprocess.check_call(astrCmd)
+        # subprocess.check_call(astrCmd)
+
+        try:
+            subprocess.check_call(astrCmd)
+        except Exception as e:
+            print("Failed to call external program:")
+            print(astrCmd)
+            print(e)
+            raise
 
         # Get the application data.
         tBinFile = open(strBinFileName, 'rb')
@@ -963,101 +1117,191 @@ class HbootImage:
         },
         'set': {
             'atAttributes': [
-                {'name': 'address', 'type': 'uint32'},
-                {'name': 'value',   'type': 'uint32'},
-                {'name': 'unlock',  'type': 'bool', 'optional': True, 'default': False}
+                {
+                    'name': 'address',
+                    'type': 'uint32'
+                },
+                {
+                    'name': 'value',
+                    'type': 'uint32'
+                },
+                {
+                    'name': 'unlock',
+                    'type': 'bool',
+                    'optional': True,
+                    'default': False
+                }
             ],
             'ucCmd': REGI_COMMAND_LoadStore,
             'atSerialize': ['value', 'address'],
         },
         'copy': {
             'atAttributes': [
-                {'name': 'source',  'type': 'uint32'},
-                {'name': 'dest',    'type': 'uint32'},
-                {'name': 'unlock',  'type': 'bool', 'optional': True, 'default': False}
+                {
+                    'name': 'source',
+                    'type': 'uint32'
+                },
+                {
+                    'name': 'dest',
+                    'type': 'uint32'
+                },
+                {
+                    'name': 'unlock',
+                    'type': 'bool',
+                    'optional': True,
+                    'default': False
+                }
             ],
             'ucCmd': REGI_COMMAND_LoadStore + REGI_COMMAND_SourceIsRegister,
             'atSerialize': ['source', 'dest'],
         },
         'delay': {
             'atAttributes': [
-                {'name': 'time_ms', 'type': 'uint32'}
+                {
+                    'name': 'time_ms',
+                    'type': 'uint32'
+                }
             ],
             'ucCmd': REGI_COMMAND_Delay,
             'atSerialize': ['time_ms'],
         },
         'poll': {
             'atAttributes': [
-                {'name': 'address',     'type': 'uint32'},
-                {'name': 'mask',        'type': 'uint32', 'optional': True, 'default': 0xffffffff},
-                {'name': 'cmp',         'type': 'uint32'},
-                {'name': 'timeout_ms',  'type': 'uint32'},
+                {
+                    'name': 'address',
+                    'type': 'uint32'
+                },
+                {
+                    'name': 'mask',
+                    'type': 'uint32',
+                    'optional': True,
+                    'default': 0xffffffff
+                },
+                {
+                    'name': 'cmp',
+                    'type': 'uint32'
+                },
+                {
+                    'name': 'timeout_ms',
+                    'type': 'uint32'
+                },
             ],
             'ucCmd': REGI_COMMAND_Poll,
             'atSerialize': ['address', 'mask', 'cmp', 'timeout_ms'],
         },
         'setmask': {
             'atAttributes': [
-                {'name': 'address', 'type': 'uint32'},
-                {'name': 'mask', 'type': 'uint32'},
-                {'name': 'value',   'type': 'uint32'},
-                {'name': 'unlock',  'type': 'bool', 'optional': True, 'default': False}
+                {
+                    'name': 'address',
+                    'type': 'uint32'
+                },
+                {
+                    'name': 'mask',
+                    'type': 'uint32'
+                },
+                {
+                    'name': 'value',
+                    'type': 'uint32'
+                },
+                {
+                    'name': 'unlock',
+                    'type': 'bool',
+                    'optional': True,
+                    'default': False
+                }
             ],
             'ucCmd': REGI_COMMAND_LoadStoreMask,
             'atSerialize': ['value', 'mask', 'address'],
         },
         'copymask': {
             'atAttributes': [
-                {'name': 'source',  'type': 'uint32'},
-                {'name': 'mask', 'type': 'uint32'},
-                {'name': 'dest',    'type': 'uint32'},
-                {'name': 'unlock',  'type': 'bool', 'optional': True, 'default': False}
+                {
+                    'name': 'source',
+                    'type': 'uint32'
+                },
+                {
+                    'name': 'mask',
+                    'type': 'uint32'
+                },
+                {
+                    'name': 'dest',
+                    'type': 'uint32'
+                },
+                {
+                    'name': 'unlock',
+                    'type': 'bool',
+                    'optional': True,
+                    'default': False
+                }
             ],
-            'ucCmd': REGI_COMMAND_LoadStoreMask + REGI_COMMAND_SourceIsRegister,
+            'ucCmd': (
+                REGI_COMMAND_LoadStoreMask +
+                REGI_COMMAND_SourceIsRegister
+            ),
             'atSerialize': ['source', 'mask', 'dest'],
         }
     }
 
-    # Read the contents of a <Register> chunk and turn it into an intermediate representation.
-    # Attributes not required for a command are ignored, i.e. <nop address="0x10000000" /> is accepted.
+    # Read the contents of a <Register> chunk and turn it into an
+    # intermediate representation.
+    # Attributes not required for a command are ignored,
+    # i.e. <nop address="0x10000000" /> is accepted.
     def __get_register_contents(self, tRegNode, atCmd):
-        # tRegNode is the <Register> tag. Each child is a register command, e.g. <set>.
+        # tRegNode is the <Register> tag. Each child is a register
+        # command, e.g. <set>.
         for tCmdNode in tRegNode.childNodes:
             # Is this a node element?
             if tCmdNode.nodeType == tCmdNode.ELEMENT_NODE:
                 tCmd = {}
                 atCmd.append(tCmd)
 
-                # Get the command name and the list of attributes defined for it.
+                # Get the command name and the list of attributes
+                # defined for it.
                 strNodeName = tCmdNode.localName
                 tCmd['name'] = strNodeName
 
                 if strNodeName not in self.atRegisterCommandTypes:
                     raise Exception(
-                        'Unknown command type in register chunk: %s' % (strNodeName)
+                        'Unknown command type in register chunk: %s' %
+                        strNodeName
                     )
                 else:
-                    atAttribs = self.atRegisterCommandTypes[strNodeName]['atAttributes']
+                    atAttribs = self.atRegisterCommandTypes[strNodeName][
+                        'atAttributes'
+                    ]
 
                     # Collect the attributes for the current register command.
                     for tAttrib in atAttribs:
-                        # Get name and type of each attribute and whether it's optional.
+                        # Get name and type of each attribute and whether
+                        # it's optional.
                         # By default, attributes are mandatory.
                         strAttribName = tAttrib['name']
                         strAttribType = tAttrib['type']
-                        fAttribOpt = 'optional' in tAttrib and tAttrib['optional'] is True
+                        fAttribOpt = (
+                            'optional' in tAttrib and
+                            tAttrib['optional'] is True
+                        )
 
                         # Get the value of the XML attribute.
-                        # If the attribute is not present, an empty string is returned.
-                        strAttribVal = tCmdNode.getAttribute(strAttribName).strip()
+                        # If the attribute is not present, an empty string
+                        # is returned.
+                        strAttribVal = tCmdNode.getAttribute(
+                            strAttribName
+                        ).strip()
 
                         # The attribute is present. Convert the value.
                         if len(strAttribVal) > 0:
                             if strAttribType == 'uint32':
-                                ulAttribVal = self.__parse_numeric_expression(strAttribVal)
+                                ulAttribVal = self.__parse_numeric_expression(
+                                    strAttribVal
+                                )
                                 if ulAttribVal is None:
                                     raise Exception(
-                                        'Could not parse value %s in attribute %s' % (strAttribVal, strAttribName)
+                                        'Could not parse value %s in '
+                                        'attribute %s' % (
+                                            strAttribVal,
+                                            strAttribName
+                                        )
                                     )
                                 tCmd[strAttribName] = ulAttribVal
 
@@ -1068,7 +1312,11 @@ class HbootImage:
                                     tCmd[strAttribName] = False
                                 else:
                                     raise Exception(
-                                        'Invalid value %s for boolean attribute %s' % (strAttribVal, strAttribName)
+                                        'Invalid value %s for boolean '
+                                        'attribute %s' % (
+                                            strAttribVal,
+                                            strAttribName
+                                        )
                                     )
                             else:
                                 tCmd[strAttribName] = strAttribVal
@@ -1084,7 +1332,9 @@ class HbootImage:
                         # Raise an error.
                         else:
                             raise Exception(
-                                'Mandatory attribute %s is missing' % (strAttribName)
+                                'Mandatory attribute %s is missing' % (
+                                    strAttribName
+                                )
                             )
                     # print tCmd
 
@@ -1135,7 +1385,8 @@ class HbootImage:
         tChunkAttributes['atData'] = aulChunk
         tChunkAttributes['aulHash'] = array.array('I', strHash)
 
-    def __build_chunk_register(self, tChunkAttributes, atParserState, uiChunkIndex, atAllChunks):
+    def __build_chunk_register(self, tChunkAttributes, atParserState,
+                               uiChunkIndex, atAllChunks):
         tRegNode = tChunkAttributes['tNode']
 
         # Read the register operations from the XML.
@@ -1148,6 +1399,34 @@ class HbootImage:
 
         # Build the chunk
         ulTagId = self.__get_tag_id('R', 'E', 'G', 'I')
+        self.__wrap_chunk(tChunkAttributes, ulTagId, aulData)
+
+    def __get_firewall_contents(self, tChunkNode, atEntries):
+        # Get the data block.
+        self.__get_data_contents(tChunkNode, atEntries, False)
+
+    def __serialize_firewall_chunk(self, atEntries, aulData):
+        # Convert the padded data to an array.
+        strData = atEntries['data']
+        if len(strData) != 36*4:
+            raise Exception('The data size of a Firewall chunk must be 36 '
+                            'dwords (144 bytes).')
+        aulData.fromstring(strData)
+
+    def __build_chunk_firewall(self, tChunkAttributes, atParserState,
+                               uiChunkIndex, atAllChunks):
+        tChunkNode = tChunkAttributes['tNode']
+
+        # Read the firewall settings from the XML.
+        atEntries = {}
+        self.__get_firewall_contents(tChunkNode, atEntries)
+
+        # Encode the payload of the firewall chunk.
+        aulData = array.array('I')
+        self.__serialize_firewall_chunk(atEntries, aulData)
+
+        # Build the chunk
+        ulTagId = self.__get_tag_id('F', 'R', 'W', 'L')
         self.__wrap_chunk(tChunkAttributes, ulTagId, aulData)
 
     def __get_data_contents(self, tDataNode, atData, fWantLoadAddress):
@@ -1353,6 +1632,18 @@ class HbootImage:
                                 strDataChunk = binascii.unhexlify(strDataHex)
                                 astrData.append(strDataChunk)
 
+                            elif tConcatNode.localName == 'String':
+                                # Get the text in this node and include it
+                                # verbatim in the chunk.
+                                strDataString = self.__xml_get_all_text(
+                                    tConcatNode
+                                )
+                                if strDataString is None:
+                                    raise Exception('No text in node "String" '
+                                                    ' found!')
+
+                                astrData.append(strDataString)
+
                             elif tConcatNode.localName == 'UInt32':
                                 # Get the text in this node and split it
                                 # by whitespace.
@@ -1422,6 +1713,10 @@ class HbootImage:
                                 )
                                 astrData.append(strDataChunk)
 
+                            else:
+                                raise Exception('Unexpected node: %s' %
+                                                tConcatNode.localName)
+
                     strData = ''.join(astrData)
 
                 else:
@@ -1437,7 +1732,8 @@ class HbootImage:
         if fWantLoadAddress is True:
             atData['load_address'] = pulLoadAddress
 
-    def __build_chunk_data(self, tChunkAttributes, atParserState, uiChunkIndex, atAllChunks):
+    def __build_chunk_data(self, tChunkAttributes, atParserState,
+                           uiChunkIndex, atAllChunks):
         tChunkNode = tChunkAttributes['tNode']
 
         # Get the data block.
@@ -1447,7 +1743,7 @@ class HbootImage:
         pulLoadAddress = atData['load_address']
 
         # Pad the application size to a multiple of DWORDs.
-        strPadding = chr(0x00) * ((4 - (len(strData) % 4)) & 3)
+        strPadding = b'\x00' * ((4 - (len(strData) % 4)) & 3)
         strChunk = strData + strPadding
 
         # Convert the padded data to an array.
@@ -1485,7 +1781,8 @@ class HbootImage:
         tChunkAttributes['atData'] = aulChunk
         tChunkAttributes['aulHash'] = array.array('I', strHash)
 
-    def __build_chunk_text(self, tChunkAttributes, atParserState, uiChunkIndex, atAllChunks):
+    def __build_chunk_text(self, tChunkAttributes, atParserState,
+                           uiChunkIndex, atAllChunks):
         tChunkNode = tChunkAttributes['tNode']
 
         # Get the text block.
@@ -1515,7 +1812,8 @@ class HbootImage:
         tChunkAttributes['atData'] = aulChunk
         tChunkAttributes['aulHash'] = array.array('I', strHash)
 
-    def __build_chunk_xip(self, tChunkAttributes, atParserState, uiChunkIndex, atAllChunks):
+    def __build_chunk_xip(self, tChunkAttributes, atParserState, uiChunkIndex,
+                          atAllChunks):
         tChunkNode = tChunkAttributes['tNode']
 
         # Get the data block.
@@ -1733,7 +2031,8 @@ class HbootImage:
         atData['ulR2'] = ulR2
         atData['ulR3'] = ulR3
 
-    def __build_chunk_execute(self, tChunkAttributes, atParserState, uiChunkIndex, atAllChunks):
+    def __build_chunk_execute(self, tChunkAttributes, atParserState,
+                              uiChunkIndex, atAllChunks):
         tChunkNode = tChunkAttributes['tNode']
 
         __atData = {
@@ -1787,16 +2086,44 @@ class HbootImage:
                 if fBool is not None:
                     fApplyFirewallSettings = fBool
 
+
+            # enable bxlr-debug-function
+            # A bxlr_index is a address in memory, which is traversed before a exec-chunk is executed.
+            # You can activate this function in any exec-chunk. There are 16 bxlr-addresses.
+            # you can set a brakpoint to such addresses.
+            # ( 4bit ^= 16 bxlr-addresses).
+            fBxlrIndex = None
+            strIdx = tChunkNode.getAttribute('bxlr_index')
+            if len(strIdx) != 0:
+                # we hve a index, activate use of trampoline:
+                try:
+                    intIdx = int(strIdx, 0)
+                except BaseException as e:
+                    m = "In chunk idx %s: You have provided %s as a bxlr_index index. You are supposed to provide a number in range of [0,15]."
+                    raise BaseException(e, m)
+
+                if 0 <= intIdx < 16:  #  !(MSK_EXEC_CHUNK_FLAGS_BxLrIndex) && intIndex != 0
+                    fBxlrIndex = intIdx
+                else:
+                    m = "In chunk idx %s expected attribute 'bxlr_index' to be between 0 to 15. Your bxlr_index index is at %s" % (uiChunkIndex, intIdx)
+                    raise(BaseException(m))
+                # todo: Via a log message I would like to tell the user where to put the breakpoint for chunk ID XY.
+
             # Combine all flags.
             ulFlags = 0
             if fStartAppCpu is True:
-                ulFlags |= 1
+                ulFlags |= 0x00000001  # MSK_EXEC_CHUNK_FLAGS_StartAppCpu
             if fLockFirewallSettings is True:
-                ulFlags |= 2
+                ulFlags |= 0x00000002  # MSK_EXEC_CHUNK_FLAGS_LockFirewall
             if fActivateDebugging is True:
-                ulFlags |= 4
+                ulFlags |= 0x00000004  # MSK_EXEC_CHUNK_FLAGS_ActivateDebugging
             if fApplyFirewallSettings is True:
-                ulFlags |= 8
+                ulFlags |= 0x00000008  # MSK_EXEC_CHUNK_FLAGS_ApplyFirewallSettings
+            if fBxlrIndex is not None:
+                # activate bxlr-function
+                ulFlags |= 0x00000100
+                # keep in mind, this is not a flag. it is a 4-bit value representing the index of a bxlr
+                ulFlags |= fBxlrIndex << 4  # (MSK_EXEC_CHUNK_FLAGS_BxLrIndex) << SRT_EXEC_CHUNK_FLAGS_BxLrIndex
 
         aulChunk = array.array('I')
         aulChunk.append(self.__get_tag_id('E', 'X', 'E', 'C'))
@@ -1820,7 +2147,8 @@ class HbootImage:
         tChunkAttributes['atData'] = aulChunk
         tChunkAttributes['aulHash'] = array.array('I', strHash)
 
-    def __build_chunk_execute_ca9(self, tChunkAttributes, atParserState, uiChunkIndex, atAllChunks):
+    def __build_chunk_execute_ca9(self, tChunkAttributes, atParserState,
+                                  uiChunkIndex, atAllChunks):
         tChunkNode = tChunkAttributes['tNode']
 
         __atCore0 = {
@@ -1860,7 +2188,7 @@ class HbootImage:
             (__atCore0['pfnExecFunction'] == 0) and
             (__atCore1['pfnExecFunction'] == 0)
         ):
-            raise Exception('No core is started with the ExecuteCA9 chunk!')
+            print('Warning: No core is started with the ExecuteCA9 chunk!')
 
         aulChunk = array.array('I')
         aulChunk.append(self.__get_tag_id('E', 'X', 'A', '9'))
@@ -1887,7 +2215,8 @@ class HbootImage:
         tChunkAttributes['atData'] = aulChunk
         tChunkAttributes['aulHash'] = array.array('I', strHash)
 
-    def __build_chunk_spi_macro(self, tChunkAttributes, atParserState, uiChunkIndex, atAllChunks):
+    def __build_chunk_spi_macro(self, tChunkAttributes, atParserState,
+                                uiChunkIndex, atAllChunks):
         tChunkNode = tChunkAttributes['tNode']
 
         # Get the device.
@@ -2080,7 +2409,8 @@ class HbootImage:
 
         return aulChunk, ucFill, sizSkip, strAbsFilePath, tNodeFile
 
-    def __build_chunk_skip(self, tChunkAttributes, atParserState, uiChunkIndex, atAllChunks):
+    def __build_chunk_skip(self, tChunkAttributes, atParserState,
+                           uiChunkIndex, atAllChunks):
         aulChunk, ucFill, sizSkip, strAbsFilePath, tNodeFile =\
             self.__build_chunk_skip_header(tChunkAttributes, atParserState)
 
@@ -2124,7 +2454,8 @@ class HbootImage:
         tChunkAttributes['fIsFinished'] = True
         tChunkAttributes['atData'] = aulChunk
 
-    def __build_chunk_skip_incomplete(self, tChunkAttributes, atParserState, uiChunkIndex, atAllChunks):
+    def __build_chunk_skip_incomplete(self, tChunkAttributes, atParserState,
+                                      uiChunkIndex, atAllChunks):
         # This chunk is not allowed for images with an end marker.
         if self.__fHasEndMarker is not False:
             raise Exception(
@@ -2181,7 +2512,8 @@ class HbootImage:
     def __openssl_uncompress_field(self, aucData):
         # The data must not be compressed.
         if aucData[0] != 0x04:
-            raise Exception('The data is compressed. This is not supported yet.')
+            raise Exception('The data is compressed. '
+                            'This is not supported yet.')
         # Cut off the first byte.
         aucData.pop(0)
 
@@ -2227,11 +2559,19 @@ class HbootImage:
         ]
         if fIsPublicKey is True:
             astrCmd.append('-pubin')
-        tProcess = subprocess.Popen(
-            astrCmd,
-            stdin=subprocess.PIPE,
-            stdout=subprocess.PIPE
-        )
+        if platform.system() == 'Windows':
+            tProcess = subprocess.Popen(
+                astrCmd,
+                stdin=subprocess.PIPE,
+                stdout=subprocess.PIPE,
+                shell=True
+            )
+        else:
+            tProcess = subprocess.Popen(
+                astrCmd,
+                stdin=subprocess.PIPE,
+                stdout=subprocess.PIPE
+            )
         (strStdout, strStdErr) = tProcess.communicate(strKeyDER)
         if tProcess.returncode != 0:
             raise Exception('OpenSSL failed with return code %d.' %
@@ -2242,19 +2582,18 @@ class HbootImage:
         # "priv:".
         iKeyTyp_1ECC_2RSA = None
         atAttr = None
-        if string.find(strStdout, 'modulus:') != -1:
+        strMatchExponent = 'publicExponent:'
+        strMatchModulus = 'modulus:'
+        if fIsPublicKey is True:
+            strMatchExponent = 'Exponent:'
+            strMatchModulus = 'Modulus:'
+        if strStdout.find(strMatchModulus) != -1:
             # Looks like this is an RSA key.
             iKeyTyp_1ECC_2RSA = 2
 
-            strMatchExponent = 'publicExponent:'
-            strMatchModulus = 'modulus:'
-            if fIsPublicKey is True:
-                strMatchExponent = 'Exponent:'
-                strMatchModulus = 'Modulus:'
-
             # Extract the public exponent.
             tReExp = re.compile(
-                '^%s\s+(\d+)\s+\(0x([0-9a-fA-F]+)\)$' % strMatchExponent,
+                r'^%s\s+(\d+)\s+\(0x([0-9a-fA-F]+)\)' % strMatchExponent,
                 re.MULTILINE
             )
             tMatch = tReExp.search(strStdout)
@@ -2313,8 +2652,12 @@ class HbootImage:
                 )
                 for uiElementId, atAttr in __atKnownRsaSizes.iteritems():
                     strErr += (
-                        '  RSA%d: %d bytes modulo, %d bytes public exponent\n' %
-                        (atAttr['rsa'], atAttr['mod'], atAttr['exp'])
+                        '  RSA%d: %d bytes modulo, '
+                        '%d bytes public exponent\n' % (
+                            atAttr['rsa'],
+                            atAttr['mod'],
+                            atAttr['exp']
+                        )
                     )
                 raise Exception(strErr)
 
@@ -2350,7 +2693,10 @@ class HbootImage:
             self.__openssl_cut_leading_zero(aucB)
             self.__openssl_convert_to_little_endian(aucB)
 
-            strData = self.__openssl_get_data_block(strStdout, 'Generator (uncompressed):')
+            strData = self.__openssl_get_data_block(
+                strStdout,
+                'Generator (uncompressed):'
+            )
             aucGen = array.array('B', strData)
             self.__openssl_uncompress_field(aucGen)
             aucGenX, aucGenY = self.__openssl_cut_in_half(aucGen)
@@ -2362,12 +2708,15 @@ class HbootImage:
             self.__openssl_convert_to_little_endian(aucOrder)
 
             # Extract the cofactor.
-            tReExp = re.compile('^Cofactor:\s+(\d+)\s+\(0x([0-9a-fA-F]+)\)$', re.MULTILINE)
+            tReExp = re.compile(
+                r'^Cofactor:\s+(\d+)\s+\(0x([0-9a-fA-F]+)\)',
+                re.MULTILINE
+            )
             tMatch = tReExp.search(strStdout)
             if tMatch is None:
                 raise Exception('Can not find cofactor!')
-            ulCofactor = long(tMatch.group(1))
-            ulCofactorHex = long(tMatch.group(2), 16)
+            ulCofactor = int(tMatch.group(1))
+            ulCofactorHex = int(tMatch.group(2), 16)
             if ulCofactor != ulCofactorHex:
                 raise Exception('Decimal version differs from hex version!')
 
@@ -2738,7 +3087,8 @@ class HbootImage:
 
         return aulChunk
 
-    def __build_chunk_root_cert(self, tChunkAttributes, atParserState, uiChunkIndex, atAllChunks):
+    def __build_chunk_root_cert(self, tChunkAttributes, atParserState,
+                                uiChunkIndex, atAllChunks):
         tChunkNode = tChunkAttributes['tNode']
 
         aulChunk = None
@@ -2959,7 +3309,7 @@ class HbootImage:
             os.close(iFile)
 
             # Write the DER key to the temporary file.
-            tFile = open(strPathKeypair, 'wt')
+            tFile = open(strPathKeypair, 'wb')
             tFile.write(strKeyDER)
             tFile.close()
 
@@ -2973,11 +3323,14 @@ class HbootImage:
                 'dgst',
                 '-sign', strPathKeypair,
                 '-keyform', 'DER',
-                '-sigopt', 'rsa_padding_mode:pss',
-                '-sigopt', 'rsa_pss_saltlen:-1',
                 '-sha384'
             ]
-            astrCmd.extend(self.__cfg_openssloptions)
+            if self.__cfg_openssloptions:
+                astrCmd.extend(self.__cfg_openssloptions)
+            if not self.__fOpensslRandOff:
+                astrCmd.extend([
+                    '-sigopt', 'rsa_padding_mode:pss',
+                    '-sigopt', 'rsa_pss_saltlen:-1'])
             astrCmd.append(strPathSignatureInputData)
             strSignature = subprocess.check_output(astrCmd)
 
@@ -3007,7 +3360,8 @@ class HbootImage:
         tChunkAttributes['atData'] = aulChunk
         tChunkAttributes['aulHash'] = None
 
-    def __build_chunk_license_cert(self, tChunkAttributes, atParserState, uiChunkIndex, atAllChunks):
+    def __build_chunk_license_cert(self, tChunkAttributes, atParserState,
+                                   uiChunkIndex, atAllChunks):
         tChunkNode = tChunkAttributes['tNode']
 
         aulChunk = None
@@ -3128,7 +3482,7 @@ class HbootImage:
             os.close(iFile)
 
             # Write the DER key to the temporary file.
-            tFile = open(strPathKeypair, 'wt')
+            tFile = open(strPathKeypair, 'wb')
             tFile.write(strKeyDER)
             tFile.close()
 
@@ -3142,11 +3496,14 @@ class HbootImage:
                 'dgst',
                 '-sign', strPathKeypair,
                 '-keyform', 'DER',
-                '-sigopt', 'rsa_padding_mode:pss',
-                '-sigopt', 'rsa_pss_saltlen:-1',
                 '-sha384'
             ]
-            astrCmd.extend(self.__cfg_openssloptions)
+            if self.__cfg_openssloptions:
+                astrCmd.extend(self.__cfg_openssloptions)
+            if not self.__fOpensslRandOff:
+                astrCmd.extend([
+                    '-sigopt', 'rsa_padding_mode:pss',
+                    '-sigopt', 'rsa_pss_saltlen:-1'])
             astrCmd.append(strPathSignatureInputData)
             strSignature = subprocess.check_output(astrCmd)
 
@@ -3176,7 +3533,8 @@ class HbootImage:
         tChunkAttributes['atData'] = aulChunk
         tChunkAttributes['aulHash'] = None
 
-    def __build_chunk_cr7sw(self, tChunkAttributes, atParserState, uiChunkIndex, atAllChunks):
+    def __build_chunk_cr7sw(self, tChunkAttributes, atParserState,
+                            uiChunkIndex, atAllChunks):
         tChunkNode = tChunkAttributes['tNode']
 
         aulChunk = None
@@ -3323,7 +3681,7 @@ class HbootImage:
             os.close(iFile)
 
             # Write the DER key to the temporary file.
-            tFile = open(strPathKeypair, 'wt')
+            tFile = open(strPathKeypair, 'wb')
             tFile.write(strKeyDER)
             tFile.close()
 
@@ -3337,11 +3695,14 @@ class HbootImage:
                 'dgst',
                 '-sign', strPathKeypair,
                 '-keyform', 'DER',
-                '-sigopt', 'rsa_padding_mode:pss',
-                '-sigopt', 'rsa_pss_saltlen:-1',
                 '-sha384'
             ]
-            astrCmd.extend(self.__cfg_openssloptions)
+            if self.__cfg_openssloptions:
+                astrCmd.extend(self.__cfg_openssloptions)
+            if not self.__fOpensslRandOff:
+                astrCmd.extend([
+                    '-sigopt', 'rsa_padding_mode:pss',
+                    '-sigopt', 'rsa_pss_saltlen:-1'])
             astrCmd.append(strPathSignatureInputData)
             strSignature = subprocess.check_output(astrCmd)
 
@@ -3371,7 +3732,8 @@ class HbootImage:
         tChunkAttributes['atData'] = aulChunk
         tChunkAttributes['aulHash'] = None
 
-    def __build_chunk_ca9sw(self, tChunkAttributes, atParserState, uiChunkIndex, atAllChunks):
+    def __build_chunk_ca9sw(self, tChunkAttributes, atParserState,
+                            uiChunkIndex, atAllChunks):
         tChunkNode = tChunkAttributes['tNode']
 
         aulChunk = None
@@ -3553,7 +3915,7 @@ class HbootImage:
             os.close(iFile)
 
             # Write the DER key to the temporary file.
-            tFile = open(strPathKeypair, 'wt')
+            tFile = open(strPathKeypair, 'wb')
             tFile.write(strKeyDER)
             tFile.close()
 
@@ -3567,11 +3929,14 @@ class HbootImage:
                 'dgst',
                 '-sign', strPathKeypair,
                 '-keyform', 'DER',
-                '-sigopt', 'rsa_padding_mode:pss',
-                '-sigopt', 'rsa_pss_saltlen:-1',
                 '-sha384'
             ]
-            astrCmd.extend(self.__cfg_openssloptions)
+            if self.__cfg_openssloptions:
+                astrCmd.extend(self.__cfg_openssloptions)
+            if not self.__fOpensslRandOff:
+                astrCmd.extend([
+                    '-sigopt', 'rsa_padding_mode:pss',
+                    '-sigopt', 'rsa_pss_saltlen:-1'])
             astrCmd.append(strPathSignatureInputData)
             strSignature = subprocess.check_output(astrCmd)
 
@@ -3601,7 +3966,8 @@ class HbootImage:
         tChunkAttributes['atData'] = aulChunk
         tChunkAttributes['aulHash'] = None
 
-    def __build_chunk_memory_device_up(self, tChunkAttributes, atParserState, uiChunkIndex, atAllChunks):
+    def __build_chunk_memory_device_up(self, tChunkAttributes, atParserState,
+                                       uiChunkIndex, atAllChunks):
         tChunkNode = tChunkAttributes['tNode']
 
         # The netX90B is the first chip which allows more than one device in
@@ -3765,7 +4131,9 @@ class HbootImage:
 
         return aucSignature
 
-    def __build_chunk_update_secure_info_page(self, tChunkAttributes, atParserState, uiChunkIndex, atAllChunks):
+    def __build_chunk_update_secure_info_page(self, tChunkAttributes,
+                                              atParserState, uiChunkIndex,
+                                              atAllChunks):
         tChunkNode = tChunkAttributes['tNode']
 
         aulChunk = None
@@ -4005,7 +4373,7 @@ class HbootImage:
             os.close(iFile)
 
             # Write the DER key to the temporary file.
-            tFile = open(strPathKeypair, 'wt')
+            tFile = open(strPathKeypair, 'wb')
             tFile.write(strKeyDER)
             tFile.close()
 
@@ -4028,7 +4396,10 @@ class HbootImage:
                 aucEccSignature = array.array('B', strEccSignature)
 
                 # Parse the signature.
-                aucSignature = self.__openssl_ecc_get_signature(aucEccSignature, sizKeyInDwords * 4)
+                aucSignature = self.__openssl_ecc_get_signature(
+                    aucEccSignature,
+                    sizKeyInDwords * 4
+                )
 
             elif iKeyTyp_1ECC_2RSA == 2:
                 astrCmd = [
@@ -4036,11 +4407,14 @@ class HbootImage:
                     'dgst',
                     '-sign', strPathKeypair,
                     '-keyform', 'DER',
-                    '-sigopt', 'rsa_padding_mode:pss',
-                    '-sigopt', 'rsa_pss_saltlen:-1',
                     '-sha384'
                 ]
-                astrCmd.extend(self.__cfg_openssloptions)
+                if self.__cfg_openssloptions:
+                    astrCmd.extend(self.__cfg_openssloptions)
+                if not self.__fOpensslRandOff:
+                    astrCmd.extend([
+                        '-sigopt', 'rsa_padding_mode:pss',
+                        '-sigopt', 'rsa_pss_saltlen:-1'])
                 astrCmd.append(strPathSignatureInputData)
                 strSignatureMirror = subprocess.check_output(astrCmd)
                 aucSignature = array.array('B', strSignatureMirror)
@@ -4058,7 +4432,8 @@ class HbootImage:
             tChunkAttributes['atData'] = aulChunk
             tChunkAttributes['aulHash'] = None
 
-    def __build_chunk_hash_table(self, tChunkAttributes, atParserState, uiChunkIndex, atAllChunks):
+    def __build_chunk_hash_table(self, tChunkAttributes, atParserState,
+                                 uiChunkIndex, atAllChunks):
         # This chunk must be build in multiple passes as it includes the hash
         # sums of the following chunks.
         #
@@ -4076,7 +4451,7 @@ class HbootImage:
         strNumberOfHashes = tChunkNode.getAttribute('entries')
         if len(strNumberOfHashes) != 0:
             ulNumberOfHashes = int(strNumberOfHashes, 0)
-            if (ulNumberOfHashes < 1) or (ulNumberOfHashes > 8):
+            if (ulNumberOfHashes < 1) or (ulNumberOfHashes > 16):
                 raise Exception(
                     'The number of hashes is invalid: %d' % ulNumberOfHashes
                 )
@@ -4227,9 +4602,17 @@ class HbootImage:
             sizFillUpInDwords = 0
         else:
             if sizChunkMinimumInBytes > ulRequiredSizeInBytes:
-                raise Exception('The HashTable size has a minimum size of %d bytes, which exceeds the requested size of %d bytes.' % (sizChunkMinimumInBytes, ulRequiredSizeInBytes))
+                raise Exception(
+                    'The HashTable size has a minimum size of %d bytes, '
+                    'which exceeds the requested size of %d bytes.' % (
+                        sizChunkMinimumInBytes,
+                        ulRequiredSizeInBytes
+                    )
+                )
 
-            sizFillUpInDwords = (ulRequiredSizeInBytes - sizChunkMinimumInBytes) / 4
+            sizFillUpInDwords = (
+                (ulRequiredSizeInBytes - sizChunkMinimumInBytes) / 4
+            )
         sizChunkMinimumSizeInDwords = sizChunkMinimumInBytes / 4
 
         uiPass = atParserState['uiPass']
@@ -4279,13 +4662,17 @@ class HbootImage:
 
             # Collect hash sums of the next chunks.
             atHashes = []
-            for uiChunkIndex in range(sizHtblFirstChunk, sizHtblLastChunkPlus1):
+            for uiChunkIndex in range(sizHtblFirstChunk,
+                                      sizHtblLastChunkPlus1):
                 tAttr = atAllChunks[uiChunkIndex]
 
                 # Is this one of the chunks which needs a hash entry?
                 strChunkName = tAttr['strName']
                 if strChunkName not in astrAllowedChunks:
-                    raise Exception('A "%s" chunk can not be included in a HashTable.' % strChunkName)
+                    raise Exception(
+                        'A "%s" chunk can not be included in a HashTable.' %
+                        strChunkName
+                    )
 
                 # Is this chunk already finished?
                 if tAttr['fIsFinished'] is not True:
@@ -4324,7 +4711,11 @@ class HbootImage:
                         # Add the strength.
                         aucData.append(atAttr['id'])
                         # Add the public modulus N and fill up to 64 bytes.
-                        self.__add_array_with_fillup(aucData, atAttr['mod'], 512)
+                        self.__add_array_with_fillup(
+                            aucData,
+                            atAttr['mod'],
+                            512
+                        )
                         # Add the exponent E.
                         aucData.extend(atAttr['exp'])
                         # Pad the key with 3 bytes.
@@ -4356,7 +4747,9 @@ class HbootImage:
                 # Add the ID.
                 aulChunk.append(self.__get_tag_id('H', 'T', 'B', 'L'))
                 # The size field does not include the ID and itself.
-                aulChunk.append(sizChunkMinimumSizeInDwords + sizFillUpInDwords - 2)
+                aulChunk.append(
+                    sizChunkMinimumSizeInDwords + sizFillUpInDwords - 2
+                )
                 # Add the data part.
                 aulChunk.fromstring(aucData.tostring())
                 # Append the fill-up.
@@ -4384,7 +4777,7 @@ class HbootImage:
                 os.close(iFile)
 
                 # Write the DER key to the temporary file.
-                tFile = open(strPathKeypair, 'wt')
+                tFile = open(strPathKeypair, 'wb')
                 tFile.write(strKeyDER)
                 tFile.close()
 
@@ -4401,13 +4794,17 @@ class HbootImage:
                         '-keyform', 'DER',
                         '-sha384'
                     ]
-                    astrCmd.extend(self.__cfg_openssloptions)
+                    if self.__cfg_openssloptions:
+                        astrCmd.extend(self.__cfg_openssloptions)
                     astrCmd.append(strPathSignatureInputData)
                     strEccSignature = subprocess.check_output(astrCmd)
                     aucEccSignature = array.array('B', strEccSignature)
 
                     # Parse the signature.
-                    aucSignature = self.__openssl_ecc_get_signature(aucEccSignature, sizKeyInDwords * 4)
+                    aucSignature = self.__openssl_ecc_get_signature(
+                        aucEccSignature,
+                        sizKeyInDwords * 4
+                    )
 
                 elif iKeyTyp_1ECC_2RSA == 2:
                     astrCmd = [
@@ -4415,11 +4812,14 @@ class HbootImage:
                         'dgst',
                         '-sign', strPathKeypair,
                         '-keyform', 'DER',
-                        '-sigopt', 'rsa_padding_mode:pss',
-                        '-sigopt', 'rsa_pss_saltlen:-1',
                         '-sha384'
                     ]
-                    astrCmd.extend(self.__cfg_openssloptions)
+                    if self.__cfg_openssloptions:
+                        astrCmd.extend(self.__cfg_openssloptions)
+                    if not self.__fOpensslRandOff:
+                        astrCmd.extend([
+                            '-sigopt', 'rsa_padding_mode:pss',
+                            '-sigopt', 'rsa_pss_saltlen:-1'])
                     astrCmd.append(strPathSignatureInputData)
                     strSignatureMirror = subprocess.check_output(astrCmd)
                     aucSignature = array.array('B', strSignatureMirror)
@@ -4437,7 +4837,8 @@ class HbootImage:
                 tChunkAttributes['atData'] = aulChunk
                 tChunkAttributes['aulHash'] = None
 
-    def __build_chunk_next(self, tChunkAttributes, atParserState, uiChunkIndex, atAllChunks):
+    def __build_chunk_next(self, tChunkAttributes, atParserState,
+                           uiChunkIndex, atAllChunks):
         tChunkNode = tChunkAttributes['tNode']
 
         ulDevice = None
@@ -4501,9 +4902,10 @@ class HbootImage:
 
         tChunkAttributes['fIsFinished'] = True
         tChunkAttributes['atData'] = aulChunk
-        tChunkAttributes['aulHash'] = None
+        tChunkAttributes['aulHash'] = array.array('I', strHash)
 
-    def __build_chunk_daxz(self, tChunkAttributes, atParserState, uiChunkIndex, atAllChunks):
+    def __build_chunk_daxz(self, tChunkAttributes, atParserState,
+                           uiChunkIndex, atAllChunks):
         tChunkNode = tChunkAttributes['tNode']
 
         # Get the working address.
@@ -4547,7 +4949,7 @@ class HbootImage:
         tChunkAttributes['aulHash'] = array.array('I', strHash)
 
     def __string_to_bool(self, strBool):
-        strBool = string.upper(strBool)
+        strBool = strBool.upper()
         if(
             (strBool == 'TRUE') or
             (strBool == 'T') or
@@ -4604,11 +5006,33 @@ class HbootImage:
                     'NETX4100',
                     'NETX90_MPW',
                     'NETX90B',
-                    'NETX90'
+                    'NETX90',
+                    'NETXXL_MPW'
                 ]
             },
             'Register': {
                 'fn': self.__build_chunk_register,
+                'img': [
+                    self.__IMAGE_TYPE_REGULAR,
+                    self.__IMAGE_TYPE_ALTERNATIVE,
+                    self.__IMAGE_TYPE_INTRAM,
+                    # self.__IMAGE_TYPE_SECMEM,
+                    # self.__IMAGE_TYPE_COM_INFO_PAGE,
+                    # self.__IMAGE_TYPE_APP_INFO_PAGE
+                ],
+                'netx': [
+                    # 'NETX56',
+                    # 'NETX4000_RELAXED',
+                    # 'NETX4000',
+                    # 'NETX4100',
+                    # 'NETX90_MPW',
+                    'NETX90',
+                    'NETX90B',
+                    'NETXXL_MPW'
+                ]
+            },
+            'Firewall': {
+                'fn': self.__build_chunk_firewall,
                 'img': [
                     self.__IMAGE_TYPE_REGULAR,
                     self.__IMAGE_TYPE_ALTERNATIVE,
@@ -4644,7 +5068,8 @@ class HbootImage:
                     'NETX4100',
                     'NETX90_MPW',
                     'NETX90',
-                    'NETX90B'
+                    'NETX90B',
+                    'NETXXL_MPW'
                 ]
             },
             'Text': {
@@ -4664,7 +5089,8 @@ class HbootImage:
                     'NETX4100',
                     'NETX90_MPW',
                     'NETX90',
-                    'NETX90B'
+                    'NETX90B',
+                    'NETXXL_MPW'
                 ]
             },
             'XIP': {
@@ -4684,7 +5110,8 @@ class HbootImage:
                     'NETX4100',
                     'NETX90_MPW',
                     'NETX90',
-                    'NETX90B'
+                    'NETX90B',
+                    'NETXXL_MPW'
                 ]
             },
             'Execute': {
@@ -4704,7 +5131,8 @@ class HbootImage:
                     'NETX4100',
                     'NETX90_MPW',
                     'NETX90',
-                    'NETX90B'
+                    'NETX90B',
+                    'NETXXL_MPW'
                 ]
             },
             'ExecuteCA9': {
@@ -4744,7 +5172,8 @@ class HbootImage:
                     'NETX4100',
                     'NETX90_MPW',
                     'NETX90',
-                    'NETX90B'
+                    'NETX90B',
+                    'NETXXL_MPW'
                 ]
             },
             'Skip': {
@@ -4764,7 +5193,8 @@ class HbootImage:
                     'NETX4100',
                     'NETX90_MPW',
                     'NETX90',
-                    'NETX90B'
+                    'NETX90B',
+                    'NETXXL_MPW'
                 ]
             },
             'SkipIncomplete': {
@@ -4884,7 +5314,8 @@ class HbootImage:
                     'NETX4100',
                     'NETX90_MPW',
                     'NETX90',
-                    'NETX90B'
+                    'NETX90B',
+                    'NETXXL_MPW'
                 ]
             },
             'UpdateSecureInfoPage': {
@@ -4964,7 +5395,8 @@ class HbootImage:
                     # 'NETX4100',
                     # 'NETX90_MPW',
                     'NETX90',
-                    'NETX90B'
+                    'NETX90B',
+                    'NETXXL_MPW'
                 ]
             },
         }
@@ -5176,8 +5608,15 @@ class HbootImage:
             ulStartOffset = int(strStartOffset, 0)
             if ulStartOffset < 0:
                 raise Exception(
-                    'The start offset is invalid: %d' % ulStartOffset
+                    'The start offset in the <HBootImage> tag '
+                    'is invalid: %d' % ulStartOffset
                 )
+            elif ulStartOffset % 4 != 0:
+                raise Exception(
+                    'The start offset in the <HBootImage> tag '
+                    'must be a multiple of 4: %d' % ulStartOffset
+                )
+
         self.__ulStartOffset = ulStartOffset
 
         # Get the size and value for a padding. Default to 0 bytes of 0xff.
@@ -5235,9 +5674,9 @@ class HbootImage:
                 # Is this a 'Header' node?
                 if tImageNode.localName == 'Header':
                     if(
-                        (self.__tImageType == self.__IMAGE_TYPE_SECMEM) or
-                        (self.__tImageType == self.__IMAGE_TYPE_COM_INFO_PAGE) or
-                        (self.__tImageType == self.__IMAGE_TYPE_APP_INFO_PAGE)
+                        self.__tImageType == self.__IMAGE_TYPE_SECMEM or
+                        self.__tImageType == self.__IMAGE_TYPE_COM_INFO_PAGE or
+                        self.__tImageType == self.__IMAGE_TYPE_APP_INFO_PAGE
                     ):
                         raise Exception(
                             'Header overrides are not allowed in '
@@ -5383,6 +5822,10 @@ class HbootImage:
 
             # Generate the standard header.
             atHeaderStandard = self.__build_standard_header(atChunks)
+
+            # Insert flasher parameters if selected.
+            if self.__fSetFlasherParameters is True:
+                self.__set_flasher_parameters(atHeaderStandard)
 
             # Combine the standard header with the overrides.
             atHeader = self.__combine_headers(atHeaderStandard)
