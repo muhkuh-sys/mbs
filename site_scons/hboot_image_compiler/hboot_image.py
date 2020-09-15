@@ -2086,6 +2086,12 @@ class HbootImage:
                 if fBool is not None:
                     fApplyFirewallSettings = fBool
 
+            fApplyFirewallSettingsFull = False
+            strBool = tChunkNode.getAttribute('apply_firewall_settings_full')
+            if len(strBool) != 0:
+                fBool = self.__string_to_bool(strBool)
+                if fBool is not None:
+                    fApplyFirewallSettingsFull = fBool
 
             # enable bxlr-debug-function
             # A bxlr_index is a address in memory, which is traversed before a exec-chunk is executed.
@@ -2119,6 +2125,8 @@ class HbootImage:
                 ulFlags |= 0x00000004  # MSK_EXEC_CHUNK_FLAGS_ActivateDebugging
             if fApplyFirewallSettings is True:
                 ulFlags |= 0x00000008  # MSK_EXEC_CHUNK_FLAGS_ApplyFirewallSettings
+            if fApplyFirewallSettingsFull is True:
+                ulFlags |= 0x00000200  # MSK_EXEC_CHUNK_FLAGS_ApplyFirewallSettingsFull
             if fBxlrIndex is not None:
                 # activate bxlr-function
                 ulFlags |= 0x00000100
