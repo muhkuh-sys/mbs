@@ -2382,12 +2382,12 @@ class HbootImage:
             # The SKIP chunk for SQI flash forwards the offset by the
             # argument - 1.
             if self.__strDevice == 'SQIROM':
-                sizSkip = (sizOffsetNew - sizOffsetCurrent) / 4
+                sizSkip = int((sizOffsetNew - sizOffsetCurrent) / 4)
                 sizSkipParameter = (
                     sizOffsetNew - sizOffsetCurrent + 1 - self.__sizHashDw
                 )
             else:
-                sizSkip = (sizOffsetNew - sizOffsetCurrent) / 4
+                sizSkip = int((sizOffsetNew - sizOffsetCurrent) / 4)
                 sizSkipParameter = sizSkip
 
         elif self.__strNetxType == 'NETX4000_RELAXED':
@@ -2400,13 +2400,13 @@ class HbootImage:
             # parallel NOR flashes are quite unusual in the netX4000 area.
             # That's why we can safely default to SQIROM here and ignore
             # the rest.
-            sizSkip = (sizOffsetNew - sizOffsetCurrent) / 4
+            sizSkip = int((sizOffsetNew - sizOffsetCurrent) / 4)
             sizSkipParameter = (
                 sizOffsetNew - sizOffsetCurrent + 1 - self.__sizHashDw
             )
 
         else:
-            sizSkip = (sizOffsetNew - sizOffsetCurrent) / 4
+            sizSkip = int((sizOffsetNew - sizOffsetCurrent) / 4)
             sizSkipParameter = sizSkip
 
         aulChunk = array.array('I')
