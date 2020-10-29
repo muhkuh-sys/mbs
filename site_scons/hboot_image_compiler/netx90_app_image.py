@@ -1238,6 +1238,23 @@ class AppImage:
         aulHBoot[0x01] = ulFlashOffset
         aulHBoot[0x05] = ulFlashDevice
 
+    # Get the header address of the next data block (sizIdx+1),
+    # if there is another data block left.
+    # If the next block is in intflash 2, its header address is in the
+    # address range for the APP CPU. Since the COM CPU is evaluating the
+    # image, we convert the address to the range for the COM CPU.
+    # Intflash 2 is located at 0x00000000..0x0007ffff for the APP CPU,
+    #                   and at 0x00200000..0x0027ffff for the COM CPU.
+    def get_next_header_address(self, sizIdx):
+        ulNextHeaderAddress = 0
+        sizDataBlocks = len(self.__atDataBlocks)
+        if sizIdx + 1 < sizDataBlocks:
+            ulNextHeaderAddress = self.__atDataBlocks[sizIdx + 1]['headeraddress']
+            if ulNextHeaderAddress<=0x0007ffff:
+                ulNextHeaderAddress += 0x00200000
+        
+        return ulNextHeaderAddress
+        
     def patch_first_data_block(self):
         sizDataBlocks = len(self.__atDataBlocks)
         tAttr = self.__atDataBlocks[0]
@@ -1268,10 +1285,7 @@ class AppImage:
             )
 
         # Set the next pointer.
-        if sizDataBlocks == 1:
-            aulHBoot[2] = 0
-        else:
-            aulHBoot[2] = self.__atDataBlocks[1]['headeraddress']
+        aulHBoot[2] = self.get_next_header_address(0)
 
         # Set the new length.
         # This is the complete file size except the CM4 header (448 bytes)
@@ -1331,11 +1345,7 @@ class AppImage:
         aulHBoot[0] = 0xf3beaf00
 
         # Set the next pointer.
-        sizDataBlocks = len(self.__atDataBlocks)
-        if sizIdx + 1 >= sizDataBlocks:
-            aulHBoot[2] = 0
-        else:
-            aulHBoot[2] = self.__atDataBlocks[sizIdx + 1]['headeraddress']
+        aulHBoot[2] = self.get_next_header_address(sizIdx)
 
         # Is the block XIP?
         if tAttr['destination'] == tAttr['headeraddress'] + 64:
