@@ -4206,6 +4206,9 @@ class HbootImage:
                             'The key index is out of range: %d' %
                             ulKeyIndex
                         )
+                    if (ulKeyIndex > 17):
+                        print("Warning: The key index in an USIP chunk must not be greater than 17!")
+
                     __atCert['KeyIndex'] = ulKeyIndex
 
                 elif tNode.localName == 'Binding':
@@ -4542,6 +4545,10 @@ class HbootImage:
                             'The root key index is out of range: %d' %
                             ulRootKeyIndex
                         )
+
+                    if (ulRootKeyIndex != 17):
+                        print("Warning: The key index in a HTBL chunk must be 17!")
+
                     __atData['RootKeyIndex'] = ulRootKeyIndex
 
                 elif tNode.localName == 'Binding':
