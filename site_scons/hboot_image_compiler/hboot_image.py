@@ -4776,8 +4776,6 @@ class HbootImage:
                 )
                 # Add the data part.
                 aulChunk.fromstring(aucData.tostring())
-                # Append the fill-up.
-                aulChunk.extend([0] * sizFillUpInDwords)
 
                 # Get the key in DER encoded format.
                 strKeyDER = __atData['Key']['der']
@@ -4853,6 +4851,9 @@ class HbootImage:
                 # Remove the temp files.
                 os.remove(strPathKeypair)
                 os.remove(strPathSignatureInputData)
+
+                # Append the fill-up.
+                aulChunk.extend([0] * sizFillUpInDwords)
 
                 # Append the signature to the chunk.
                 aulChunk.fromstring(aucSignature.tostring())
