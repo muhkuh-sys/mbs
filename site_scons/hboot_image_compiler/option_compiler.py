@@ -445,6 +445,25 @@ class OptionCompiler:
                 elif tDataNode.localName == 'DDR':
                     strData = self.__get_ddr_macro_data(tDataNode)
                     atData.append(strData)
+                elif tDataNode.localName == 'File':
+                    strFileName = tDataNode.getAttribute('name')
+                    if len(strFileName) == 0:
+                        raise Exception(
+                            "The file node has no name attribute!"
+                        )
+
+                    strAbsFilePath = None
+                    if os.access(strFileName, os.R_OK) is True:
+                        strAbsFilePath = os.path.abspath(strFileName)
+
+                    if strAbsFilePath is None:
+                        raise Exception('File %s not found!' % strFileName)
+
+                    tBinFile = open(strAbsFilePath, 'rb')
+                    strData = tBinFile.read()
+                    tBinFile.close()
+                    atData.append(strData)
+
                 else:
                     raise Exception('Unexpected node: %s', tDataNode.localName)
 
