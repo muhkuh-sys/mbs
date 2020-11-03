@@ -23,6 +23,7 @@
 import ast
 import string
 import xml.dom.minidom
+import os
 
 # ----------------------------------------------------------------------------
 #
@@ -502,18 +503,36 @@ class OptionCompiler:
                                 'it.'
                             )
 
-                        # The data size must fit into 1 byte.
-                        sizElement = len(atData[0])
-                        if sizElement > 255:
-                            raise Exception('The RAW tag does not accept '
-                                            'more than 255 bytes.')
+                        # A raw option entry contains 4 bytes header and 
+                        # up to 255 bytes data.
+                        # If the data is longer than 255 bytes, we split it 
+                        # into multiple raw entries.
+                        # The max. size of the data chunk is 2048 bytes.
+                        # The max. size of the payload data is 2048-8*4 bytes.
+                        iMaxSize = 2048-8*4
+                        strData = atData[0]
+                        iOffset = 0
+                        sizData = len(strData)
 
-                        ucOptionValue = 0xfe
-                        atOptionData.append(chr(ucOptionValue))
-                        atOptionData.append(chr(sizElement))
-                        atOptionData.append(chr(ulOffset & 0xff))
-                        atOptionData.append(chr((ulOffset >> 8) & 0xff))
-                        atOptionData.extend(atData[0])
+                        if sizData > iMaxSize:
+                            raise Exception('The RAW option must not contain more than %d bytes.' % (iMaxSize))
+                            
+                        while sizData>0:
+                            # Get a chunk of data
+                            sizChunk = min(255, sizData)
+                            strChunk=strData[iOffset:iOffset+sizChunk] 
+                            
+                            # Write it as a raw option
+                            ucOptionIdRaw = 0xfe
+                            atOptionData.append(chr(ucOptionIdRaw))
+                            atOptionData.append(chr(sizChunk))
+                            atOptionData.append(chr(ulOffset & 0xff))
+                            atOptionData.append(chr((ulOffset >> 8) & 0xff))
+                            atOptionData.extend(strChunk)
+
+                            iOffset+=sizChunk
+                            sizData-=sizChunk
+                            ulOffset+=sizChunk
 
                     else:
                         atOptionDesc = (
