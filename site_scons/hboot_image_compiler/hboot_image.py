@@ -4675,6 +4675,7 @@ class HbootImage:
                 'MemoryDeviceUp',  # MDUP
                 'Firewall',        # FRWL
                 'Skip',            # SKIP
+                'SkipIncomplete',  # This is done with a SKIP chunk.
                 'SecureCopy',      # SCPY
                 'Text',            # TEXT
                 'XIP',             # This is done with a TEXT chunk.
