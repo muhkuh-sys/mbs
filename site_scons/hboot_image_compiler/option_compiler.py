@@ -33,13 +33,13 @@ import os
 
 class OptionCompiler:
     # This is a list of the compiled options.
-    __strOptions = None
+    __aucOptions = None
 
     # This is the patch definitions object.
     __cPatchDefinitions = None
 
     def __init__(self, tPatchDefinitions):
-        self.__strOptions = ''
+        self.__aucOptions = bytearray()
         self.__cPatchDefinitions = tPatchDefinitions
 
     def __parse_numeric_expression(self, strExpression):
@@ -69,7 +69,7 @@ class OptionCompiler:
         atTextElements = strText.split(',')
 
         # Process all data elements.
-        atData = []
+        atData = bytearray()
         for strElementRaw in atTextElements:
             strElement = strElementRaw.strip()
 
@@ -77,12 +77,9 @@ class OptionCompiler:
             ulValue = self.__parse_numeric_expression(strElement)
 
             # Generate the data entry.
-            atBytes = [
-                chr((ulValue >> (iCnt << 3)) & 0xff)
-                for iCnt in range(0, uiElementSizeInBytes)
-            ]
-            atData.append(''.join(atBytes))
-        return ''.join(atData)
+            for iCnt in range(0, uiElementSizeInBytes):
+              atData.append((ulValue >> (iCnt << 3)) & 0xff)
+        return atData
 
     # NOTE: This function is also used from outside for SpiMacro parsing.
     def get_spi_macro_data(self, tDataNode):
@@ -145,7 +142,7 @@ class OptionCompiler:
         self.__cPatchDefinitions.setTemporaryConstants(atLabels)
 
         # Process all data elements.
-        atData = []
+        atData = bytearray()
         for strElement in atElements:
             # Parse the data.
             tAstNode = ast.parse(strElement, mode='eval')
@@ -154,16 +151,16 @@ class OptionCompiler:
             ulValue = eval(compile(tAstResolved, 'lala', mode='eval'))
 
             # Generate the data entry.
-            atData.append(chr(ulValue))
+            atData.append(ulValue)
 
         # Remove the labels as temporary constants.
         self.__cPatchDefinitions.setTemporaryConstants([])
 
-        return ''.join(atData)
+        return atData
 
     def __get_ddr_macro_data(self, tDataNode):
         # Collect the DDR macro in this array.
-        atDdrMacro = []
+        atDdrMacro = bytearray()
 
         # Loop over all children.
         for tNode in tDataNode.childNodes:
@@ -197,16 +194,16 @@ class OptionCompiler:
                                         ulData)
 
                     # Append the new element.
-                    atDdrMacro.append(chr(
+                    atDdrMacro.append(
                         self.__cPatchDefinitions.m_atConstants[
                             'DDR_SETUP_COMMAND_WritePhy'
                         ]
-                    ))
-                    atDdrMacro.append(chr(ucRegister))
-                    atDdrMacro.append(chr(ulData & 0xff))
-                    atDdrMacro.append(chr((ulData >> 8) & 0xff))
-                    atDdrMacro.append(chr((ulData >> 16) & 0xff))
-                    atDdrMacro.append(chr((ulData >> 24) & 0xff))
+                    )
+                    atDdrMacro.append(ucRegister)
+                    atDdrMacro.append(ulData & 0xff)
+                    atDdrMacro.append((ulData >> 8) & 0xff)
+                    atDdrMacro.append((ulData >> 16) & 0xff)
+                    atDdrMacro.append((ulData >> 24) & 0xff)
 
                 elif tNode.localName == 'WriteCtrl':
                     strValue = tNode.getAttribute('register')
@@ -237,16 +234,16 @@ class OptionCompiler:
                                         ulData)
 
                     # Append the new element.
-                    atDdrMacro.append(chr(
+                    atDdrMacro.append(
                         self.__cPatchDefinitions.m_atConstants[
                             'DDR_SETUP_COMMAND_WriteCtrl'
                         ]
-                    ))
-                    atDdrMacro.append(chr(ucRegister))
-                    atDdrMacro.append(chr(ulData & 0xff))
-                    atDdrMacro.append(chr((ulData >> 8) & 0xff))
-                    atDdrMacro.append(chr((ulData >> 16) & 0xff))
-                    atDdrMacro.append(chr((ulData >> 24) & 0xff))
+                    )
+                    atDdrMacro.append(ucRegister)
+                    atDdrMacro.append(ulData & 0xff)
+                    atDdrMacro.append((ulData >> 8) & 0xff)
+                    atDdrMacro.append((ulData >> 16) & 0xff)
+                    atDdrMacro.append((ulData >> 24) & 0xff)
 
                 elif tNode.localName == 'Delay':
                     strValue = tNode.getAttribute('ticks')
@@ -261,15 +258,15 @@ class OptionCompiler:
                                         ulTicks)
 
                     # Append the new element.
-                    atDdrMacro.append(chr(
+                    atDdrMacro.append(
                         self.__cPatchDefinitions.m_atConstants[
                             'DDR_SETUP_COMMAND_DelayTicks'
                         ]
-                    ))
-                    atDdrMacro.append(chr(ulTicks & 0xff))
-                    atDdrMacro.append(chr((ulTicks >> 8) & 0xff))
-                    atDdrMacro.append(chr((ulTicks >> 16) & 0xff))
-                    atDdrMacro.append(chr((ulTicks >> 24) & 0xff))
+                    )
+                    atDdrMacro.append(ulTicks & 0xff)
+                    atDdrMacro.append((ulTicks >> 8) & 0xff)
+                    atDdrMacro.append((ulTicks >> 16) & 0xff)
+                    atDdrMacro.append((ulTicks >> 24) & 0xff)
 
                 elif tNode.localName == 'PollPhy':
                     strValue = tNode.getAttribute('register')
@@ -320,24 +317,24 @@ class OptionCompiler:
                                         ulTicks)
 
                     # Append the new element.
-                    atDdrMacro.append(chr(
+                    atDdrMacro.append(
                         self.__cPatchDefinitions.m_atConstants[
                             'DDR_SETUP_COMMAND_PollPhy'
                         ]
-                    ))
-                    atDdrMacro.append(chr(ucRegister))
-                    atDdrMacro.append(chr(ulMask & 0xff))
-                    atDdrMacro.append(chr((ulMask >> 8) & 0xff))
-                    atDdrMacro.append(chr((ulMask >> 16) & 0xff))
-                    atDdrMacro.append(chr((ulMask >> 24) & 0xff))
-                    atDdrMacro.append(chr(ulData & 0xff))
-                    atDdrMacro.append(chr((ulData >> 8) & 0xff))
-                    atDdrMacro.append(chr((ulData >> 16) & 0xff))
-                    atDdrMacro.append(chr((ulData >> 24) & 0xff))
-                    atDdrMacro.append(chr(ulTicks & 0xff))
-                    atDdrMacro.append(chr((ulTicks >> 8) & 0xff))
-                    atDdrMacro.append(chr((ulTicks >> 16) & 0xff))
-                    atDdrMacro.append(chr((ulTicks >> 24) & 0xff))
+                    )
+                    atDdrMacro.append(ucRegister)
+                    atDdrMacro.append(ulMask & 0xff)
+                    atDdrMacro.append((ulMask >> 8) & 0xff)
+                    atDdrMacro.append((ulMask >> 16) & 0xff)
+                    atDdrMacro.append((ulMask >> 24) & 0xff)
+                    atDdrMacro.append(ulData & 0xff)
+                    atDdrMacro.append((ulData >> 8) & 0xff)
+                    atDdrMacro.append((ulData >> 16) & 0xff)
+                    atDdrMacro.append((ulData >> 24) & 0xff)
+                    atDdrMacro.append(ulTicks & 0xff)
+                    atDdrMacro.append((ulTicks >> 8) & 0xff)
+                    atDdrMacro.append((ulTicks >> 16) & 0xff)
+                    atDdrMacro.append((ulTicks >> 24) & 0xff)
 
                 elif tNode.localName == 'PollCtrl':
                     strValue = tNode.getAttribute('register')
@@ -388,37 +385,36 @@ class OptionCompiler:
                                         ulTicks)
 
                     # Append the new element.
-                    atDdrMacro.append(chr(
+                    atDdrMacro.append(
                         self.__cPatchDefinitions.m_atConstants[
                             'DDR_SETUP_COMMAND_PollCtrl'
                         ]
-                    ))
-                    atDdrMacro.append(chr(ucRegister))
-                    atDdrMacro.append(chr(ulMask & 0xff))
-                    atDdrMacro.append(chr((ulMask >> 8) & 0xff))
-                    atDdrMacro.append(chr((ulMask >> 16) & 0xff))
-                    atDdrMacro.append(chr((ulMask >> 24) & 0xff))
-                    atDdrMacro.append(chr(ulData & 0xff))
-                    atDdrMacro.append(chr((ulData >> 8) & 0xff))
-                    atDdrMacro.append(chr((ulData >> 16) & 0xff))
-                    atDdrMacro.append(chr((ulData >> 24) & 0xff))
-                    atDdrMacro.append(chr(ulTicks & 0xff))
-                    atDdrMacro.append(chr((ulTicks >> 8) & 0xff))
-                    atDdrMacro.append(chr((ulTicks >> 16) & 0xff))
-                    atDdrMacro.append(chr((ulTicks >> 24) & 0xff))
+                    )
+                    atDdrMacro.append(ucRegister)
+                    atDdrMacro.append(ulMask & 0xff)
+                    atDdrMacro.append((ulMask >> 8) & 0xff)
+                    atDdrMacro.append((ulMask >> 16) & 0xff)
+                    atDdrMacro.append((ulMask >> 24) & 0xff)
+                    atDdrMacro.append(ulData & 0xff)
+                    atDdrMacro.append((ulData >> 8) & 0xff)
+                    atDdrMacro.append((ulData >> 16) & 0xff)
+                    atDdrMacro.append((ulData >> 24) & 0xff)
+                    atDdrMacro.append(ulTicks & 0xff)
+                    atDdrMacro.append((ulTicks >> 8) & 0xff)
+                    atDdrMacro.append((ulTicks >> 16) & 0xff)
+                    atDdrMacro.append((ulTicks >> 24) & 0xff)
 
                 else:
                     raise Exception('Unknown child node: %s' %
                                     tNode.localName)
 
         # Combine all macro data.
-        strDdrMacro = ''.join(atDdrMacro)
-        sizDdrMacro = len(strDdrMacro)
+        sizDdrMacro = len(atDdrMacro)
 
         # Prepend the size information.
-        atData = []
-        atData.append(chr(sizDdrMacro & 0xff))
-        atData.append(chr((sizDdrMacro >> 8) & 0xff))
+        atData = bytearray()
+        atData.append(sizDdrMacro & 0xff)
+        atData.append((sizDdrMacro >> 8) & 0xff)
         atData.extend(atDdrMacro)
 
         # Return the data.
@@ -432,20 +428,20 @@ class OptionCompiler:
             # Is this a node element with the name 'Options'?
             if tDataNode.nodeType == tDataNode.ELEMENT_NODE:
                 if tDataNode.localName == 'U08':
-                    strData = self.__get_data(tDataNode, 1)
-                    atData.append(strData)
+                    aucData = self.__get_data(tDataNode, 1)
+                    atData.append(aucData)
                 elif tDataNode.localName == 'U16':
-                    strData = self.__get_data(tDataNode, 2)
-                    atData.append(strData)
+                    aucData = self.__get_data(tDataNode, 2)
+                    atData.append(aucData)
                 elif tDataNode.localName == 'U32':
-                    strData = self.__get_data(tDataNode, 4)
-                    atData.append(strData)
+                    aucData = self.__get_data(tDataNode, 4)
+                    atData.append(aucData)
                 elif tDataNode.localName == 'SPIM':
-                    strData = self.get_spi_macro_data(tDataNode)
-                    atData.append(strData)
+                    aucData = self.get_spi_macro_data(tDataNode)
+                    atData.append(aucData)
                 elif tDataNode.localName == 'DDR':
-                    strData = self.__get_ddr_macro_data(tDataNode)
-                    atData.append(strData)
+                    aucData = self.__get_ddr_macro_data(tDataNode)
+                    atData.append(aucData)
                 elif tDataNode.localName == 'File':
                     strFileName = tDataNode.getAttribute('name')
                     if len(strFileName) == 0:
@@ -461,9 +457,9 @@ class OptionCompiler:
                         raise Exception('File %s not found!' % strFileName)
 
                     tBinFile = open(strAbsFilePath, 'rb')
-                    strData = tBinFile.read()
+                    aucData = tBinFile.read()
                     tBinFile.close()
-                    atData.append(strData)
+                    atData.append(aucData)
 
                 else:
                     raise Exception('Unexpected node: %s', tDataNode.localName)
@@ -471,7 +467,7 @@ class OptionCompiler:
         return atData
 
     def __processChunkOptions(self, tChunkNode):
-        atOptionData = []
+        atOptionData = bytearray()
 
         # Loop over all children.
         for tOptionNode in tChunkNode.childNodes:
@@ -516,18 +512,18 @@ class OptionCompiler:
 
                         if sizData > iMaxSize:
                             raise Exception('The RAW option must not contain more than %d bytes.' % (iMaxSize))
-                            
+
                         while sizData>0:
                             # Get a chunk of data
                             sizChunk = min(255, sizData)
-                            strChunk=strData[iOffset:iOffset+sizChunk] 
-                            
+                            strChunk = strData[iOffset:iOffset+sizChunk]
+
                             # Write it as a raw option
                             ucOptionIdRaw = 0xfe
-                            atOptionData.append(chr(ucOptionIdRaw))
-                            atOptionData.append(chr(sizChunk))
-                            atOptionData.append(chr(ulOffset & 0xff))
-                            atOptionData.append(chr((ulOffset >> 8) & 0xff))
+                            atOptionData.append(ucOptionIdRaw)
+                            atOptionData.append(sizChunk)
+                            atOptionData.append(ulOffset & 0xff)
+                            atOptionData.append((ulOffset >> 8) & 0xff)
                             atOptionData.extend(strChunk)
 
                             iOffset+=sizChunk
@@ -559,7 +555,7 @@ class OptionCompiler:
                                 )
                             )
 
-                        atOptionData.append(chr(ulOptionValue))
+                        atOptionData.append(ulOptionValue)
 
                         # Compare the size of all elements.
                         for iCnt in range(0, sizElements):
@@ -618,14 +614,14 @@ class OptionCompiler:
                                 atOptionData.extend(atData[iCnt])
                             elif ulType == 1:
                                 # Add a size byte.
-                                atOptionData.append(chr(sizElement))
+                                atOptionData.append(sizElement)
                                 atOptionData.extend(atData[iCnt])
                             elif ulType == 2:
                                 # Add 16 bit size information.
-                                atOptionData.append(chr(sizElement & 0xff))
-                                atOptionData.append(chr(
+                                atOptionData.append(sizElement & 0xff)
+                                atOptionData.append(
                                     (sizElement >> 8) & 0xff
-                                ))
+                                )
                                 atOptionData.extend(atData[iCnt])
                             else:
                                 raise Exception('Unknown Type %d' % ulType)
@@ -633,21 +629,21 @@ class OptionCompiler:
                     raise Exception('Unexpected node: %s' %
                                     tOptionNode.localName)
 
-        return ''.join(atOptionData)
+        return atOptionData
 
     def process(self, tSource):
         # Clear the output data.
-        self.__strOptions = ''
+        self.__aucOptions = bytearray()
 
         if not isinstance(tSource, xml.dom.minidom.Node):
             raise Exception('The input must be of the type '
                             'xml.dom.minidom.Node, but it is not!')
 
-        self.__strOptions = self.__processChunkOptions(tSource)
+        self.__aucOptions = self.__processChunkOptions(tSource)
 
     def tostring(self):
         """ Return the compiled options as a string. """
-        return self.__strOptions
+        return self.__aucOptions
 
     def write(self, strTargetPath):
         """ Write all compiled options to the file strTargetPath . """

@@ -903,7 +903,7 @@ class HbootImage:
             self.__cPatchDefinitions
         )
         tOptionCompiler.process(tChunkNode)
-        strData = tOptionCompiler.tostring()
+        aucData = tOptionCompiler.tostring()
 
         # Return the plain option chunk for SECMEM images.
         # Add a header otherwise.
@@ -913,16 +913,18 @@ class HbootImage:
         else:
             if self.__strNetxType == 'NETX56':
                 # Pad the option chunk plus a CRC16 to 32 bit size.
-                strPadding = chr(0x00) * ((4 - ((len(strData) + 2) % 4)) & 3)
-                strChunk = strData + strPadding
+                aucPadding = bytearray([0x00] * ((4 - ((len(aucData) + 2) % 4)) & 3))
+                aucChunk = bytearray()
+                aucChunk.extend(aucData)
+                aucChunk.extend(aucPadding)
 
                 # Get the CRC16 for the chunk.
                 usCrc = self.__crc16(strChunk)
-                strChunk += chr((usCrc >> 8) & 0xff)
-                strChunk += chr(usCrc & 0xff)
+                aucChunk.append((usCrc >> 8) & 0xff)
+                aucChunk.append(usCrc & 0xff)
 
                 aulData = array.array('I')
-                aulData.fromstring(strChunk)
+                aulData.fromstring(bytes(aucChunk))
 
                 atChunk = array.array('I')
                 atChunk.append(self.__get_tag_id('O', 'P', 'T', 'S'))
@@ -935,11 +937,13 @@ class HbootImage:
                 (self.__strNetxType == 'NETX4100')
             ):
                 # Pad the option chunk to 32 bit size.
-                strPadding = chr(0x00) * ((4 - (len(strData) % 4)) & 3)
-                strChunk = strData + strPadding
+                aucPadding = bytearray([0x00] * ((4 - (len(aucData) % 4)) & 3))
+                aucChunk = bytearray()
+                aucChunk.extend(aucData)
+                aucChunk.extend(aucPadding)
 
                 aulData = array.array('I')
-                aulData.fromstring(strChunk)
+                aulData.fromstring(bytes(aucChunk))
 
                 atChunk = array.array('I')
                 atChunk.append(self.__get_tag_id('O', 'P', 'T', 'S'))
@@ -960,11 +964,13 @@ class HbootImage:
                 (self.__strNetxType == 'NETXXL_MPW')
             ):
                 # Pad the option chunk to 32 bit size.
-                strPadding = chr(0x00) * ((4 - (len(strData) % 4)) & 3)
-                strChunk = strData + strPadding
+                aucPadding = bytearray([0x00] * ((4 - (len(aucData) % 4)) & 3))
+                aucChunk = bytearray()
+                aucChunk.extend(aucData)
+                aucChunk.extend(aucPadding)
 
                 aulData = array.array('I')
-                aulData.fromstring(strChunk)
+                aulData.fromstring(bytes(aucChunk))
 
                 atChunk = array.array('I')
                 atChunk.append(self.__get_tag_id('O', 'P', 'T', 'S'))
