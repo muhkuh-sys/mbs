@@ -2697,9 +2697,7 @@ class HbootImage:
             iKeyTyp_1ECC_2RSA = 1
 
             aucPriv = self.__openssl_get_data_block(strStdout, 'priv:')
-            # NOT understood, why it has to be removed here. This will fail during 
-            # test case creation for a few ECC keys
-            #self.__openssl_cut_leading_zero(aucPriv)
+            self.__openssl_cut_leading_zero(aucPriv)
             self.__openssl_convert_to_little_endian(aucPriv)
 
             aucPub = self.__openssl_get_data_block(strStdout, 'pub:')
