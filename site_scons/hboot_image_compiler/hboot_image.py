@@ -2557,14 +2557,31 @@ class HbootImage:
 
     def __get_cert_mod_exp(self, tNodeParent, strKeyDER, fIsPublicKey):
         # Extract all information from the key.
-        astrCmd = [
-            self.__cfg_openssl,
-            'pkey',
-            '-inform',
-            'DER',
-            '-text',
-            '-noout'
-        ]
+        # RSA keys with a minimum modulus of 2048bit 
+        #    have a length of input DER stream > 1000
+        if len(strKeyDER) > 1000:
+            astrCmd = [
+                self.__cfg_openssl,
+                'pkey',
+                '-inform',
+                'DER',
+                '-text',
+                '-noout'
+            ]
+        # ECC keys with a maximum modulus of 512bit 
+        #    have a length of input DER stream < 1000
+        else:
+            astrCmd = [
+                self.__cfg_openssl,
+                'ec',
+                '-inform',
+                'DER',
+                '-text',
+                '-noout',
+                '-param_enc', 'explicit',
+                '-no_public'
+            ]
+
         if fIsPublicKey is True:
             astrCmd.append('-pubin')
         if platform.system() == 'Windows':
@@ -2680,7 +2697,9 @@ class HbootImage:
             iKeyTyp_1ECC_2RSA = 1
 
             aucPriv = self.__openssl_get_data_block(strStdout, 'priv:')
-            self.__openssl_cut_leading_zero(aucPriv)
+            # NOT understood, why it has to be removed here. This will fail during 
+            # test case creation for a few ECC keys
+            #self.__openssl_cut_leading_zero(aucPriv)
             self.__openssl_convert_to_little_endian(aucPriv)
 
             aucPub = self.__openssl_get_data_block(strStdout, 'pub:')
