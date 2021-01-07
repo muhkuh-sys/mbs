@@ -814,6 +814,18 @@ class HbootImage:
             raise Exception('Invalid number: "%s"' % strExpression)
         return ulResult
 
+    # Get a 32 bit unsigned value from an attribute.
+    # Raise an error if the attribute is not present.
+    def __get_attribute_value_ul(self, tNode, strAttributeName):
+        strVal = tNode.getAttribute(strAttributeName)
+        if len(strVal) == 0:
+            strNodeName = tNode.localName
+            raise Exception('A %s node is missing the %s attribute!' 
+                            % (strNodeName, strAttributeName))
+
+        ulVal = self.__parse_numeric_expression(strVal)
+        return ulVal 
+
     def __parse_header_options(self, tOptionsNode):
         strFlashInfo = tOptionsNode.getAttribute('set_flasher_parameters')
         if strFlashInfo == "":
@@ -1412,6 +1424,25 @@ class HbootImage:
 
         # Build the chunk
         ulTagId = self.__get_tag_id('R', 'E', 'G', 'I')
+        self.__wrap_chunk(tChunkAttributes, ulTagId, aulData)
+
+    def __build_chunk_secure_copy(self, tChunkAttributes, atParserState,
+                                  uiChunkIndex, atAllChunks):
+        tNode = tChunkAttributes['tNode']
+
+        # Read the parameters from the XML attributes.
+        ulSrcAddr  = self.__get_attribute_value_ul(tNode, 'source_address')
+        ulDestAddr = self.__get_attribute_value_ul(tNode, 'destination_address')
+        ulSize     = self.__get_attribute_value_ul(tNode, 'size')
+
+        # Encode the chunk.
+        aulData = array.array('I')
+        aulData.append(ulSrcAddr)
+        aulData.append(ulDestAddr)
+        aulData.append(ulSize)
+
+        # Build the chunk
+        ulTagId = self.__get_tag_id('S', 'C', 'P', 'Y')
         self.__wrap_chunk(tChunkAttributes, ulTagId, aulData)
 
     def __get_firewall_contents(self, tChunkNode, atEntries):
@@ -5429,6 +5460,28 @@ class HbootImage:
                     'NETX90',
                     'NETX90B',
                     'NETXXL_MPW'
+                ]
+            },
+            
+            'SecureCopy': {
+                'fn': self.__build_chunk_secure_copy,
+                'img': [
+                    self.__IMAGE_TYPE_REGULAR,
+                    self.__IMAGE_TYPE_ALTERNATIVE,
+                    self.__IMAGE_TYPE_INTRAM,
+                    # self.__IMAGE_TYPE_SECMEM,
+                    # self.__IMAGE_TYPE_COM_INFO_PAGE,
+                    # self.__IMAGE_TYPE_APP_INFO_PAGE
+                ],
+                'netx': [
+                    # 'NETX56',
+                    # 'NETX4000_RELAXED',
+                    # 'NETX4000',
+                    # 'NETX4100',
+                    # 'NETX90_MPW',
+                    'NETX90',
+                    'NETX90B',
+                    # 'NETXXL_MPW'
                 ]
             },
         }
