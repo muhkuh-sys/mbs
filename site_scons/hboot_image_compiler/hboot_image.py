@@ -2601,14 +2601,26 @@ class HbootImage:
 
     def __get_cert_mod_exp(self, tNodeParent, strKeyDER, fIsPublicKey):
         # Extract all information from the key.
-        astrCmd = [
-            self.__cfg_openssl,
-            'pkey',
-            '-inform',
-            'DER',
-            '-text',
-            '-noout'
-        ]
+        if len(strKeyDER) > 1000:
+            astrCmd = [
+                self.__cfg_openssl,
+                'pkey',
+                '-inform',
+                'DER',
+                '-text',
+                '-noout'
+            ]
+        else:
+            astrCmd = [
+                self.__cfg_openssl,
+                'ec',
+                '-inform',
+                'DER',
+                '-text',
+                '-noout',
+                '-param_enc', 'explicit',
+                '-no_public'
+            ]
         if fIsPublicKey is True:
             astrCmd.append('-pubin')
         if platform.system() == 'Windows':
@@ -2761,7 +2773,7 @@ class HbootImage:
 
             # Extract the cofactor.
             tReExp = re.compile(
-                r'^Cofactor:\s+(\d+)\s+\(0x([0-9a-fA-F]+)\)$',
+                r'^Cofactor:\s+(\d+)\s+\(0x([0-9a-fA-F]+)\)',
                 re.MULTILINE
             )
             tMatch = tReExp.search(strStdout)
@@ -4447,7 +4459,8 @@ class HbootImage:
                     '-keyform', 'DER',
                     '-sha384'
                 ]
-                astrCmd.extend(self.__cfg_openssloptions)
+                if self.__cfg_openssloptions:
+                    astrCmd.extend(self.__cfg_openssloptions)
                 astrCmd.append(strPathSignatureInputData)
                 strEccSignature = subprocess.check_output(astrCmd)
                 aucEccSignature = array.array('B', strEccSignature)
@@ -4814,6 +4827,8 @@ class HbootImage:
                 )
                 # Add the data part.
                 aulChunk.fromstring(aucData.tostring())
+                # Append the fill-up.
+                aulChunk.extend([0] * sizFillUpInDwords)
 
                 # Get the key in DER encoded format.
                 strKeyDER = __atData['Key']['der']
