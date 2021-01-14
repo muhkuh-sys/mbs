@@ -77,6 +77,7 @@ class AppImage:
     __cfg_openssl = 'openssl'
     __cfg_openssloptions = None
     __fOpensslRandOff = False
+    __signed_binding = False
 
     def __init__(self, tEnv, strNetxType, astrIncludePaths, atKnownFiles,
                  ulSDRamSplitOffset, strOpensslExe, fOpensslRandOff):
@@ -727,14 +728,26 @@ class AppImage:
 
     def __get_cert_mod_exp(self, tNodeParent, strKeyDER, fIsPublicKey):
         # Extract all information from the key.
-        astrCmd = [
-            self.__cfg_openssl,
-            'pkey',
-            '-inform',
-            'DER',
-            '-text',
-            '-noout'
-        ]
+        if len(strKeyDER) > 1000:
+            astrCmd = [
+                self.__cfg_openssl,
+                'pkey',
+                '-inform',
+                'DER',
+                '-text',
+                '-noout'
+            ]
+        else:
+            astrCmd = [
+                self.__cfg_openssl,
+                'ec',
+                '-inform',
+                'DER',
+                '-text',
+                '-noout',
+                '-param_enc', 'explicit',
+                '-no_public'
+            ]
         if fIsPublicKey is True:
             astrCmd.append('-pubin')
         if platform.system() == 'Windows':
@@ -879,7 +892,7 @@ class AppImage:
             self.__openssl_convert_to_little_endian(aucOrder)
 
             # Extract the cofactor.
-            tReExp = re.compile(r'^Cofactor:\s+(\d+)\s+\(0x([0-9a-fA-F]+)\)$',
+            tReExp = re.compile(r'^Cofactor:\s+(\d+)\s+\(0x([0-9a-fA-F]+)\)',
                                 re.MULTILINE)
             tMatch = tReExp.search(strStdout)
             if tMatch is None:
@@ -992,7 +1005,7 @@ class AppImage:
         atData['atAttr'] = atAttr
         atData['der'] = strKeyDER
 
-    def __build_chunk_asig(self, tChunkNode):
+    def __build_chunk_asig(self, tChunkNode, aulFWHash):
         aulChunk = None
 
         # Generate an array with default values where possible.
@@ -1071,12 +1084,17 @@ class AppImage:
         aulChunk.fromstring(__atCert['Binding']['value'].tostring())
         aulChunk.fromstring(__atCert['Binding']['mask'].tostring())
 
-        # Build a hash over the first part of the chunk.
-        tHash = hashlib.sha384()
-        tHash.update(aulChunk.tostring())
-        strHash = tHash.digest()
-        aulHash = array.array('I', strHash)
-        aulChunk.extend(aulHash)
+        if self.__signed_binding:
+            # Append fw hash
+            aulChunk.extend(aulFWHash)
+            print("fw hash: %s" % aulFWHash)
+        else:
+            # Build a hash over the first part of the chunk.
+            tHash = hashlib.sha384()
+            tHash.update(aulChunk.tostring())
+            strHash = tHash.digest()
+            aulHash = array.array('I', strHash)
+            aulChunk.extend(aulHash)
 
         # Get the key in DER encoded format.
         strKeyDER = __atCert['Key']['der']
@@ -1104,15 +1122,20 @@ class AppImage:
         tFile.write(strKeyDER)
         tFile.close()
 
-        # Write the data to sign to the temporary file.
         tFile = open(strPathSignatureInputData, 'wb')
-        aulChunk0Data = self.__atDataBlocks[0]['data']
-        tFile.write(aulChunk0Data[0:112])
-        tFile.write(aulChunk0Data[128:])
-        sizDataBlocks = len(self.__atDataBlocks)
-        for sizCnt in range(1, sizDataBlocks):
-            tFile.write(self.__atDataBlocks[sizCnt]['header'])
-            tFile.write(self.__atDataBlocks[sizCnt]['data'])
+        if self.__signed_binding is False:
+            # Write the data from the fw to the file
+            # Write the data to sign to the temporary file.
+            aulChunk0Data = self.__atDataBlocks[0]['data']
+            tFile.write(aulChunk0Data[0:112])
+            tFile.write(aulChunk0Data[128:])
+            sizDataBlocks = len(self.__atDataBlocks)
+            for sizCnt in range(1, sizDataBlocks):
+                tFile.write(self.__atDataBlocks[sizCnt]['header'])
+                tFile.write(self.__atDataBlocks[sizCnt]['data'])
+        else:
+            # Write the data from the chunk to the file instead of the whole fw
+            tFile.write(aulChunk)
         tFile.close()
 
         if iKeyTyp_1ECC_2RSA == 1:
@@ -1160,6 +1183,7 @@ class AppImage:
 
         # Append the signature to the chunk.
         aulChunk.fromstring(aucSignature.tostring())
+        # print("signature: %s " % aucSignature.tostring())
 
         return aulChunk
 
@@ -1200,6 +1224,51 @@ class AppImage:
             'chip_select': 0
         },
     ]
+
+    def __openssl_ecc_get_signature(self, aucSignature, sizKeyInBytes):
+        # Get the start of the firt element, which is "r".
+        uiLen = aucSignature[1]
+        if uiLen >= 128:
+            uiLen -= 128
+        else:
+            uiLen = 0
+        uiElementStart = 2 + uiLen
+
+        sizR = aucSignature[uiElementStart + 1]
+        aucR = aucSignature[uiElementStart + 2:uiElementStart + 2 + sizR]
+
+        if sizR > sizKeyInBytes + 1:
+            raise Exception('The R field is too big. Expected %d bytes, '
+                            'but got %d.' % (sizKeyInBytes, sizR))
+        elif sizR == sizKeyInBytes + 1:
+            self.__openssl_cut_leading_zero(aucR)
+        elif sizR < sizKeyInBytes:
+            # The signature data is smaller than expected. Pad it with 0x00.
+            aucR.extend([0] * (sizKeyInBytes - sizR))
+        self.__openssl_convert_to_little_endian(aucR)
+
+        # Get the start of the second element, which is "s".
+        uiElementStart = 2 + uiLen + 2 + sizR
+
+        sizS = aucSignature[uiElementStart + 1]
+        aucS = aucSignature[uiElementStart + 2:uiElementStart + 2 + sizS]
+
+        if sizS > sizKeyInBytes + 1:
+            raise Exception('The S field is too big. Expected %d bytes, '
+                            'but got %d.' % (sizKeyInBytes, sizS))
+        elif sizS == sizKeyInBytes + 1:
+            self.__openssl_cut_leading_zero(aucS)
+        elif sizS < sizKeyInBytes:
+            # The signature data is smaller than expected. Pad it with 0x00.
+            aucS.extend([0] * (sizKeyInBytes - sizS))
+        self.__openssl_convert_to_little_endian(aucS)
+
+        # Combine R and S.
+        aucSignature = array.array('B')
+        aucSignature.extend(aucR)
+        aucSignature.extend(aucS)
+
+        return aucSignature
 
     # Insert information for use by the flasher:
     # chip type, target flash device and flash offset.
@@ -1318,6 +1387,7 @@ class AppImage:
         aulHBoot[0x0d] = aulHash[5]
         aulHBoot[0x0e] = aulHash[6]
 
+        # print("header hash: %s" % aulHash)
         # Create the header checksum.
         ulBootblockChecksum = 0
         for iCnt in range(0, 15):
@@ -1333,6 +1403,7 @@ class AppImage:
             aulInputImage[112 + iCnt] = aulHBoot[iCnt]
 
         tAttr['data'] = aulInputImage
+        return aulHash
 
     def build_header(self, sizIdx):
         # Get the attributes.
@@ -1522,6 +1593,10 @@ class AppImage:
                 if tNodeAsig is not None:
                     raise Exception('More than one "asig" node found.')
                 tNodeAsig = tNodeChild
+                signed_binding = tNodeChild.getAttribute('signed_binding')
+                if signed_binding == "True":
+                    self.__signed_binding = True
+                    print("---- use signed binding method -----")
 
         # There must be at least one data block.
         sizDataBlocks = len(self.__atDataBlocks)
@@ -1554,12 +1629,13 @@ class AppImage:
             self.build_header(sizIdx)
 
         # Patch the first data block.
-        self.patch_first_data_block()
+        aulFWHash = self.patch_first_data_block()
 
         # Append ASIG thing to the last block if requested.
         if tNodeAsig is not None:
             tAttr = self.__atDataBlocks[-1]
-            tAttr['asig'] = self.__build_chunk_asig(tNodeAsig)
+            tAttr['asig'] = self.__build_chunk_asig(tNodeAsig, aulFWHash)
+
 
         # Write the data blocks.
         for iCnt in range(0, len(self.__atDataBlocks)):
