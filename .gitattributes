@@ -4,4 +4,6 @@
 # The windows batch file needs CRLF line endings, the linux shell script
 # needs LF line endings.
 autopy_win32.bat text eol=crlf
+autopy3_win32.bat text eol=crlf
 autopy_linux.bat text eol=lf
+autopy3_linux.bat text eol=lf
