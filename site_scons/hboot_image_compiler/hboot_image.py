@@ -110,6 +110,7 @@ class HbootImage:
     __tImageType = None
     __fHasHeader = None
     __fHasEndMarker = None
+    
     __astrToImageType = None
     __IMAGE_TYPE_REGULAR = 0
     __IMAGE_TYPE_INTRAM = 1
@@ -149,6 +150,9 @@ class HbootImage:
 
     __ulPaddingPreSize = None
     __ucPaddingPreValue = None
+    __ulMinImageSize = None
+    __ulMinImageSizeFillValue = None 
+    __ulMaxImageSize = None
 
     def __init__(self, tEnv, strNetxType, **kwargs):
         strPatchDefinition = None
@@ -5739,6 +5743,55 @@ class HbootImage:
         self.__ulPaddingPreSize = ulPaddingPreSize
         self.__ucPaddingPreValue = ucPaddingPreValue
 
+
+        # Get the size and value for min_size padding. 
+        # Default to 0 bytes of 0xffffffff.
+        # The size excludes any pre_padding.
+        # 
+        ulMinImageSize = 0
+        ulMinImageSizeFillValue = 0xffffffff
+        strMinImageSize = tXmlRootNode.getAttribute('min_size')
+        if len(strMinImageSize) != 0:
+            ulMinImageSize = int(strMinImageSize, 0)
+            if ulMinImageSize < 0:
+                raise Exception(
+                    'The min_size is invalid: %d' % ulMinImageSize
+                )
+            if (ulMinImageSize % 4) != 0:
+                raise Exception(
+                    'The min_size is not a multiple of four' % ulMinImageSize
+                )
+        strMinImageSizeFillValue = tXmlRootNode.getAttribute('min_size_fill_value')
+        if len(strMinImageSizeFillValue) != 0:
+            ulMinImageSizeFillValue = int(strMinImageSizeFillValue, 0)
+            if (ucPaddingPreValue < 0) or (ulMinImageSizeFillValue > 0xffffffff):
+                raise Exception(
+                    'The min_size_fill_value is invalid: %d' % ulMinImageSizeFillValue
+                )
+        self.__ulMinImageSize = ulMinImageSize
+        self.__ulMinImageSizeFillValue = ulMinImageSizeFillValue
+
+        # Get the maximum size of the image.
+        # Defaults to 0, meaning no size limit.
+        # The maximum size excludes any pre-padding.
+        ulMaxImageSize = 0
+        strMaxImageSize = tXmlRootNode.getAttribute('max_size')
+        if len(strMaxImageSize) != 0:
+            ulMaxImageSize = int(strMaxImageSize, 0)
+            if ulMaxImageSize < 0:
+                raise Exception(
+                    'The max_size is invalid: %d' % ulMaxImageSize
+                )
+            if (ulMaxImageSize % 4) != 0:
+                raise Exception(
+                    'The max_size is not a multiple of four' % ulMaxImageSize
+                )
+                
+        self.__ulMaxImageSize = ulMaxImageSize
+        
+        if (ulMaxImageSize > 0) and (ulMinImageSize > ulMaxImageSize):
+            raise Exception('min_size is greater than max_size!')
+        
         # Get the device. Default to "UNSPECIFIED".
         astrValidDeviceNames = [
             'UNSPECIFIED',
@@ -5936,6 +5989,34 @@ class HbootImage:
             # Terminate the chunks with a DWORD of 0.
             atEndMarker = array.array('I', [0x00000000])
 
+        # Get the size of the header, chunks and end marker.
+        # Exclude any pre-padding.
+        ulFileSize = 0
+        if self.__fHasHeader is True:
+            ulFileSize += len(atHeader)*4
+        ulFileSize += len(atChunks)*4
+        if self.__fHasEndMarker is True:
+            ulFileSize += len(atEndMarker)*4
+        
+        print "Min. image size: 0x%08x" % self.__ulMinImageSize
+        print "File size:       0x%08x" % ulFileSize
+        
+        # If a minimum size is set and the file is too small, extend it.
+        atFiller = None
+        if self.__ulMinImageSize > ulFileSize:
+            ulFillSize = self.__ulMinImageSize - ulFileSize 
+            ulFillSizeDwords = int(ulFillSize/4)
+            atFiller = array.array(
+                'I',
+                [self.__ulMinImageSizeFillValue] * ulFillSizeDwords
+            )
+            ulFileSize = self.__ulMinImageSize
+
+        # If a maximum size is set, check the size
+        if self.__ulMaxImageSize != 0 and ulFileSize > self.__ulMaxImageSize:
+            raise Exception('Image exceeds maximum size: image 0x%08x bytes, max. size 0x%08x bytes' % (ulFileSize, self.__ulMaxImageSize))
+            
+
         # Write all components to the output file.
         tFile = open(strTargetPath, 'wb')
         if self.__ulPaddingPreSize != 0:
@@ -5949,6 +6030,8 @@ class HbootImage:
         atChunks.tofile(tFile)
         if self.__fHasEndMarker is True:
             atEndMarker.tofile(tFile)
+        if atFiller is not None:
+            atFiller.tofile(tFile)
         tFile.close()
 
     def dependency_scan(self, strInput):
