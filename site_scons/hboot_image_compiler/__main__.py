@@ -41,6 +41,7 @@ tGroupe.add_argument('-n', '--netx-type',
                          'NETX56',
                          'NETX90',
                          'NETX90B',
+                         'NETX90C',
                          'NETX90_MPW',
                          'NETX4000_RELAXED',
                          'NETX4000',
@@ -55,6 +56,7 @@ tGroupe.add_argument('--netx-type-public',
                          'netx90',
                          'netx90_rev0',
                          'netx90_rev1',
+                         'netx90_rev2',
                          'netx90_mpw',
                          'NETX56',
                          'NETX4000_RELAXED',
@@ -155,6 +157,7 @@ atDefaultPatchTables = {
     'NETX56': 'hboot_netx56_patch_table.xml',
     'NETX90': 'hboot_netx90_patch_table.xml',
     'NETX90B': 'hboot_netx90b_patch_table.xml',
+    'NETX90C': 'hboot_netx90c_patch_table.xml',
     'NETX90_MPW': 'hboot_netx90_mpw_patch_table.xml',
     'NETX4000_RELAXED': 'hboot_netx4000_relaxed_patch_table.xml',
     'NETX4000': 'hboot_netx4000_patch_table.xml',
@@ -162,11 +165,13 @@ atDefaultPatchTables = {
 }
 
 if tArgs.strNetxType == 'netx90':
-    strNetxType = 'NETX90B'
+    strNetxType = 'NETX90C'
 elif tArgs.strNetxType == 'netx90_rev0':
     strNetxType = 'NETX90'
 elif tArgs.strNetxType == 'netx90_rev1':
     strNetxType = 'NETX90B'
+elif tArgs.strNetxType == 'netx90_rev2':
+    strNetxType = 'NETX90C'
 elif tArgs.strNetxType == 'netx90_mpw':
     strNetxType = 'NETX90_MPW'
 else:
