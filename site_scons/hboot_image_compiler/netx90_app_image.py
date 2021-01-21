@@ -221,6 +221,49 @@ class AppImage:
 
         return strAbsFilePath
 
+    # Robustly convert boolean strings into boolean values.
+    def __string_to_bool(self, strBool):
+        strBool = strBool.upper()
+        if(
+            (strBool == 'TRUE') or
+            (strBool == 'T') or
+            (strBool == 'YES') or
+            (strBool == 'Y') or
+            (strBool == '1')
+        ):
+            fBool = True
+        elif(
+            (strBool == 'FALSE') or
+            (strBool == 'F') or
+            (strBool == 'NO') or
+            (strBool == 'N') or
+            (strBool == '0')
+        ):
+            fBool = False
+        else:
+            fBool = None
+        return fBool
+        
+    # Get a boolean value from a tag attribute.
+    # If fDefault is defined, the attribute is optional,
+    # if fDefault is None, it is mandatory.
+    def __xml_get_boolean_attribute_value(self, tNode, strAttribName, 
+        fDefault = None):
+        fBool = fDefault
+        strBool = tNode.getAttribute(strAttribName)
+        if len(strBool) == 0:
+            if fBool == None:
+                raise Exception("The attribute %s in node %s is missing!" 
+                % (strAttribName, tNode.tag))
+        else:
+            fBool = self.__string_to_bool(strBool)
+            if fBool == None:
+                raise Exception(
+                "The attribute '%s' in node '%s' has an illegal value!" 
+                % (strAttribName, tNode.localName))
+            
+        return fBool
+        
     def __xml_get_all_text(self, tNode):
         astrText = []
         for tChild in tNode.childNodes:
@@ -1595,9 +1638,10 @@ class AppImage:
                 if tNodeAsig is not None:
                     raise Exception('More than one "asig" node found.')
                 tNodeAsig = tNodeChild
-                signed_binding = tNodeChild.getAttribute('signed_binding')
-                if signed_binding == "True":
-                    self.__signed_binding = True
+                
+                self.__signed_binding = self.__xml_get_boolean_attribute_value(
+                    tNodeAsig, 'signed_binding', False)
+                if self.__signed_binding == True:
                     print("---- use signed binding method -----")
 
         # There must be at least one data block.
