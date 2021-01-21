@@ -2303,22 +2303,23 @@ class HbootImage:
         tOptionCompiler = option_compiler.OptionCompiler(
             self.__cPatchDefinitions
         )
-        strMacroData = tOptionCompiler.get_spi_macro_data(tChunkNode)
+        # abMacroData is a bytearray 
+        abMacroData = tOptionCompiler.get_spi_macro_data(tChunkNode)
 
         # Prepend the device and the size.
-        sizMacro = len(strMacroData)
+        sizMacro = len(abMacroData)
         if sizMacro > 255:
             raise Exception('The SPI macro is too long. The header can only '
                             'indicate up to 255 bytes.')
-        strData = chr(ulDevice) + chr(sizMacro) + strMacroData
+        abData = chr(ulDevice) + chr(sizMacro) + abMacroData
 
         # Pad the macro to a multiple of dwords.
-        strPadding = chr(0x00) * ((4 - (len(strData) % 4)) & 3)
-        strChunk = strData + strPadding
+        strPadding = chr(0x00) * ((4 - (len(abData) % 4)) & 3)
+        abChunk = abData + strPadding
 
         # Convert the padded data to an array.
         aulData = array.array('I')
-        aulData.fromstring(strChunk)
+        aulData.fromstring(bytes(abChunk))
 
         aulChunk = array.array('I')
         aulChunk.append(self.__get_tag_id('S', 'P', 'I', 'M'))
