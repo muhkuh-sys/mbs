@@ -29,7 +29,6 @@ import math
 import os
 import os.path
 import re
-import string
 import platform
 import subprocess
 import sys
@@ -43,7 +42,7 @@ if sys.version_info[0] == 2:
     import option_compiler
     import patch_definitions
     import snippet_library
-elif sys.version_info[0]==3:
+elif sys.version_info[0] == 3:
     from . import option_compiler
     from . import patch_definitions
     from . import snippet_library
@@ -110,7 +109,7 @@ class HbootImage:
     __tImageType = None
     __fHasHeader = None
     __fHasEndMarker = None
-    
+
     __astrToImageType = None
     __IMAGE_TYPE_REGULAR = 0
     __IMAGE_TYPE_INTRAM = 1
@@ -153,7 +152,7 @@ class HbootImage:
     __ulPaddingPreSize = None
     __ucPaddingPreValue = None
     __ulMinImageSize = None
-    __ulMinImageSizeFillValue = None 
+    __ulMinImageSizeFillValue = None
     __ulMaxImageSize = None
 
     def __init__(self, tEnv, strNetxType, **kwargs):
@@ -837,11 +836,11 @@ class HbootImage:
         strVal = tNode.getAttribute(strAttributeName)
         if len(strVal) == 0:
             strNodeName = tNode.localName
-            raise Exception('A %s node is missing the %s attribute!' 
+            raise Exception('A %s node is missing the %s attribute!'
                             % (strNodeName, strAttributeName))
 
         ulVal = self.__parse_numeric_expression(strVal)
-        return ulVal 
+        return ulVal
 
     def __parse_header_options(self, tOptionsNode):
         strFlashInfo = tOptionsNode.getAttribute('set_flasher_parameters')
@@ -942,7 +941,9 @@ class HbootImage:
         else:
             if self.__strNetxType == 'NETX56':
                 # Pad the option chunk plus a CRC16 to 32 bit size.
-                aucPadding = bytearray([0x00] * ((4 - ((len(aucData) + 2) % 4)) & 3))
+                aucPadding = bytearray(
+                    [0x00] * ((4 - ((len(aucData) + 2) % 4)) & 3)
+                )
                 aucChunk = bytearray()
                 aucChunk.extend(aucData)
                 aucChunk.extend(aucPadding)
@@ -1450,9 +1451,18 @@ class HbootImage:
         tNode = tChunkAttributes['tNode']
 
         # Read the parameters from the XML attributes.
-        ulSrcAddr  = self.__get_attribute_value_ul(tNode, 'source_address')
-        ulDestAddr = self.__get_attribute_value_ul(tNode, 'destination_address')
-        ulSize     = self.__get_attribute_value_ul(tNode, 'size')
+        ulSrcAddr = self.__get_attribute_value_ul(
+            tNode,
+            'source_address'
+        )
+        ulDestAddr = self.__get_attribute_value_ul(
+            tNode,
+            'destination_address'
+        )
+        ulSize = self.__get_attribute_value_ul(
+            tNode,
+            'size'
+        )
 
         # Encode the chunk.
         aulData = array.array('I')
@@ -2159,8 +2169,10 @@ class HbootImage:
                     fApplyFirewallSettingsFull = fBool
 
             # enable bxlr-debug-function
-            # A bxlr_index is a address in memory, which is traversed before a exec-chunk is executed.
-            # You can activate this function in any exec-chunk. There are 16 bxlr-addresses.
+            # A bxlr_index is a address in memory, which is traversed before a
+            # exec-chunk is executed.
+            # You can activate this function in any exec-chunk. There are 16
+            # bxlr-addresses.
             # you can set a brakpoint to such addresses.
             # ( 4bit ^= 16 bxlr-addresses).
             fBxlrIndex = None
@@ -2170,33 +2182,51 @@ class HbootImage:
                 try:
                     intIdx = int(strIdx, 0)
                 except BaseException as e:
-                    m = "In chunk idx %s: You have provided %s as a bxlr_index index. You are supposed to provide a number in range of [0,15]."
+                    m = (
+                        "In chunk idx %s: You have provided %s as a " +
+                        "bxlr_index index. You are supposed to provide a " +
+                        "number in range of [0,15]."
+                    )
                     raise BaseException(e, m)
 
-                if 0 <= intIdx < 16:  #  !(MSK_EXEC_CHUNK_FLAGS_BxLrIndex) && intIndex != 0
+                # !(MSK_EXEC_CHUNK_FLAGS_BxLrIndex) && intIndex != 0
+                if 0 <= intIdx < 16:
                     fBxlrIndex = intIdx
                 else:
-                    m = "In chunk idx %s expected attribute 'bxlr_index' to be between 0 to 15. Your bxlr_index index is at %s" % (uiChunkIndex, intIdx)
+                    m = (
+                        "In chunk idx %s expected attribute 'bxlr_index' " +
+                        "to be between 0 to 15. Your bxlr_index index is at %s"
+                    ) % (uiChunkIndex, intIdx)
                     raise(BaseException(m))
-                # todo: Via a log message I would like to tell the user where to put the breakpoint for chunk ID XY.
+                # todo: Via a log message I would like to tell the user where
+                # to put the breakpoint for chunk ID XY.
 
             # Combine all flags.
             ulFlags = 0
             if fStartAppCpu is True:
-                ulFlags |= 0x00000001  # MSK_EXEC_CHUNK_FLAGS_StartAppCpu
+                # MSK_EXEC_CHUNK_FLAGS_StartAppCpu
+                ulFlags |= 0x00000001
             if fLockFirewallSettings is True:
-                ulFlags |= 0x00000002  # MSK_EXEC_CHUNK_FLAGS_LockFirewall
+                # MSK_EXEC_CHUNK_FLAGS_LockFirewall
+                ulFlags |= 0x00000002
             if fActivateDebugging is True:
-                ulFlags |= 0x00000004  # MSK_EXEC_CHUNK_FLAGS_ActivateDebugging
+                # MSK_EXEC_CHUNK_FLAGS_ActivateDebugging
+                ulFlags |= 0x00000004
             if fApplyFirewallSettings is True:
-                ulFlags |= 0x00000008  # MSK_EXEC_CHUNK_FLAGS_ApplyFirewallSettings
+                # MSK_EXEC_CHUNK_FLAGS_ApplyFirewallSettings
+                ulFlags |= 0x00000008
             if fApplyFirewallSettingsFull is True:
-                ulFlags |= 0x00000200  # MSK_EXEC_CHUNK_FLAGS_ApplyFirewallSettingsFull
+                # MSK_EXEC_CHUNK_FLAGS_ApplyFirewallSettingsFull
+                ulFlags |= 0x00000200
             if fBxlrIndex is not None:
                 # activate bxlr-function
                 ulFlags |= 0x00000100
-                # keep in mind, this is not a flag. it is a 4-bit value representing the index of a bxlr
-                ulFlags |= fBxlrIndex << 4  # (MSK_EXEC_CHUNK_FLAGS_BxLrIndex) << SRT_EXEC_CHUNK_FLAGS_BxLrIndex
+                # keep in mind, this is not a flag. it is a 4-bit value
+                # representing the index of a bxlr
+                #
+                # (MSK_EXEC_CHUNK_FLAGS_BxLrIndex) <<
+                #  SRT_EXEC_CHUNK_FLAGS_BxLrIndex
+                ulFlags |= fBxlrIndex << 4
 
         aulChunk = array.array('I')
         aulChunk.append(self.__get_tag_id('E', 'X', 'E', 'C'))
@@ -2303,7 +2333,7 @@ class HbootImage:
         tOptionCompiler = option_compiler.OptionCompiler(
             self.__cPatchDefinitions
         )
-        # abMacroData is a bytearray 
+        # abMacroData is a bytearray
         abMacroData = tOptionCompiler.get_spi_macro_data(tChunkNode)
 
         # Prepend the device and the size.
@@ -4062,8 +4092,10 @@ class HbootImage:
 
         # The netX90B is the first chip which allows more than one device in
         # an MDUP chunk. All other chips allow only one device.
-        if ((self.__strNetxType == 'NETX90B') or
-            (self.__strNetxType == 'NETX90C')):
+        if(
+            (self.__strNetxType == 'NETX90B') or
+            (self.__strNetxType == 'NETX90C')
+        ):
             # Get the comma separated list of devices.
             strDeviceList = tChunkNode.getAttribute('device')
             # Split the list by comma.
@@ -4292,7 +4324,10 @@ class HbootImage:
                             ulKeyIndex
                         )
                     if (ulKeyIndex > 17):
-                        print("Warning: The key index in an USIP chunk must not be greater than 17!")
+                        print(
+                            "Warning: The key index in an USIP chunk must " +
+                            "not be greater than 17!"
+                        )
 
                     __atCert['KeyIndex'] = ulKeyIndex
 
@@ -4633,7 +4668,10 @@ class HbootImage:
                         )
 
                     if (ulRootKeyIndex != 17):
-                        print("Warning: The key index in a HTBL chunk must be 17!")
+                        print(
+                            "Warning: The key index in a HTBL chunk " +
+                            "must be 17!"
+                        )
 
                     __atData['RootKeyIndex'] = ulRootKeyIndex
 
@@ -5370,7 +5408,7 @@ class HbootImage:
                     # 'NETX90_MPW',
                     # 'NETX90',
                     # 'NETX90B'
-#                   # 'NETX90C',
+                    # 'NETX90C',
                 ]
             },
             'CR7Software': {
@@ -5522,7 +5560,7 @@ class HbootImage:
                     'NETXXL_MPW'
                 ]
             },
-            
+
             'SecureCopy': {
                 'fn': self.__build_chunk_secure_copy,
                 'img': [
@@ -5786,11 +5824,10 @@ class HbootImage:
         self.__ulPaddingPreSize = ulPaddingPreSize
         self.__ucPaddingPreValue = ucPaddingPreValue
 
-
-        # Get the size and value for min_size padding. 
+        # Get the size and value for min_size padding.
         # Default to 0 bytes of 0xffffffff.
         # The size excludes any pre_padding.
-        # 
+        #
         ulMinImageSize = 0
         ulMinImageSizeFillValue = 0xffffffff
         strMinImageSize = tXmlRootNode.getAttribute('min_size')
@@ -5804,12 +5841,18 @@ class HbootImage:
                 raise Exception(
                     'The min_size is not a multiple of four' % ulMinImageSize
                 )
-        strMinImageSizeFillValue = tXmlRootNode.getAttribute('min_size_fill_value')
+        strMinImageSizeFillValue = tXmlRootNode.getAttribute(
+            'min_size_fill_value'
+        )
         if len(strMinImageSizeFillValue) != 0:
             ulMinImageSizeFillValue = int(strMinImageSizeFillValue, 0)
-            if (ucPaddingPreValue < 0) or (ulMinImageSizeFillValue > 0xffffffff):
+            if(
+                (ucPaddingPreValue < 0) or
+                (ulMinImageSizeFillValue > 0xffffffff)
+            ):
                 raise Exception(
-                    'The min_size_fill_value is invalid: %d' % ulMinImageSizeFillValue
+                    'The min_size_fill_value is invalid: %d' %
+                    ulMinImageSizeFillValue
                 )
         self.__ulMinImageSize = ulMinImageSize
         self.__ulMinImageSizeFillValue = ulMinImageSizeFillValue
@@ -5829,12 +5872,12 @@ class HbootImage:
                 raise Exception(
                     'The max_size is not a multiple of four' % ulMaxImageSize
                 )
-                
+
         self.__ulMaxImageSize = ulMaxImageSize
-        
+
         if (ulMaxImageSize > 0) and (ulMinImageSize > ulMaxImageSize):
             raise Exception('min_size is greater than max_size!')
-        
+
         # Get the device. Default to "UNSPECIFIED".
         astrValidDeviceNames = [
             'UNSPECIFIED',
@@ -6040,14 +6083,14 @@ class HbootImage:
         ulFileSize += len(atChunks)*4
         if self.__fHasEndMarker is True:
             ulFileSize += len(atEndMarker)*4
-        
-        print "Min. image size: 0x%08x" % self.__ulMinImageSize
-        print "File size:       0x%08x" % ulFileSize
-        
+
+        print("Min. image size: 0x%08x" % self.__ulMinImageSize)
+        print("File size:       0x%08x" % ulFileSize)
+
         # If a minimum size is set and the file is too small, extend it.
         atFiller = None
         if self.__ulMinImageSize > ulFileSize:
-            ulFillSize = self.__ulMinImageSize - ulFileSize 
+            ulFillSize = self.__ulMinImageSize - ulFileSize
             ulFillSizeDwords = int(ulFillSize/4)
             atFiller = array.array(
                 'I',
@@ -6057,8 +6100,13 @@ class HbootImage:
 
         # If a maximum size is set, check the size
         if self.__ulMaxImageSize != 0 and ulFileSize > self.__ulMaxImageSize:
-            raise Exception('Image exceeds maximum size: image 0x%08x bytes, max. size 0x%08x bytes' % (ulFileSize, self.__ulMaxImageSize))
-            
+            raise Exception((
+                'Image exceeds maximum size: image 0x%08x bytes, ' +
+                'max. size 0x%08x bytes'
+            ) % (
+                ulFileSize,
+                self.__ulMaxImageSize
+            ))
 
         # Write all components to the output file.
         tFile = open(strTargetPath, 'wb')
