@@ -22,7 +22,6 @@
 
 import array
 import os
-import string
 
 import SCons
 
@@ -70,7 +69,7 @@ def dataarray_action(target, source, env):
     if (sizFile % sizElement) != 0:
         raise Exception('The file size (%d) is no multiple of the selected '
                         'element size (%d).' % (sizFile, sizElement))
-    sizArray = sizFile / sizElement
+    sizArray = int(sizFile / sizElement)
 
     atSourceData = array.array(strArrayFormat)
     tFileSource = open(source[0].get_path(), 'rb')
