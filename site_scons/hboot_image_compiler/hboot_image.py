@@ -937,7 +937,7 @@ class HbootImage:
         # Add a header otherwise.
         if self.__tImageType == self.__IMAGE_TYPE_SECMEM:
             atChunk = array.array('B')
-            atChunk.fromstring(strData)
+            atChunk.fromstring(aucData)
         else:
             if self.__strNetxType == 'NETX56':
                 # Pad the option chunk plus a CRC16 to 32 bit size.
@@ -949,7 +949,7 @@ class HbootImage:
                 aucChunk.extend(aucPadding)
 
                 # Get the CRC16 for the chunk.
-                usCrc = self.__crc16(strChunk)
+                usCrc = self.__crc16(aucChunk.tostring())
                 aucChunk.append((usCrc >> 8) & 0xff)
                 aucChunk.append(usCrc & 0xff)
 
