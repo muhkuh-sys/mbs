@@ -2168,6 +2168,13 @@ class HbootImage:
                 if fBool is not None:
                     fApplyFirewallSettingsFull = fBool
 
+            fDoNotLockSystemCfg = False
+            strBool = tChunkNode.getAttribute('do_not_lock_system_cfg')
+            if len(strBool) != 0:
+                fBool = self.__string_to_bool(strBool)
+                if fBool is not None:
+                    fDoNotLockSystemCfg = fBool
+                    
             # enable bxlr-debug-function
             # A bxlr_index is a address in memory, which is traversed before a
             # exec-chunk is executed.
@@ -2227,6 +2234,8 @@ class HbootImage:
                 # (MSK_EXEC_CHUNK_FLAGS_BxLrIndex) <<
                 #  SRT_EXEC_CHUNK_FLAGS_BxLrIndex
                 ulFlags |= fBxlrIndex << 4
+            if fDoNotLockSystemCfg is True:
+                ulFlags |= 0x00000400  # MSK_EXEC_CHUNK_FLAGS_DoNotLockSystemCfg
 
         aulChunk = array.array('I')
         aulChunk.append(self.__get_tag_id('E', 'X', 'E', 'C'))
