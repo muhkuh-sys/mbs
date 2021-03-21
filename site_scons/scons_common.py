@@ -47,6 +47,7 @@ import hexdump
 import iflash_image
 import objimport
 import pom_template
+import scons_compiledb
 import svnversion
 import uuencode
 import version
@@ -162,6 +163,7 @@ def CreateEnvironment(env, astrToolPatterns=None):
     objimport.ApplyToEnv(tEnvNew)
     pom_template.ApplyToEnv(tEnvNew)
     ApplyToEnv(tEnvNew)
+    scons_compiledb.enable(tEnvNew)
     svnversion.ApplyToEnv(tEnvNew)
     uuencode.ApplyToEnv(tEnvNew)
     version.ApplyToEnv(tEnvNew)
