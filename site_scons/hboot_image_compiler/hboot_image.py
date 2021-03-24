@@ -242,8 +242,9 @@ class HbootImage:
         self.__cfg_openssloptions = atOpensslOptions
 
         # Set the OpenSSL Path.
-        self.__cfg_openssl = strCfgOpenssl
-
+        if strCfgOpenssl is not None:
+        	self.__cfg_openssl = strCfgOpenssl
+        	
         if self.__fVerbose:
             print('[HBootImage] Configuration: netX type = %s' % strNetxType)
             print('[HBootImage] Configuration: patch definitions = "%s"' %
@@ -2698,6 +2699,8 @@ class HbootImage:
                 stdin=subprocess.PIPE,
                 stdout=subprocess.PIPE
             )
+        print("GUCK_HIER")
+        print(os.environ)
         (strStdout, strStdErr) = tProcess.communicate(strKeyDER)
         if tProcess.returncode != 0:
             raise Exception('OpenSSL failed with return code %d.' %
