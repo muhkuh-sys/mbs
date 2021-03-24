@@ -24,8 +24,14 @@ import argparse
 import os.path
 import re
 
-import hboot_image
-import hboot_image_version
+import sys
+
+from hbi_settings import *
+import hboot_image as hboot_image
+import hboot_image_version as hboot_image_version
+
+# import hboot_image
+# import hboot_image_version
 
 
 tParser = argparse.ArgumentParser(usage='hboot_image [options]')
@@ -177,9 +183,15 @@ elif tArgs.strNetxType == 'netx90_mpw':
 else:
     strNetxType = tArgs.strNetxType
 
+
 if tArgs.strPatchTablePath is None:
+
+    path_patch_tables = os.path.join(hbi_path, "patch_tables")
+    print("path_patch_tables: '%s'" % path_patch_tables)
+    for file in os.listdir(path_patch_tables):
+        print("-%s" % file)
     tArgs.strPatchTablePath = os.path.join(
-        os.path.dirname(os.path.dirname(os.path.realpath(__file__))),
+        path_patch_tables,
         atDefaultPatchTables[strNetxType]
     )
 

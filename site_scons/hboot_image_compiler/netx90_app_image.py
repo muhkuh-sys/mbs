@@ -31,10 +31,10 @@ import argparse
 import array
 import base64
 import binascii
-import elf_support
 import hashlib
 import logging
 import os
+import sys
 import re
 import string
 import platform
@@ -43,6 +43,11 @@ import tempfile
 import xml.dom.minidom
 import xml.etree.ElementTree
 
+cwd_ = os.path.dirname(os.path.realpath(__file__))
+project_path = os.path.dirname(cwd_)
+sys.path.append(project_path)
+import hboot_image_compiler.elf_support as elf_support
+import hboot_image_compiler.hboot_image_version as hboot_image_version
 
 # Is this a standalone script?
 if __name__ != '__main__':
@@ -1860,6 +1865,11 @@ if __name__ == '__main__':
         'strInputFile',
         metavar='INPUT_FILE',
         help='read the XML data from INPUT_FILE'
+    )
+    tParser.add_argument(
+        '--version',
+        action='version',
+        version=hboot_image_version.VERSION_STRING
     )
     tParser.add_argument(
         'astrOutputFiles',

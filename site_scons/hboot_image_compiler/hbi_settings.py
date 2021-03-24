@@ -19,11 +19,15 @@
 # *   Free Software Foundation, Inc.,                                       *
 # *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
 # ***************************************************************************
-import sys
+
 import os
+import sys
 
-cwd_ = os.path.dirname(os.path.realpath(__file__))
-project_path = os.path.dirname(cwd_)
-sys.path.insert(0, project_path)
+file_path = os.path.realpath(__file__)
+cwd_ = os.path.dirname(file_path)
 
-from hboot_image_compiler import hboot_image
+print("file_path: %s" % file_path)
+print("cwd_: %s" % cwd_)
+
+hbi_path = cwd_
+sys.path.append(hbi_path)

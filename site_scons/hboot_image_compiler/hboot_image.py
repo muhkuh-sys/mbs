@@ -36,16 +36,15 @@ import tempfile
 import xml.dom.minidom
 import xml.etree.ElementTree
 
-import elf_support
+# import elf_support
+# import option_compiler
+# import patch_definitions
+# import snippet_library
 
-if sys.version_info[0] == 2:
-    import option_compiler
-    import patch_definitions
-    import snippet_library
-elif sys.version_info[0] == 3:
-    from . import option_compiler
-    from . import patch_definitions
-    from . import snippet_library
+import elf_support as elf_support
+import option_compiler as option_compiler
+import patch_definitions as patch_definitions
+import snippet_library as snippet_library
 
 
 class ResolveDefines(ast.NodeTransformer):
@@ -120,7 +119,8 @@ class HbootImage:
     __sizHashDw = None
 
     __XmlKeyromContents = None
-    __cfg_openssl = 'openssl'
+    __cfg_openssl = r'C:\Users\frederikwoermann\Documents\_netx_tools\nxt_butler\modules\nxt.llsv.verify.secure_boot\ext\resources\openssl\openssl.exe'
+    # __cfg_openssl = 'openssl'
     __cfg_openssloptions = None
     __fOpensslRandOff = False
 
