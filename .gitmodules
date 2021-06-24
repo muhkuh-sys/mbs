@@ -1,0 +1,3 @@
+[submodule "site_scons/hil_nxt_hboot_image_compiler"]
+	path = site_scons/hil_nxt_hboot_image_compiler
+	url = https://github.com/FrikadellenFred/hil_nxt_hboot_image_compiler.git

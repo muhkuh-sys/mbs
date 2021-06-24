@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 
 
-# import hboot_image_compiler.hboot_image
-import hboot_image_compiler
+# import hil_nxt_hboot_image_compiler.hboot_image
+import hil_nxt_hboot_image_compiler.com.hboot_image
 
 import os.path
 
@@ -87,7 +87,7 @@ def __hboot_get_patch_table(env):
             raise Exception('Invalid ASIC typ: "%s"' % strAsicTyp)
 
         strPatchDefinition = os.path.join(
-            os.path.join(os.path.dirname(os.path.abspath(__file__)), "hboot_image_compiler",  "patch_tables"),
+            os.path.join(os.path.dirname(os.path.abspath(__file__)), "hil_nxt_hboot_image_compiler",  "patch_tables"),
             strRelPatchDefinition
         )
 

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 
-import hboot_image_compiler.netx90_app_iflash_image
+import hil_nxt_hboot_image_compiler.app.netx90_app_iflash_image
 
 import SCons.Script
 
