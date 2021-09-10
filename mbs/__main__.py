@@ -85,7 +85,20 @@ filter.apply(aCfg)
 
 # Clean all orphaned ".pyc" files in the project. Be verbose and really delete
 # the files.
-clean_orphaned_pyc.cleanup(os.getcwd(), True, False)
+# pyc files explanation and release python version of __pycache__:
+# https://stackoverflow.com/questions/16869024/what-is-pycache
+# https://docs.python.org/3/whatsnew/3.2.html?highlight=__pycache__#pep-3147-pyc-repository-directories
+#
+# Why not running without source file for python 3.2 and higher:
+# https://stackoverflow.com/questions/25172773/running-without-python-source-files-in-python-3-4
+# https://www.python.org/dev/peps/pep-3147/#case-3-pycache-foo-magic-pyc-with-no-source
+#
+# Only if the python Version is lower than 3.2
+# https://docs.python.org/3/library/sys.html
+if sys.version_info.major == 3 and sys.version_info.minor >= 2:
+	print("It is not necessary to clean up .pyc files for python versions higher or equal to 3.2 .")
+else:
+	clean_orphaned_pyc.cleanup(os.getcwd(), True, False)
 
 
 # Run Scons (use aCfg['scons'] to get the path. All archives *must* create a
