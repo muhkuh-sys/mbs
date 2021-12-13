@@ -1092,6 +1092,17 @@ class HbootImage:
         # Remove the temp file.
         os.remove(strBinFileName)
 
+        # Print an info message if the extracted data is empty.
+        if len(strData) == 0:
+            # If a list of segments has been specified, print this list 
+            # (the value of the segments attribute)
+            if len(strSegmentsToDump) != 0:
+                print("The data extracted from ELF file %s, segments %s, is empty!" 
+                    % (strAbsFilePath, strSegmentsToDump))
+            else:
+                print("The data extracted from ELF file %s is empty!"
+                    % (strAbsFilePath))
+                
         return strData, pulLoadAddress
 
     def __get_data_contents_key(self, tKeyNode):
@@ -1814,6 +1825,9 @@ class HbootImage:
         self.__get_data_contents(tChunkNode, atData, True)
         strData = atData['data']
         pulLoadAddress = atData['load_address']
+        
+        if (len(strData) == 0):
+            raise Exception('Empty data chunk!')
 
         # Pad the application size to a multiple of DWORDs.
         strPadding = b'\x00' * ((4 - (len(strData) % 4)) & 3)
