@@ -34,6 +34,7 @@ import artifact
 import artifact_version
 import bootblock
 import build_properties
+import concat
 import data_array
 import diff
 import filter
@@ -47,6 +48,7 @@ import hexdump
 import iflash_image
 import objimport
 import pom_template
+import scons_compiledb
 import svnversion
 import uuencode
 import version
@@ -148,6 +150,7 @@ def CreateEnvironment(env, astrToolPatterns=None):
     artifact_version.ApplyToEnv(tEnvNew)
     bootblock.ApplyToEnv(tEnvNew)
     build_properties.ApplyToEnv(tEnvNew)
+    concat.ApplyToEnv(tEnvNew)
     data_array.ApplyToEnv(tEnvNew)
     diff.ApplyToEnv(tEnvNew)
     filter.ApplyToEnv(tEnvNew)
@@ -162,6 +165,7 @@ def CreateEnvironment(env, astrToolPatterns=None):
     objimport.ApplyToEnv(tEnvNew)
     pom_template.ApplyToEnv(tEnvNew)
     ApplyToEnv(tEnvNew)
+    scons_compiledb.enable(tEnvNew)
     svnversion.ApplyToEnv(tEnvNew)
     uuencode.ApplyToEnv(tEnvNew)
     version.ApplyToEnv(tEnvNew)
