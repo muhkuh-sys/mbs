@@ -189,7 +189,10 @@ def bootblock_action(target, source, env):
         # Get the size of the evetually padded data.
         ulApplicationDwordSize = int(len(strBinFile) / 4)
         aulApplicationData = array.array('I')
-        aulApplicationData.fromstring(strBinFile)
+        if hasattr(array.array, 'frombytes') == True:
+            aulApplicationData.frombytes(strBinFile)
+        else:
+            aulApplicationData.fromstring(strBinFile)
 
         # Build the application checksum.
         ulApplicationChecksum = 0

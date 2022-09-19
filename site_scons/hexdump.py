@@ -50,7 +50,10 @@ def hexdump_action(target, source, env):
                         'but it is %d' % iElemSize)
 
     atSourceData = array.array(strArrayFormat)
-    atSourceData.fromstring(strSourceData)
+    if hasattr(array.array, 'frombytes') == True:
+        atSourceData.frombytes(strSourceData)
+    else:
+        atSourceData.fromstring(strSourceData)
 
     if iElemSize == 4.5:
         file_target_lo = open(target[0].get_path(), 'wt')
