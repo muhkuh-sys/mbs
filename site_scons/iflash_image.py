@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 
-import hboot_image_compiler.netx90_app_iflash_image
+import hil_nxt_hboot_image_compiler.com.netx90_app_iflash_image
 
 import SCons.Script
 
@@ -17,7 +17,7 @@ def __iflash_image_action(target, source, env):
             'IFlash images are not possible for ASIC typ "%s".' % strAsicTyp
         )
 
-    hboot_image_compiler.netx90_app_iflash_image.patch_image(
+    netx90_app_iflash_image.patch_image(
         source[0].get_path(),
         target[0].get_path(),
         fVerbose
