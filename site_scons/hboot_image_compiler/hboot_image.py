@@ -736,7 +736,7 @@ class HbootImage:
 
         # Get the hash for the image.
         tHash = hashlib.sha224()
-        tHash.update(atChunks.tostring())
+        tHash.update(atChunks.tobytes())
         aulHash = array.array('I', tHash.digest())
 
         # Get the parameter0 value.
@@ -1835,7 +1835,7 @@ class HbootImage:
 
         # Convert the padded data to an array.
         aulData = array.array('I')
-        aulData.fromstring(strChunk)
+        aulData.frombytes(strChunk)
 
         aulChunk = array.array('I')
         # Do not add an ID for info page images.
@@ -1850,7 +1850,7 @@ class HbootImage:
 
             # Get the hash for the chunk.
             tHash = hashlib.sha384()
-            tHash.update(aulChunk.tostring())
+            tHash.update(aulChunk.tobytes())
             strHash = tHash.digest()
             aulHash = array.array('I', strHash[:self.__sizHashDw * 4])
             aulChunk.extend(aulHash)
@@ -2264,7 +2264,7 @@ class HbootImage:
 
         # Get the hash for the chunk.
         tHash = hashlib.sha384()
-        tHash.update(aulChunk.tostring())
+        tHash.update(aulChunk.tobytes())
         strHash = tHash.digest()
         aulHash = array.array('I', strHash[:self.__sizHashDw * 4])
         aulChunk.extend(aulHash)
