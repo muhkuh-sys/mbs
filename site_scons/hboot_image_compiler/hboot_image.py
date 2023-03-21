@@ -1001,7 +1001,7 @@ class HbootImage:
                 aucChunk.extend(aucPadding)
 
                 aulData = array.array('I')
-                aulData.fromstring(bytes(aucChunk))
+                aulData.frombytes(bytes(aucChunk))
 
                 atChunk = array.array('I')
                 atChunk.append(self.__get_tag_id('O', 'P', 'T', 'S'))
@@ -1010,7 +1010,7 @@ class HbootImage:
 
                 # Get the hash for the chunk.
                 tHash = hashlib.sha384()
-                tHash.update(atChunk.tostring())
+                tHash.update(atChunk.tobytes())
                 strHash = tHash.digest()
                 aulHash = array.array('I', strHash[:self.__sizHashDw * 4])
                 atChunk.extend(aulHash)
@@ -1094,15 +1094,15 @@ class HbootImage:
 
         # Print an info message if the extracted data is empty.
         if len(strData) == 0:
-            # If a list of segments has been specified, print this list 
+            # If a list of segments has been specified, print this list
             # (the value of the segments attribute)
             if len(strSegmentsToDump) != 0:
-                print("The data extracted from ELF file %s, segments %s, is empty!" 
+                print("The data extracted from ELF file %s, segments %s, is empty!"
                     % (strAbsFilePath, strSegmentsToDump))
             else:
                 print("The data extracted from ELF file %s is empty!"
                     % (strAbsFilePath))
-                
+
         return strData, pulLoadAddress
 
     def __get_data_contents_key(self, tKeyNode):
@@ -1825,7 +1825,7 @@ class HbootImage:
         self.__get_data_contents(tChunkNode, atData, True)
         strData = atData['data']
         pulLoadAddress = atData['load_address']
-        
+
         if (len(strData) == 0):
             raise Exception('Empty data chunk!')
 
@@ -2188,7 +2188,7 @@ class HbootImage:
                 fBool = self.__string_to_bool(strBool)
                 if fBool is not None:
                     fDoNotLockSystemCfg = fBool
-                    
+
             # enable bxlr-debug-function
             # A bxlr_index is a address in memory, which is traversed before a
             # exec-chunk is executed.
