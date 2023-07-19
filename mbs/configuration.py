@@ -146,7 +146,6 @@ def create():
             os.path.expanduser('~/.mbs/depack')
         ),
         'repositories': [
-            'https://dl.bintray.com/muhkuh/Muhkuh',
             'http://downloads.sourceforge.net/project/muhkuh/mbs'
         ],
         'filter': dict({
