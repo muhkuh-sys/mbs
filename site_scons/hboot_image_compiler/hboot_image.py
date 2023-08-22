@@ -1612,7 +1612,7 @@ class HbootImage:
                         )
                         aulNumbers.append(ulNum)
 
-                    strData = aulNumbers.tostring()
+                    strData = aulNumbers.tobytes()
 
                 elif tNode.localName == 'UInt16':
                     if fWantLoadAddress is True:
@@ -1639,7 +1639,7 @@ class HbootImage:
                         )
                         ausNumbers.append(usNum)
 
-                    strData = ausNumbers.tostring()
+                    strData = ausNumbers.tobytes()
 
                 elif tNode.localName == 'UInt8':
                     if fWantLoadAddress is True:
@@ -1666,7 +1666,7 @@ class HbootImage:
                         )
                         aucNumbers.append(ucNum)
 
-                    strData = aucNumbers.tostring()
+                    strData = aucNumbers.tobytes()
 
                 elif tNode.localName == 'Key':
                     if fWantLoadAddress is True:
@@ -1746,7 +1746,7 @@ class HbootImage:
                                     )
                                     aulNumbers.append(ulNum)
 
-                                strDataChunk = aulNumbers.tostring()
+                                strDataChunk = aulNumbers.tobytes()
                                 astrData.append(strDataChunk)
 
                             elif tConcatNode.localName == 'UInt16':
@@ -1767,7 +1767,7 @@ class HbootImage:
                                     )
                                     ausNumbers.append(usNum)
 
-                                strDataChunk = ausNumbers.tostring()
+                                strDataChunk = ausNumbers.tobytes()
                                 astrData.append(strDataChunk)
 
                             elif tConcatNode.localName == 'UInt8':
@@ -1788,7 +1788,7 @@ class HbootImage:
                                     )
                                     aucNumbers.append(ucNum)
 
-                                strDataChunk = aucNumbers.tostring()
+                                strDataChunk = aucNumbers.tobytes()
                                 astrData.append(strDataChunk)
 
                             elif tConcatNode.localName == 'Key':
@@ -1801,7 +1801,7 @@ class HbootImage:
                                 raise Exception('Unexpected node: %s' %
                                                 tConcatNode.localName)
 
-                    strData = ''.join(astrData)
+                    strData = b''.join(astrData)
 
                 else:
                     raise Exception('Unexpected node: %s' % tNode.localName)
@@ -2528,7 +2528,7 @@ class HbootImage:
 
         # Get the hash for the chunk.
         tHash = hashlib.sha384()
-        tHash.update(aulChunk.tostring())
+        tHash.update(aulChunk.tobytes())
         strHash = tHash.digest()
         aulHash = array.array('I', strHash[:self.__sizHashDw * 4])
         aulChunk.extend(aulHash)
@@ -4425,7 +4425,7 @@ class HbootImage:
 
             # Convert the padded data to an array.
             aulData = array.array('I')
-            aulData.fromstring(atData.tostring())
+            aulData.frombytes(atData.tobytes())
 
             aulChunk = array.array('I')
             aulChunk.append(self.__get_tag_id('U', 'S', 'I', 'P'))
@@ -4434,7 +4434,7 @@ class HbootImage:
 
             # Get the hash for the chunk.
             tHash = hashlib.sha384()
-            tHash.update(aulChunk.tostring())
+            tHash.update(aulChunk.tobytes())
             strHash = tHash.digest()
             aulHash = array.array('I', strHash[:self.__sizHashDw * 4])
             aulChunk.extend(aulHash)
