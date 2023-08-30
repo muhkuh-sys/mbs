@@ -1873,15 +1873,15 @@ class HbootImage:
         tChunkNode = tChunkAttributes['tNode']
 
         # Get the text block.
-        strText = self.__xml_get_all_text(tChunkNode)
+        aucText = self.__xml_get_all_text(tChunkNode).encode('utf-8')
 
         # Pad the text to a multiple of DWORDs.
-        strPadding = chr(0x00) * ((4 - (len(strText) % 4)) & 3)
-        strChunk = strText + strPadding
+        aucPadding = b'\0' * ((4 - (len(aucText) % 4)) & 3)
+        aucChunk = aucText + aucPadding
 
         # Convert the padded text to an array.
         aulData = array.array('I')
-        aulData.fromstring(strChunk)
+        aulData.frombytes(aucChunk)
 
         aulChunk = array.array('I')
         aulChunk.append(self.__get_tag_id('T', 'E', 'X', 'T'))
@@ -1890,7 +1890,7 @@ class HbootImage:
 
         # Get the hash for the chunk.
         tHash = hashlib.sha384()
-        tHash.update(aulChunk.tostring())
+        tHash.update(aulChunk.tobytes())
         strHash = tHash.digest()
         aulHash = array.array('I', strHash[:self.__sizHashDw * 4])
         aulChunk.extend(aulHash)
