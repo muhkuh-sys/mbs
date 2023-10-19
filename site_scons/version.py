@@ -39,6 +39,7 @@ def build_version_strings(strProjectRootPath, strGit, strMercurial,
     strProjectVersionVcsVersionLong = 'unknown'
     strProjectVersionVCS = 'unknown'
     strProjectVersionVCSLong = 'unknown'
+    strProjectVersionGitId = 'unknown'
     strProjectVersionLastCommit = 'unknown'
     strProjectVersionVCSURL = 'unknown'
 
@@ -125,6 +126,9 @@ def build_version_strings(strProjectRootPath, strGit, strMercurial,
                     strProjectVersionVcsSystem +
                     strProjectVersionVcsVersionLong
                 )
+
+                # Make the output of 'git describe' available.
+                strProjectVersionGitId = strProjectVersionVcsSystem + strGitId
 
                 strCmd = '%s config --get remote.origin.url' % strGit
                 tProcess = subprocess.Popen(
@@ -230,6 +234,7 @@ def build_version_strings(strProjectRootPath, strGit, strMercurial,
         'VcsVersionLong': strProjectVersionVcsVersionLong,
         'VCS': strProjectVersionVCS,
         'VCSLong': strProjectVersionVCSLong,
+        'VCSGitID': strProjectVersionGitId,
         'LastCommit': strProjectVersionLastCommit,
         'VCSURL': strProjectVersionVCSURL
     }
@@ -254,6 +259,7 @@ def add_version_strings_to_env(env):
         # Add the version to the environment.
         env['PROJECT_VERSION_VCS'] = tVersion['VCS']
         env['PROJECT_VERSION_VCS_LONG'] = tVersion['VCSLong']
+        env['PROJECT_VERSION_GIT_ID'] = tVersion['VCSGitID']
         env['PROJECT_VERSION_LAST_COMMIT'] = tVersion['LastCommit']
         env['PROJECT_VERSION_VCS_SYSTEM'] = tVersion['VcsSystem']
         env['PROJECT_VERSION_VCS_VERSION'] = tVersion['VcsVersion']
@@ -291,6 +297,11 @@ def get_project_version_vcs_version_long(env):
     return env['PROJECT_VERSION_VCS_VERSION_LONG']
 
 
+def get_project_version_git_id(env):
+    add_version_strings_to_env(env)
+    return env['PROJECT_VERSION_GIT_ID']
+
+
 def get_project_version_vcs_url(env):
     add_version_strings_to_env(env)
     return env['PROJECT_VERSION_VCS_URL']
@@ -307,6 +318,8 @@ def version_action(target, source, env):
         'PROJECT_VERSION_MICRO': version_info[2],
         'PROJECT_VERSION_VCS': env['PROJECT_VERSION_VCS'],
         'PROJECT_VERSION_VCS_LONG': env['PROJECT_VERSION_VCS_LONG'],
+        'PROJECT_VERSION_GIT_ID': env['PROJECT_VERSION_GIT_ID'],
+        'PROJECT_VERSION_VCS_URL': env['PROJECT_VERSION_VCS_URL'],
         'PROJECT_VERSION': SCons.Script.PROJECT_VERSION,
         'PROJECT_VERSION_VCS_SYSTEM': env['PROJECT_VERSION_VCS_SYSTEM'],
         'PROJECT_VERSION_VCS_VERSION': env['PROJECT_VERSION_VCS_VERSION'],
@@ -352,6 +365,9 @@ def version_emitter(target, source, env):
         env['PROJECT_VERSION_VCS_VERSION_LONG'])
     )
     env.Depends(target, SCons.Node.Python.Value(
+        env['PROJECT_VERSION_GIT_ID'])
+    )
+    env.Depends(target, SCons.Node.Python.Value(
         env['PROJECT_VERSION_VCS_URL'])
     )
 
@@ -391,6 +407,8 @@ def ApplyToEnv(env):
                   "Version_GetVcsVersion")
     env.AddMethod(get_project_version_vcs_version_long,
                   "Version_GetVcsVersionLong")
+    env.AddMethod(get_project_version_git_id,
+                  "Version_GetProjectVersionGitID")
     env.AddMethod(get_project_version_vcs_url,
                   'Version_GetVcsUrl')
 
