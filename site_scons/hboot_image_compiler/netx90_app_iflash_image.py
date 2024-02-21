@@ -30,9 +30,9 @@ def patch_image(strInputFile, strOutputFile, fVerbose=False):
 
     # Read the complete input file to a string.
     tFile = open(strInputFile, 'rb')
-    strInputImage = tFile.read()
+    aucInputImage = tFile.read()
     tFile.close()
-    sizInputImage = len(strInputImage)
+    sizInputImage = len(aucInputImage)
 
     if fVerbose is True:
         print('Read %d bytes.' % sizInputImage)
@@ -55,7 +55,7 @@ def patch_image(strInputFile, strOutputFile, fVerbose=False):
 
     # Parse the HBOOT header as 32bit elements.
     aulHBoot = array.array('I')
-    aulHBoot.fromstring(strInputImage[448:512])
+    aulHBoot.frombytes(aucInputImage[448:512])
 
     # Check the magic and signature.
     if aulHBoot[0x00] != 0xf3beaf00:
@@ -92,8 +92,8 @@ def patch_image(strInputFile, strOutputFile, fVerbose=False):
     # Create a SHA384 hash over the cm4 vectors and the complete application
     # (i.e. the complete file without the first 512 bytes).
     tHash = hashlib.sha384()
-    tHash.update(strInputImage[0:448])
-    tHash.update(strInputImage[512:])
+    tHash.update(aucInputImage[0:448])
+    tHash.update(aucInputImage[512:])
     aulHash = array.array('I', tHash.digest())
 
     # Write the first 7 DWORDs of the hash to the HBOOT header.
@@ -119,9 +119,9 @@ def patch_image(strInputFile, strOutputFile, fVerbose=False):
     if fVerbose is True:
         print('Writing patched image to "%s".' % strOutputFile)
     tFile = open(strOutputFile, 'wb')
-    tFile.write(strInputImage[0:448])
+    tFile.write(aucInputImage[0:448])
     aulHBoot.tofile(tFile)
-    tFile.write(strInputImage[512:])
+    tFile.write(aucInputImage[512:])
     tFile.close()
 
     if fVerbose is True:
