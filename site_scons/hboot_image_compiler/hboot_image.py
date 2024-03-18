@@ -973,7 +973,7 @@ class HbootImage:
                 aucChunk.extend(aucPadding)
 
                 aulData = array.array('I')
-                aulData.fromstring(bytes(aucChunk))
+                aulData.frombytes(bytes(aucChunk))
 
                 atChunk = array.array('I')
                 atChunk.append(self.__get_tag_id('O', 'P', 'T', 'S'))
@@ -982,7 +982,7 @@ class HbootImage:
 
                 # Get the hash for the chunk.
                 tHash = hashlib.sha384()
-                tHash.update(atChunk.tostring())
+                tHash.update(atChunk.tobytes())
                 strHash = tHash.digest()
                 aulHash = array.array('I', strHash[:self.__sizHashDw * 4])
                 atChunk.extend(aulHash)
@@ -4176,7 +4176,7 @@ class HbootImage:
 
         # Get the hash for the chunk.
         tHash = hashlib.sha384()
-        tHash.update(aulChunk.tostring())
+        tHash.update(aulChunk.tobytes())
         strHash = tHash.digest()
         aulHash = array.array('I', strHash[:self.__sizHashDw * 4])
         aulChunk.extend(aulHash)
